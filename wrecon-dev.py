@@ -98,7 +98,7 @@ else:
   
   weechat.register(SCRIPT_NAME, SCRIPT_AUTHOR, SCRIPT_VERSION, SCRIPT_LICENSE, SCRIPT_DESC, SCRIPT_UNLOAD, 'UTF-8')
   
-    #####
+  #####
   #
   # FUNCTIONS FOR VERIFY SIGNATURE OF FILE
   
@@ -107,8 +107,8 @@ else:
     
     verify_successful = False
     
-    file_verify    = os.path.join(work_directory, 'wrecon.py')
-    file_signature = os.path.join(work_directory, 'wrecon.py.sig')
+    file_verify    = os.path.join(work_directory, 'wrecon-dev.py')
+    file_signature = os.path.join(work_directory, 'wrecon-dev.py.sig')
     
     gpg        = gnupg.GPG()
     public_key = gpg.import_keys(PUBLIC_KEY)
@@ -293,14 +293,18 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
   #
   # FUNCTION ENCRYPT AND DECTRYPT STRING
   #
-  # ENCRYPT
+  # CORRECT LENGTH OF ENCRYPT/DECRYPT KEY
 
   def encdec_keylen(istring, ikey):
     xkey = ikey
     while len(istring) > len(ikey):
       ikey += xkey
     return ikey
-    
+  
+  #
+  # ENCRYPT
+  #
+  
   def encrypt_string(level, estring, encrypt_key):
     global ENCRYPT_LEVEL
     return ENCRYPT_LEVEL[level]
@@ -345,7 +349,7 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
     return ''.join(out)
   
   def decrypt_string_L1(dstring, decrypt_key):
-    decrypt_key = encdec_keylen(dstring, decrypt_key)
+    decrypt_key     = encdec_keylen(dstring, decrypt_key)
     str_dec         = base64.urlsafe_b64decode(dstring).decode()
     new_decrypt_key = get_hash(decrypt_key)
     dec_result_l2   = decrypt_string_L0(str_dec, new_decrypt_key)
@@ -360,3 +364,213 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
   #
   #### END FUNCTION ENCRYPT AND DECTRYPT STRING
 
+  #####
+  #
+  # FUNCTION CHECK AND UPDATE
+  
+  def update_check(data, buffer):
+    global SCRIPT_VERSION
+    import urllib.request
+    update_me = False
+    f_message_simple(data, buffer, 'CHECKING FOR UPDATE')
+
+    actual_version = SCRIPT_VERSION.split(' ')[0]
+    latest_release = 'checking...'
+    update_result  = False
+    base_name      = 'reddy75/wrecon-devel'
+    base_url       = 'https://github.com/%s/archive' % base_name
+    base_api       = 'https://api.github.com/repos/%s/releases/latest' % base_name
+    
+    f_message_simple(data, buffer, 'ACTUAL VERSION  : %s' % actual_version)
+    
+    error_get  = False
+    try:
+      url_data = urllib.request.urlopen(base_api)
+    except urllib.error.HTTPError as e:
+      error_get  = True
+      error_data = e.__dict__
+    except urllib.error.URLerror as e:
+      error_get  = True
+      error_data = e.__dict__
+    except urllib.error.ContentTooShortError() as e:
+      error_get  = True
+      error_data = e.__dict__
+    
+    if error_get == True:
+      out_err_msg = []
+      out_err_msg.append('AN ERROR OCCURED DURING CHECK OF LATEST VERSION FROM GITHUB')
+      out_err_msg.append('REQUESTED URL : %s' % base_api)
+      out_err_msg.append('ERROR CODE    : %s' % error_data['code'])
+      out_err_msg.append('ERROR MESSAGE : %s' % error_data['msg'])
+      f_message(data, buffer, 'UPDATE ERROR', out_err_msg)
+    else:
+      get_data       = json.loads(url_data.read().decode('utf8'))
+      latest_release = get_data['tag_name'].split('v')[1]
+      
+      f_message_simple(data, buffer, 'LATEST RELEASE  : %s' % latest_release)
+      
+      if actual_version >= latest_release:
+        f_message_simple(data, buffer, 'WRECON IS UP TO DATE')
+      else:
+        archive_file   = '%s.tar.gz' % latest_release
+        download_url   = '%s/%s' % (base_url, archive_file)
+        
+        out_msg = []
+        out_msg.append('DOWNLOAD FILE   : %s' % download_url)
+        
+        f_message(data, buffer, 'FOUND NEW RELEASE', out_msg)
+        extract_subdir = 'wrecon-%s' % latest_release
+        update_me = [latest_release, archive_file, download_url, extract_subdir]
+    return update_me
+    
+  
+  def f_check_and_update(data, buffer):
+    update_result = 'NOT UPDATED'
+    # First check new version is available
+    check_result = update_check(data, buffer)
+    # When we receive new data, we will try download, extract, check signed file, install new file and restart wrecon
+    if not check_result == False:
+      latest_release, archive_file, download_url, extract_subdir  = check_result
+      env_vars = os.environ
+      # ~ for env_var in env_vars.keys():
+        # ~ f_message_simple(data, buffer, '%32s : %s' % (env_var, env_vars[env_var]))
+        
+      download_dir = '%s/%s' % (env_vars['HOME'], 'wrecon-update')
+      
+      # ~ f_message_simple(data, buffer, 'DOWNLOAD DIR : %s' % download_dir)
+      
+      download_dir_exist = False
+      if not os.path.exists(os.path.join(download_dir)):
+        try:
+          os.mkdir(os.path.join(download_dir))
+          download_dir_exist = True
+        except OSError as e:
+          f_message(data, buffer, 'OS ERROR', ['Unable create download directyr'])
+      
+      if not os.path.isdir(os.path.join(download_dir)):
+        f_message(data, buffer, 'OS ERROR', ['Unable create download directyr'])
+      else:
+        start_download = False
+        download_file = os.path.join(download_dir, archive_file)
+        f_message_simple(data, buffer, 'DESTINATION     : %s' % download_file)
+        if not os.path.exists(download_file):
+          start_download = True
+        else:
+          if os.path.isfile(download_file):
+            try:
+              os.remove(download_file)
+              start_download = True
+            except OSError as e:
+              f_message(data, buffer, 'OS ERROR', ['Destination file exist, but can not be removed. Please clean up.'])
+          else:
+            f_message(data, buffer, 'OS ERROR', ['Destination path exist, check your system and clean up.'])
+        
+        if start_download == True:
+          successful_download = False
+          try:
+            #
+            # DOWNLOAD NEW FILE
+            #
+            import urllib.request
+            with urllib.request.urlopen(download_url) as response, open(download_file, 'wb') as out_file:
+              shutil.copyfileobj(response, out_file)
+            out_file.close()
+            f_message_simple(data, buffer, 'DOWNLOAD STATUS : SUCCESSFUL')
+            successful_download = True
+          except urllib.error.URLerror as e:
+            error_get  = True
+            error_data = e.__dict__
+          except urllib.error.ContentTooShortError() as e:
+            error_get  = True
+            error_data = e.__dict__
+          
+          if successful_download == False:
+            f_message_simple(data, buffer, 'DOWNLOAD STATUS : FAILED')
+            out_err_msg = []
+            out_err_msg.append('AN ERROR OCCURED DURING DOWNLOAD OF FILE FROM GITHUB')
+            out_err_msg.append('REQUESTED URL : %s' % download_url)
+            out_err_msg.append('ERROR CODE    : %s' % error_data['code'])
+            out_err_msg.append('ERROR MESSAGE : %s' % error_data['msg'])
+            f_message(data, buffer, 'UPDATE ERROR', out_err_msg)
+          else:
+            #
+            # EXTRACT ARCHIVE
+            #
+            current_cwd = os.getcwd()
+            os.chdir(download_dir)
+            error_extract = False
+            try:
+              extract_me  = tarfile.open(archive_file)
+              out_message = extract_me.extractall()
+            except TarError as e:
+              error_extract = True
+              error_message = e.__dict__
+            except ReadError as e:
+              error_extract = True
+              error_message = e.__dict__
+            except CompressionError as e:
+              error_extract = True
+              error_message = e.__dict__
+            except StreamError as e:
+              error_extract = True
+              error_message = e.__dict__
+            except ExtractError as e:
+              error_extract = True
+              error_message = e.__dict__
+            except HeaderError as e:
+              error_extract = True
+              error_message = e.__dict__
+              
+            if error_extract == True:
+              out_msg = []
+              out_msg.append('EXTRACT STATUS  : FAILED')
+              out_msg.append('ERROR MESSAGE   : %s' % error_message)
+              f_message(data, buffer, 'UPDATE ERROR', out_msg)
+            else:
+              f_message_simple(data, buffer, 'EXTRACT STATUS  : SUCCESSFUL')
+              work_path = os.path.join(download_dir, extract_subdir)
+              os.chdir(work_path)
+              #
+              # VERIFY SCRIPT FILE IS SIGNED BY AUTHOR
+              #
+              verify_successful = f_verify_signature_file(work_path)
+              if verify_successful == False:
+                f_message_simple(data, buffer, 'VERIFICATION    : FAILED')
+              else:
+                f_message_simple(data, buffer, 'VERIFICATION    : SUCCESSFUL')
+                #
+                # INSTALLATION OF NEW SCRIPT WHICH WAS VERIFIED SUCCESSFULLY
+                #
+                destination_dir  = weechat.string_eval_path_home('%h', {}, {}, {})
+                destination_dir  = str(os.path.join(destination_dir, 'python'))
+                destination_file = str(os.path.join(destination_dir, 'wrecon.py'))
+                source_file      = str(os.path.join(work_path, 'wrecon.py'))
+                copy_err         = False
+                try:
+                  copy_result = shutil.copyfile(source_file, destination_file, follow_symlinks=True)
+                  f_message_simple(data, buffer, 'INSTALLATION    : SUCCESSFUL')
+                except OSError as e:
+                  copy_err = True
+                  err_msg = e.__dict__
+                  err_msg = e
+                except shutil.SameFileError as e:
+                  copy_err = True
+                  err_msg = e.__dict__
+                
+                if copy_err == True:
+                  out_msg = []
+                  out_msg.append('INSTALLATION    : FAILED')
+                  out_msg.append('ERROR MESSAGE   : %s' % err_msg)
+                  f_message(data, buffer, 'INSTALLATION ERROR', out_msg)
+                else:
+                  #
+                  # AFTER SUCCESSFUL INSTALLATION RESTART WEECAHT
+                  #
+                  f_message_simple(data, buffer, 'RESTARTING WRECON...')
+                  weechat.command(buffer, '/wait 2s /script reload wrecon.py')
+                
+            os.chdir(current_cwd)
+    return update_result
+  
+  #
+  ##### END FUNCTION CHECK AND UPDATE
