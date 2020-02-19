@@ -1,2 +1,2 @@
 # wrecon-devel
-Development version for 'wrecon'
+Development version of 'wrecon'
