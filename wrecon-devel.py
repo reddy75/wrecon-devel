@@ -105,14 +105,14 @@ SCRIPT_UNLOAD    = 'wrecon_unload'
 
 SCRIPT_CONTINUE  = True
 import importlib
-for import_mod in ['ast', 'base64', 'contextlib', 'datetime', 'gnupg', 'hashlib', 'json', 'os', 'random', 'shutil', 'string', 'sys', 'tarfile', 'time', 'urllib', 'weechat']:
+for IMPORT_MOD in ['ast', 'base64', 'contextlib', 'datetime', 'gnupg', 'hashlib', 'json', 'os', 'random', 'shutil', 'string', 'sys', 'tarfile', 'time', 'urllib', 'weechat']:
   try:
-    import_object = importlib.import_module(import_mod, package=None)
-    globals()[import_mod] = import_object
-    # ~ print('[%s v%s] > module %s imported' % (SCRIPT_NAME, SCRIPT_VERSION, import_mod))
+    IMPORT_OBJECT = importlib.import_module(IMPORT_MOD, package=None)
+    globals()[IMPORT_MOD] = IMPORT_OBJECT
+    # ~ print('[%s v%s] > module %s imported' % (SCRIPT_NAME, SCRIPT_VERSION, IMPORT_MOD))
   except ImportError:
     SCRIPT_CONTINUE = False
-    print('[%s v%s] > module >> %s << import error' % (SCRIPT_NAME, SCRIPT_VERSION, import_mod))
+    print('[%s v%s] > module >> %s << import error' % (SCRIPT_NAME, SCRIPT_VERSION, IMPORT_MOD))
 
 
 if sys.version_info >= (3,):
@@ -224,67 +224,67 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
   #
   # FUNCTION FOR GENERATING RANDOM CHARACTERS AND NUMBERS
   
-  def get_random_string(mylength):
-    lettersAndDigits = string.ascii_letters + string.digits
-    return ''.join(random.choice(lettersAndDigits) for i in range(mylength))
+  def get_random_string(STRING_LENGTH):
+    STR_LETTERS_AND_DIGITS = string.ascii_letters + string.digits
+    return ''.join(random.choice(STR_LETTERS_AND_DIGITS) for INDEX in range(STRING_LENGTH))
   
   #####
   #
   # FUNCTION GET HASH OF A STRING
   
-  def get_hash(mystring):
-    result = hashlib.md5(mystring.encode())
-    return str(result.hexdigest())
+  def get_hash(INPUT_STRING):
+    RESULT = hashlib.md5(INPUT_STRING.encode())
+    return str(RESULT.hexdigest())
   
   #####
   #
   # FUNCTION FOR COUNTING COMMANDS AND ADD UNIQ HASH
   
   def get_command_uniq_id():
-    global wrecon_command_counter
-    wrecon_command_counter = wrecon_command_counter + 1
-    if wrecon_command_counter > 9999:
-      wrecon_command_counter = 0
-    return '%04d-%s' % (wrecon_command_counter, get_random_string(4))
+    global WRECON_COMMAND_COUNTER
+    WRECON_COMMAND_COUNTER = WRECON_COMMAND_COUNTER + 1
+    if WRECON_COMMAND_COUNTER > 9999:
+      WRECON_COMMAND_COUNTER = 0
+    return '%04d-%s' % (WRECON_COMMAND_COUNTER, get_random_string(4))
   
   #####
   #
   # FUNCTION FOR VERIFY CHANNEL SETUP AND POSSIBILITY TO CHANGE MODE IF NECESSARY
   
-  def setup_channel(data, buffer, servername, channelname):
-    global wrecon_channel_key
-    result      = 0
-    resultnick  = 0
-    resultchan  = 0
-    resultmode  = 0
-    my_nickname = weechat.info_get('irc_nick', servername)
-    infolist    = weechat.infolist_get('irc_nick', '', '%s,%s' % (servername, channelname))
-    while weechat.infolist_next(infolist):
-      found_nickname = weechat.infolist_string(infolist, 'name')
-      if my_nickname == found_nickname:
-        my_prefix   = weechat.infolist_string(infolist, 'prefix')
-        my_prefixes = weechat.infolist_string(infolist, 'prefixes')
-        if '@' in my_prefixes:
-          resultnick = 1
-    weechat.infolist_free(infolist)
+  def setup_channel(DATA, BUFFER, SERVER_NAME, CHANNEL_NAME):
+    global WRECON_CHANNEL_KEY
+    RESULT      = 0
+    RESULT_NICK  = 0
+    RESULT_CHANNEL  = 0
+    RESULT_MODE  = 0
+    MY_NICK_NAME = weechat.info_get('irc_nick', SERVER_NAME)
+    INFOLIST    = weechat.infolist_get('irc_nick', '', '%s,%s' % (SERVER_NAME, CHANNEL_NAME))
+    while weechat.infolist_next(INFOLIST):
+      FOUND_NICK_NAME = weechat.infolist_string(INFOLIST, 'name')
+      if MY_NICK_NAME == FOUND_NICK_NAME:
+        NICK_PREFIX   = weechat.infolist_string(INFOLIST, 'prefix')
+        NICK_PREFIXES = weechat.infolist_string(INFOLIST, 'prefixes')
+        if '@' in NICK_PREFIXES:
+          RESULT_NICK = 1
+    weechat.infolist_free(INFOLIST)
 
-    infolist   = weechat.infolist_get('irc_channel', '', '%s,%s' % (servername, channelname))
-    while weechat.infolist_next(infolist):
-      my_channel_name = weechat.infolist_string(infolist, 'name')
-      my_channel_key  = weechat.infolist_string(infolist, 'key')
-      my_channel_mode = weechat.infolist_string(infolist, 'modes')
-      if my_channel_name == channelname:
-        if not wrecon_channel_key in my_channel_mode:
-          resultchan = 1
-        if not 'k' in my_channel_mode:
-          resultmode = 1
+    INFOLIST   = weechat.infolist_get('irc_channel', '', '%s,%s' % (SERVER_NAME, CHANNEL_NAME))
+    while weechat.infolist_next(INFOLIST):
+      FOUND_CHANNEL_NAME = weechat.infolist_string(INFOLIST, 'name')
+      FOUND_CHANNEL_KEY  = weechat.infolist_string(INFOLIST, 'key')
+      FOUND_CHANNEL_MODE = weechat.infolist_string(INFOLIST, 'modes')
+      if FOUND_CHANNEL_NAME == CHANNEL_NAME:
+        if not WRECON_CHANNEL_KEY in FOUND_CHANNEL_MODE:
+          RESULT_CHANNEL = 1
+        if not 'k' in FOUND_CHANNEL_MODE:
+          RESULT_MODE = 1
         
-    weechat.infolist_free(infolist)
+    weechat.infolist_free(INFOLIST)
     
-    if resultnick == 1:
-      if resultmode == 1 or resultchan == 1:
-        weechat.command(buffer, '/mode %s -n+sk %s' % (channelname, wrecon_channel_key))
-    return result
+    if RESULT_NICK == 1:
+      if RESULT_MODE == 1 or RESULT_CHANNEL == 1:
+        weechat.command(BUFFER, '/mode %s -n+sk %s' % (CHANNEL_NAME, WRECON_CHANNEL_KEY))
+    return RESULT
     
   #####
   #
@@ -292,71 +292,71 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
   #
   # CORRECT LENGTH OF ENCRYPT/DECRYPT KEY
 
-  def encdec_keylen(istring, ikey):
-    xkey = ikey
-    while len(istring) > len(ikey):
-      ikey += xkey
-    return ikey
+  def correct_key_length(INPUT_STRING, INPUT_KEY):
+    OUTPUT_KEY = INPUT_KEY
+    while len(INPUT_STRING) > len(OUTPUT_KEY):
+      OUTPUT_KEY += INPUT_KEY
+    return OUTPUT_KEY
   
   #
   # ENCRYPT
   #
   
-  def encrypt_string(level, estring, encrypt_key):
+  def encrypt_string(LEVEL, INPUT_STRING, INPUT_KEY):
     global ENCRYPT_LEVEL
-    return ENCRYPT_LEVEL[level]
+    return ENCRYPT_LEVEL[LEVEL]
 
-  def encrypt_string_L0(estring, encrypt_key):
-    encrypt_key = encdec_keylen(estring, encrypt_key)
-    out         = []
-    for i in range(len(estring)):
-      k_c = estring[i % len(estring)]
-      o_c = chr((ord(encrypt_key[i]) + ord(k_c)) % 256)
-      out.append(o_c)
-    return base64.urlsafe_b64encode(''.join(out).encode()).decode()
+  def encrypt_string_level_0(INPUT_STRING, INPUT_KEY):
+    INPUT_KEY   = correct_key_length(INPUT_STRING, INPUT_KEY)
+    OUTPUT_LIST = []
+    for INDEX in range(len(INPUT_STRING)):
+      KEY_CHAR    = INPUT_STRING[INDEX % len(INPUT_STRING)]
+      OUTPUT_CHAR = chr((ord(INPUT_KEY[INDEX]) + ord(KEY_CHAR)) % 256)
+      OUTPUT_LIST.append(OUTPUT_CHAR)
+    return base64.urlsafe_b64encode(''.join(OUTPUT_LIST).encode()).decode()
   
-  def encrypt_string_L1(estring, encrypt_key):
-    encrypt_key     = encdec_keylen(estring, encrypt_key)
-    new_encrypt_key = get_hash(encrypt_key)
-    my_salt         = f_random_generator(8)
-    enc_result_l1   = encrypt_string_L0(estring, my_salt + encrypt_key)
-    enc_result_l2   = encrypt_string_L0(my_salt + enc_result_l1, new_encrypt_key)
-    return base64.urlsafe_b64encode(enc_result_l2.encode()).decode()
+  def encrypt_string_level_1(INPUT_STRING, INPUT_KEY):
+    INPUT_KEY             = correct_key_length(INPUT_STRING, INPUT_KEY)
+    NEW_INPUT_KEY         = get_hash(INPUT_KEY)
+    SALT_STRING           = f_random_generator(8)
+    OUTPUT_RESULT_LEVEL_1 = encrypt_string_level_0(INPUT_STRING, SALT_STRING + INPUT_KEY)
+    OUTPUT_RESULT_LEVEL_2 = encrypt_string_level_0(SALT_STRING + OUTPUT_RESULT_LEVEL_1, NEW_INPUT_KEY)
+    return base64.urlsafe_b64encode(OUTPUT_RESULT_LEVEL_2.encode()).decode()
   
   global ENCRYPT_LEVEL
-  ENCRYPT_LEVEL[0] = encrypt_string_L0
-  ENCRYPT_LEVEL[1] = encrypt_string_L1
+  ENCRYPT_LEVEL[0] = encrypt_string_level_0
+  ENCRYPT_LEVEL[1] = encrypt_string_level_1
   
   #
   # DECRYPT
   #
   
-  def decrypt_string(level, dstring, decrypt_key):
+  def decrypt_string(LEVEL, INPUT_STRING, INPUT_KEY):
     global DECRYPT_LEVEL
-    return DECRYPT_LEVEL[level] 
+    return DECRYPT_LEVEL[LEVEL] 
   
-  def decrypt_string_L0(dstring, decrypt_key):
-    decrypt_key = encdec_keylen(dstring, decrypt_key)
-    out         = []
-    dec         = base64.urlsafe_b64decode(dstring).decode()
-    for i in range(len(dec)):
-      k_c = decrypt_key[i % len(decrypt_key)]
-      d_c = chr((256 + ord(dec[i]) - ord(k_c)) % 256)
-      out.append(d_c)
-    return ''.join(out)
+  def decrypt_string_level_0(INPUT_STRING, INPUT_KEY):
+    INPUT_KEY     = correct_key_length(INPUT_STRING, INPUT_KEY)
+    OUTPUT_LIST   = []
+    DECODE_STRING = base64.urlsafe_b64decode(INPUT_STRING).decode()
+    for INDEX in range(len(DECODE_STRING)):
+      KEY_CHAR = INPUT_KEY[INDEX % len(INPUT_KEY)]
+      OUTPUT_CHAR = chr((256 + ord(DECODE_STRING[INDEX]) - ord(KEY_CHAR)) % 256)
+      OUTPUT_LIST.append(OUTPUT_CHAR)
+    return ''.join(OUTPUT_LIST)
   
-  def decrypt_string_L1(dstring, decrypt_key):
-    decrypt_key     = encdec_keylen(dstring, decrypt_key)
-    str_dec         = base64.urlsafe_b64decode(dstring).decode()
-    new_decrypt_key = get_hash(decrypt_key)
-    dec_result_l2   = decrypt_string_L0(str_dec, new_decrypt_key)
-    my_salt         = dec_result_l2[:8]
-    dec_result_l1   = decrypt_string_L0(dec_result_l2[8:], my_salt + decrypt_key)
-    return dec_result_l1
+  def decrypt_string_level_1(INPUT_STRING, INPUT_KEY):
+    INPUT_KEY             = correct_key_length(INPUT_STRING, INPUT_KEY)
+    DECODE_STRING         = base64.urlsafe_b64decode(INPUT_STRING).decode()
+    NEW_INPUT_KEY         = get_hash(INPUT_KEY)
+    OUTPUT_RESULT_LEVEL_2 = decrypt_string_level_0(DECODE_STRING, NEW_INPUT_KEY)
+    SALT_STRING           = OUTPUT_RESULT_LEVEL_2[:8]
+    OUTPUT_RESULT_LEVEL_1 = decrypt_string_level_0(OUTPUT_RESULT_LEVEL_2[8:], SALT_STRING + INPUT_KEY)
+    return OUTPUT_RESULT_LEVEL_1
   
   global DECRYPT_LEVEL
-  DECRYPT_LEVEL[0] = decrypt_string_L0
-  DECRYPT_LEVEL[1] = decrypt_string_L1
+  DECRYPT_LEVEL[0] = decrypt_string_level_0
+  DECRYPT_LEVEL[1] = decrypt_string_level_1
   
   #
   #### END FUNCTION ENCRYPT AND DECTRYPT STRING
@@ -365,14 +365,14 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
   #
   # FUNCTION DISPLAY MESSAGE
   
-  def display_message(data, buffer, out_msg):
+  def display_message(BUFFER, INPUT_MESSAGE):
     global SCRIPT_NAME
 
-    if isinstance(out_msg, list):
-      for out_m in out_msg:
-        weechat.prnt(buffer, '[%s]\t%s' % (SCRIPT_NAME, str(out_m)))
+    if isinstance(INPUT_MESSAGE, list):
+      for OUTPUT_MESSAGE in INPUT_MESSAGE:
+        weechat.prnt(BUFFER, '[%s]\t%s' % (SCRIPT_NAME, str(OUTPUT_MESSAGE)))
     else:
-      weechat.prnt(buffer, '[%s]\t%s' % (SCRIPT_NAME, str(out_msg)))
+      weechat.prnt(BUFFER, '[%s]\t%s' % (SCRIPT_NAME, str(INPUT_MESSAGE)))
 
     return weechat.WEECHAT_RC_OK
   
@@ -387,256 +387,258 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
   # UPDATE
   #
   
-  def update(data, buffer):
-    out_msg = ['--- WRECON UPDATE CHECK AND INSTALL ---']
+  def update(DATA, BUFFER):
+    OUTPUT_MESSAGE = ['--- WRECON UPDATE CHECK AND INSTALL ---']
     
     # CALL CHECK FOR NEW UPDATE
-    upd_continue, upd_next_fnc, out_msg, latest_release, archive_file, download_url, extract_subdir = update_1_check(out_msg)
+    UPDATE_CONTINUE, UPDATE_NEXT_FUNCTION, OUTPUT_MESSAGE, LATEST_RELEASE, ARCHIVE_FILE, DOWNLOAD_URL, EXTRACT_SUBDIRECTORY = update_1_check(OUTPUT_MESSAGE)
     
     # CALL PREPARE DIR
-    if upd_continue == True:
-      upd_continue, upd_next_fnc, out_msg, download_dir = upd_next_fnc(out_msg)
+    if UPDATE_CONTINUE == True:
+      UPDATE_CONTINUE, UPDATE_NEXT_FUNCTION, OUTPUT_MESSAGE, DOWNLOAD_DIRECTORY = UPDATE_NEXT_FUNCTION(OUTPUT_MESSAGE)
     
     # CALL DOWNLOAD FILE
-    if upd_continue == True:
-      upd_continue, upd_next_fnc, out_msg = upd_next_fnc(out_msg, download_dir, archive_file, download_url)
+    if UPDATE_CONTINUE == True:
+      UPDATE_CONTINUE, UPDATE_NEXT_FUNCTION, OUTPUT_MESSAGE = UPDATE_NEXT_FUNCTION(OUTPUT_MESSAGE, DOWNLOAD_DIRECTORY, ARCHIVE_FILE, DOWNLOAD_URL)
     
     # CALL EXTRACT ARCHIVE
-    if upd_continue == True:
-      upd_continue, upd_next_fnc, out_msg = upd_next_fnc(out_msg, download_dir, archive_file)
+    if UPDATE_CONTINUE == True:
+      UPDATE_CONTINUE, UPDATE_NEXT_FUNCTION, OUTPUT_MESSAGE = UPDATE_NEXT_FUNCTION(OUTPUT_MESSAGE, DOWNLOAD_DIRECTORY, ARCHIVE_FILE)
     
     # CALL VERIFY EXTRACTED FILE
-    if upd_continue == True:
-      upd_continue, upd_next_fnc, out_msg, install_file = upd_next_fnc(out_msg, extract_subdir)
+    if UPDATE_CONTINUE == True:
+      UPDATE_CONTINUE, UPDATE_NEXT_FUNCTION, OUTPUT_MESSAGE, INSTALL_FILE = UPDATE_NEXT_FUNCTION(OUTPUT_MESSAGE, EXTRACT_SUBDIRECTORY)
     
     # CALL INSTALL NEW FILE
-    if upd_continue == True:
-      upd_continue, upd_next_fnc, out_msg = upd_next_fnc(out_msg, install_file)
+    if UPDATE_CONTINUE == True:
+      UPDATE_CONTINUE, UPDATE_NEXT_FUNCTION, OUTPUT_MESSAGE = UPDATE_NEXT_FUNCTION(OUTPUT_MESSAGE, INSTALL_FILE)
     
-    display_message(data, buffer, out_msg)  
+    display_message(DATA, BUFFER, OUTPUT_MESSAGE)
     
     # AFTER SUCCESSFUL INSTALLATION WE CAN RESTART
-    if upd_continue == True:
+    if UPDATE_CONTINUE == True:
       global SCRIPT_FILE
-      display_message(data, buffer, 'RESTARTING WRECON...')
-      weechat.command(buffer, '/wait 3s /script reload %s' % SCRIPT_FILE)
+      display_message(BUFFER, 'RESTARTING WRECON...')
+      weechat.command(BUFFER, '/wait 3s /script reload %s' % SCRIPT_FILE)
     
-    return update_result
+    return weechat.WEECHAT_RC_OK
     
   #
   # UPDATE - CHECK (new version in URL)
   #
   
-  def update_1_check(out_msg):
-    global SCRIPT_VERSION, SCRIPT_BASE_NAME
+  def update_1_check(OUTPUT_MESSAGE):
     import urllib.request
+    global SCRIPT_VERSION, SCRIPT_BASE_NAME
     
-    update_me      = False
-    next_function  = pass
+    UPDATE_EXIST   = False
+    NEXT_FUNCTION  = pass
     
-    latest_release, archive_file, download_url, extract_subdir  = ['', '', '', '']
+    LATEST_RELEASE, ARCHIVE_FILE, DOWNLOAD_URL, EXTRACT_SUBDIRECTORY  = ['', '', '', '']
 
-    actual_version = SCRIPT_VERSION.split(' ')[0]
-    base_url       = 'https://github.com/%s/archive' % SCRIPT_BASE_NAME
-    base_api       = 'https://api.github.com/repos/%s/releases/latest' % SCRIPT_BASE_NAME
+    ACTUAL_VERSION = SCRIPT_VERSION.split(' ')[0]
+    BASE_URL       = 'https://github.com/%s/archive' % SCRIPT_BASE_NAME
+    BASE_API_URL   = 'https://api.github.com/repos/%s/releases/latest' % SCRIPT_BASE_NAME
     
-    out_msg.append('ACTUAL VERSION  : %s' % actual_version)
-    out_msg.append('REQUESTING URL  : %s' % base_api)
+    OUTPUT_MESSAGE.append('ACTUAL VERSION  : %s' % ACTUAL_VERSION)
+    OUTPUT_MESSAGE.append('REQUESTING URL  : %s' % BASE_API_URL)
     
-    error_get = False
+    ERROR_GET = False
     try:
-      url_data = urllib.request.urlopen(base_api)
-    except (urllib.error.HTTPError, urllib.error.URLerror, urllib.error.ContentTooShortError()) as e:
-      error_get = True
-      error_data = e.__dict__
+      URL_DATA = urllib.request.urlopen(BASE_API_URL)
+    except (urllib.error.HTTPError, urllib.error.URLerror, urllib.error.ContentTooShortError()) as ERROR:
+      ERROR_GET  = True
+      ERROR_DATA = ERROR.__dict__
     
-    if error_get == True:
-      out_msg.append('AN ERROR OCCURED DURING CHECK OF LATEST VERSION FROM GITHUB')
-      if 'code' in error_data and 'msg' in error_data:
-        out_msg.append('ERROR CODE    : %s' % error_data['code'])
-        out_msg.append('ERROR MESSAGE : %s' % error_data['msg'])
-      out_msg.append('ERROR DATA    : %s' % error_data)
+    if ERROR_GET == True:
+      OUTPUT_MESSAGE.append('AN ERROR OCCURED DURING CHECK OF LATEST VERSION FROM GITHUB')
+      if 'code' in ERROR_DATA and 'msg' in ERROR_DATA:
+        OUTPUT_MESSAGE.append('ERROR CODE    : %s' % ERROR_DATA['code'])
+        OUTPUT_MESSAGE.append('ERROR MESSAGE : %s' % ERROR_DATA['msg'])
+      OUTPUT_MESSAGE.append('ERROR DATA    : %s' % ERROR_DATA)
     else:
-      get_data       = json.loads(url_data.read().decode('utf8'))
-      latest_release = get_data['tag_name'].split('v')[1]
+      GET_DATA       = json.loads(URL_DATA.read().decode('utf8'))
+      LATEST_RELEASE = GET_DATA['tag_name'].split('v')[1]
       
-      out_msg.append('LATEST RELEASE  : %s' % latest_release)
+      OUTPUT_MESSAGE.append('LATEST RELEASE  : %s' % LATEST_RELEASE)
       
-      if actual_version >= latest_release:
-        out_msg.append('WRECON IS UP TO DATE')
+      if ACTUAL_VERSION >= LATEST_RELEASE:
+        OUTPUT_MESSAGE.append('WRECON IS UP TO DATE')
       else:
         global SCRIPT_FILE
-        update_me      = True
-        next_function  = update_2_prepare_dir
-        archive_file   = '%s.tar.gz' % latest_release
-        download_url   = '%s/%s' % (base_url, archive_file)
-        extract_subdir = '%s-%s' % (SCRIPT_FILE.split('.')[0], latest_release)
+        UPDATE_EXIST         = True
+        NEXT_FUNCTION        = update_2_prepare_dir
+        ARCHIVE_FILE         = '%s.tar.gz' % LATEST_RELEASE
+        DOWNLOAD_URL         = '%s/%s' % (BASE_URL, ARCHIVE_FILE)
+        EXTRACT_SUBDIRECTORY = '%s-%s' % (SCRIPT_FILE.split('.')[0], LATEST_RELEASE)
         
-        out_msg.append('FOUND NEW RELEASE')        
-        out_msg.append('DOWNLOAD URL    : %s' % download_url)
+        OUTPUT_MESSAGE.append('FOUND NEW RELEASE')        
+        OUTPUT_MESSAGE.append('DOWNLOAD URL    : %s' % DOWNLOAD_URL)
 
-    return [update_me, next_function, out_msg, latest_release, archive_file, download_url, extract_subdir]
+    return [UPDATE_EXIST, NEXT_FUNCTION, OUTPUT_MESSAGE, LATEST_RELEASE, ARCHIVE_FILE, DOWNLOAD_URL, EXTRACT_SUBDIRECTORY]
   
   #
   # UPDATE - PREPARE DOWNLOAD DIR
   #
   
-  def update_2_prepare_dir(out_msg):
-    env_vars           = os.environ
-    download_dir       = '%s/%s' % (env_vars['HOME'], '.wrecon-update')
+  def update_2_prepare_dir(OUTPUT_MESSAGE):
+    ENVIRONMENT_VARIABLES = os.environ
+    DOWNLOAD_DIRECTORY    = '%s/%s' % (ENVIRONMENT_VARIABLES['HOME'], '.wrecon-update')
     
-    dir_prepared       = False
-    next_function      = pass
+    DIRECTORY_PREPARED    = False
+    NEXT_FUNCTION         = pass
     
-    out_msg.append('DOWNLOAD DIR    : %s' % download_dir)
+    OUTPUT_MESSAGE.append('DOWNLOAD DIR    : %s' % DOWNLOAD_DIRECTORY)
     
-    if not os.path.exists(os.path.join(download_dir)):
+    if not os.path.exists(os.path.join(DOWNLOAD_DIRECTORY)):
       try:
-        os.mkdir(os.path.join(download_dir))
-        dir_prepared  = True
-      except OSError as e:
-        out_msg.append('ERROR, DOWNLOAD DIRECTORY CAN NOT BE CREATED')
-        out_msg.append('ERROR : %s' % e.__dict__)
+        os.mkdir(os.path.join(DOWNLOAD_DIRECTORY))
+        DIRECTORY_PREPARED = True
+      except OSError as ERROR:
+        OUTPUT_MESSAGE.append('ERROR, DOWNLOAD DIRECTORY CAN NOT BE CREATED')
+        OUTPUT_MESSAGE.append('ERROR : %s' % ERROR.__dict__)
     else:
-      if not os.path_isdir(s.path.join(download_dir)):
-        out_msg.append('ERROR, OBJECT EXIST, BUT IS NOT DIRECTORY')
+      if not os.path_isdir(s.path.join(DOWNLOAD_DIRECTORY)):
+        OUTPUT_MESSAGE.append('ERROR, OBJECT EXIST, BUT IS NOT DIRECTORY')
       else:
-        dir_prepared == True
+        DIRECTORY_PREPARED == True
     
-    if dir_prepared == True:
-      next_function = update_3_download
+    if DIRECTORY_PREPARED == True:
+      NEXT_FUNCTION = update_3_download
     
-    return [dir_prepared, next_function, out_msg, download_dir]
+    return [DIRECTORY_PREPARED, NEXT_FUNCTION, OUTPUT_MESSAGE, DOWNLOAD_DIRECTORY]
   
   #
   # UPDATE - DOWNLOAD (new file from URL)
   # 
   
-  def update_3_download(out_msg, download_dir, archive_file, download_url):
+  def update_3_download(OUTPUT_MESSAGE, DOWNLOAD_DIRECTORY, ARCHIVE_FILE, DOWNLOAD_URL):
     import urllib.request
     
-    download_prepared = False
-    next_function     = pass
+    DOWNLOAD_PREPARED = False
+    NEXT_FUNCTION     = pass
     
-    download_file     = os.path.join(download_dir, archive_file)
+    DOWNLOAD_FILE     = os.path.join(DOWNLOAD_DIRECTORY, ARCHIVE_FILE)
     
-    with urllib.request.urlopen(download_url) as response, open(download_file, 'wb') as out_file:
-        shutil.copyfileobj(response, out_file)
-      out_file.close()
-      download_prepared = True
-      download_result   = 'SUCCESSFUL'
-    except (urllib.error.URLerror, urllib.error.ContentTooShortError()) as e:
-      download_result = 'FAILED'
+    with urllib.request.urlopen(DOWNLOAD_URL) as response, open(DOWNLOAD_FILE, 'wb') as OUT_FILE:
+        shutil.copyfileobj(response, OUT_FILE)
+      OUT_FILE.close()
+      DOWNLOAD_PREPARED = True
+      DOWNLOAD_RESULT   = 'SUCCESSFUL'
+    except (urllib.error.URLerror, urllib.error.ContentTooShortError()) as ERROR:
+      DOWNLOAD_RESULT = 'FAILED'
     
-    download_result = 'DOWNLOAD STATUS : %' % download_result
-    out_msg.append(download_result)
+    DOWNLOAD_RESULT = 'DOWNLOAD STATUS : %' % DOWNLOAD_RESULT
+    OUTPUT_MESSAGE.append(DOWNLOAD_RESULT)
     
-    if download_prepared == False:
-      out_msg.append('ERROR : %s' % e.__dict__)
+    if DOWNLOAD_PREPARED == False:
+      OUTPUT_MESSAGE.append('ERROR : %s' % ERROR.__dict__)
     else:
-      next_function     = update_4_extract
+      NEXT_FUNCTION = update_4_extract
     
-    return [download_prepared, next_function, out_msg]
+    return [DOWNLOAD_PREPARED, NEXT_FUNCTION, OUTPUT_MESSAGE]
   
   #
   # UPDATE - EXTRACT ARCHIVE (from downloaded file)
   #
   
-  def update_4_extract(out_msg, download_dir, archive_file):
-    extract_prepared = False
-    next_function    = pass
+  def update_4_extract(OUTPUT_MESSAGE, DOWNLOAD_DIRECTORY, ARCHIVE_FILE):
+    EXTRACT_PREPARED = False
+    NEXT_FUNCTION    = pass
     
-    os.chdir(download_dir)
+    os.chdir(DOWNLOAD_DIRECTORY)
     
     try:
-      out_msg.append('EXTRACT FILE    : %' % archive_file)
-      extract_file = tarfile.open(archive_file)
-      for o_msg in extract_me.extractall():
-        out_msg.append('EXTRACTING .... : %s' % o_msg)
-      extract_prepared = True
-      extract_result   = 'SUCCESSFUL'
-    except (TarError, ReadError, CompressionError, StreamError, ExtractError, HeaderError) as e:
-      extract_result = 'FAILED'
+      OUTPUT_MESSAGE.append('EXTRACT FILE    : %' % ARCHIVE_FILE)
+      EXTRACT_FILE = tarfile.open(ARCHIVE_FILE)
+      for EXTRACT_OUTPUT in extract_me.extractall():
+        OUTPUT_MESSAGE.append('EXTRACTING .... : %s' % EXTRACT_OUTPUT)
+      EXTRACT_PREPARED = True
+      EXTRACT_RESULT   = 'SUCCESSFUL'
+    except (TarError, ReadError, CompressionError, StreamError, ExtractError, HeaderError) as ERROR:
+      EXTRACT_RESULT = 'FAILED'
     
-    out_msg.append('EXTRACT RESULT  : %' % extract_result)
+    OUTPUT_MESSAGE.append('EXTRACT RESULT  : %' % EXTRACT_RESULT)
     
-    if extract_prepared == False:
-      out_msg.append('ERROR : %s' % e.__dict__)
+    if EXTRACT_PREPARED == False:
+      OUTPUT_MESSAGE.append('ERROR : %s' % ERROR.__dict__)
     else:
-      next_function = update_5_verify_signature
+      NEXT_FUNCTION = update_5_verify_signature
     
-    return [extract_prepared, next_function, out_msg]
+    return [EXTRACT_PREPARED, NEXT_FUNCTION, OUTPUT_MESSAGE]
   
   #
   # UPDATE - VERIFY FILE (SIGNATURE)
   #
   
-  def update_5_verify_signature(out_msg, download_dir, extract_subdir):
+  def update_5_verify_signature(OUTPUT_MESSAGE, DOWNLOAD_DIRECTORY, EXTRACT_SUBDIRECTORY):
     global SCRIPT_FILE, SCRIPT_FILE_SIG, PUBLIC_KEY
     
-    verify_successful = False
-    next_function     = pass
+    VERIFY_SUCCESSFUL   = False
+    NEXT_FUNCTION       = pass
     
-    verify_new_file   = os.path.join(download_dir, extract_subdir, SCRIPT_FILE)
-    verify_signature  = os.path.join(download_dir, extract_subdir, SCRIPT_FILE_SIG)
+    NEW_FILE            = os.path.join(DOWNLOAD_DIRECTORY, EXTRACT_SUBDIRECTORY, SCRIPT_FILE)
+    NEW_FILE_SIGNATURE  = os.path.join(DOWNLOAD_DIRECTORY, EXTRACT_SUBDIRECTORY, SCRIPT_FILE_SIG)
     
-    gpg        = gnupg.GPG()
-    public_key = gpg.import_keys(PUBLIC_KEY)
+    GPG                 = gnupg.GPG()
+    PUBLIC_KEY_INTERNAL = GPG.import_keys(PUBLIC_KEY)
     
-    verification_msg = 'FAILED'
+    VERIFICATION_RESULT = 'FAILED'
     
     try:
-      with open(file_signature, 'rb') as sigfile:
-        verify_me = gpg.verify_file(sigfile, '%s' % verify_new_file)
-      sigfile.close()  
+      with open(NEW_FILE_SIGNATURE, 'rb') as SIGNATURE_FILE:
+        VERIFY_RESULT = GPG.verify_file(SIGNATURE_FILE, '%s' % NEW_FILE)
+      SIGNATURE_FILE.close()
     finally:
-      if verify_me:
-        pk_content = public_key.__dict__
-        vf_content = verify_me.__dict__
-        fp_pk      = str(pk_content['results'][0]['fingerprint'])
-        fp_vf      = str(vf_content['fingerprint'])
-        if fp_pk == fp_vf:
-          verification_msg  = 'SUCCESSFUL'
-          verify_successful = True
-          next_function     = update_6_install
+      if VERIFY_RESULT:
+        CONTENT_PUBLIC_KEY        = PUBLIC_KEY_INTERNAL.__dict__
+        CONTENT_NEW_FILE          = VERIFY_RESULT.__dict__
+        FINGERPRINT_PUBLIC_KEY    = str(CONTENT_PUBLIC_KEY['results'][0]['fingerprint'])
+        FINGERPRINT_VERIFIED_FILE = str(CONTENT_NEW_FILE['fingerprint'])
+        if FINGERPRINT_PUBLIC_KEY == FINGERPRINT_VERIFIED_FILE:
+          VERIFICATION_RESULT  = 'SUCCESSFUL'
+          VERIFY_SUCCESSFUL    = True
+          NEXT_FUNCTION        = update_6_install
+        else:
+          OUTPUT_MESSAGE.append('VERIFICATION    : Signature does not match')
     
-    out_msg.append('VERIFICATION    : %s' % verification_msg)
+    OUTPUT_MESSAGE.append('VERIFICATION    : %s' % VERIFICATION_RESULT)
     
-    del gpg
-    del public_key
-    del pk_content
-    del vf_content
+    del GPG
+    del PUBLIC_KEY_INTERNAL
+    del CONTENT_PUBLIC_KEY
+    del CONTENT_NEW_FILE
 
-    return [verify_successful, next_function, out_msg, verify_new_file]
+    return [VERIFY_SUCCESSFUL, NEXT_FUNCTION, OUTPUT_MESSAGE, NEW_FILE]
   
   #
   # UPDATE - INSTALL NEW FILE
   #
   
-  def update_6_install(out_msg, install_file):
+  def update_6_install(OUTPUT_MESSAGE, INSTALL_FILE):
     global SCRIPT_FILE
     
-    installation_successful = False
-    installation_message    = 'FAILED'
+    INSTALLATION_SUCCESSFUL = False
+    INSTALLATION_RESULT     = 'FAILED'
     
-    destination_dir  = weechat.string_eval_path_home('%h', {}, {}, {})
-    destination_dir  = str(os.path.join(destination_dir, 'python'))
-    destination_file = str(os.path.join(destination_dir, SCRIPT_FILE))
-    source_file      = str(os.path.join(install_file)
+    DESTINATION_DIRECTORY  = weechat.string_eval_path_home('%h', {}, {}, {})
+    DESTINATION_DIRECTORY  = str(os.path.join(DESTINATION_DIRECTORY, 'python'))
+    DESTINATION_FILE       = str(os.path.join(DESTINATION_DIRECTORY, SCRIPT_FILE))
+    SOURCE_FILE            = str(os.path.join(INSTALL_FILE)
     
     try:
-      copy_result = shutil.copyfile(source_file, destination_file, follow_symlinks=True)
-      installation_successful = True
-      installation_message    = 'SUCCESSFUL'
-    except (OSError, shutil.SameFileError) as e:
-      err_msg = e.__dict__
+      COPY_RESULT = shutil.copyfile(SOURCE_FILE, DESTINATION_FILE, follow_symlinks=True)
+      INSTALLATION_SUCCESSFUL = True
+      INSTALLATION_RESULT     = 'SUCCESSFUL'
+    except (OSError, shutil.SameFileError) as ERROR:
+      pass
     
-    out_msg.append('INSTALLATION    : %s' % installation_message)
+    OUTPUT_MESSAGE.append('INSTALLATION    : %s' % INSTALLATION_RESULT)
     
-    if installation_successful == False:
-      out_msg.append('ERROR : %s' % err_msg)
+    if INSTALLATION_SUCCESSFUL == False:
+      OUTPUT_MESSAGE.append('ERROR : %s' % ERROR.__dict__)
     
-    return [installation_successful, next_function, out_msg]
+    return [INSTALLATION_SUCCESSFUL, NEXT_FUNCTION, OUTPUT_MESSAGE]
   
   #
   ##### END FUNCTION CHECK AND UPDATE
