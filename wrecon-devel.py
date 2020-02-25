@@ -249,16 +249,14 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
   
   #####
   #
-  # FUNCTION FOR VERIFY CHANNEL SETUP AND POSSIBILITY TO CHANGE MODE IF NECESSARY
+  # FUNCTION GET STATUS NICK
+  # Will check my nick is operator, if yes, it will return 1, else 0
   
-  def setup_channel(DATA, BUFFER, SERVER_NAME, CHANNEL_NAME):
-    global WRECON_CHANNEL_KEY
-    RESULT      = 0
-    RESULT_NICK  = 0
-    RESULT_CHANNEL  = 0
-    RESULT_MODE  = 0
-    MY_NICK_NAME = weechat.info_get('irc_nick', SERVER_NAME)
-    INFOLIST    = weechat.infolist_get('irc_nick', '', '%s,%s' % (SERVER_NAME, CHANNEL_NAME))
+  def get_status_nick(SERVER_NAME, CHANNEL_NAME)
+    RESULT_NICK    = 0
+    MY_NICK_NAME   = weechat.info_get('irc_nick', SERVER_NAME)
+    INFOLIST       = weechat.infolist_get('irc_nick', '', '%s,%s' % (SERVER_NAME, CHANNEL_NAME))
+    
     while weechat.infolist_next(INFOLIST):
       FOUND_NICK_NAME = weechat.infolist_string(INFOLIST, 'name')
       if MY_NICK_NAME == FOUND_NICK_NAME:
@@ -267,6 +265,24 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
         if '@' in NICK_PREFIXES:
           RESULT_NICK = 1
     weechat.infolist_free(INFOLIST)
+    
+  return RESULT_NICK
+  
+  #
+  ##### END FUNCTION CHECK MY NICK IS OPERATOR
+  
+  #####
+  #
+  # FUNCTION FOR VERIFY CHANNEL SETUP AND POSSIBILITY TO CHANGE MODE IF NECESSARY
+  
+  def setup_channel(DATA, BUFFER, SERVER_NAME, CHANNEL_NAME):
+    global WRECON_CHANNEL_KEY
+
+    RESULT         = 0
+    RESULT_CHANNEL = 0
+    RESULT_MODE    = 0
+    
+    RESULT_NICK    = get_status_nick(SERVER_NAME, CHANNEL_NAME)
 
     INFOLIST   = weechat.infolist_get('irc_channel', '', '%s,%s' % (SERVER_NAME, CHANNEL_NAME))
     while weechat.infolist_next(INFOLIST):
@@ -277,7 +293,7 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
         if not WRECON_CHANNEL_KEY in FOUND_CHANNEL_MODE:
           RESULT_CHANNEL = 1
         if not 'k' in FOUND_CHANNEL_MODE:
-          RESULT_MODE = 1
+          RESULT_MODE    = 1
         
     weechat.infolist_free(INFOLIST)
     
@@ -642,3 +658,158 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
   
   #
   ##### END FUNCTION CHECK AND UPDATE
+  
+  #####
+  #
+  # FUNCTION GET BUFFERS AND BUFFER OF REGISTERED CHANNEL
+  
+  def get_buffers():
+    WRECON_BUFFERS  = {}
+    INFOLIST_BUFFER = weechat.infolist_get('buffer', '', '')
+    while weechat.infolist_next(INFOLIST_BUFFER):
+      BUFFER_POINTER              = weechat.infolist_pointer(INFOLIST_BUFFER, 'pointer')
+      BUFFER_NAME                 = weechat.buffer_get_string(BUFFER_POINTER, 'localvar_name')
+      WRECON_BUFFERS[BUFFER_NAME] = BUFFER_POINTER
+    weechat.infolist_free(INFOLIST_BUFFER)
+    return WRECON_BUFFERS
+  
+  def get_buffer_channel():
+    global WRECON_SERVER, WRECON_CHANNEL
+    wrecon_BUFFER_NAME = '%s.%s' % (WRECON_SERVER, WRECON_CHANNEL)
+    WRECON_BUFFERS     = get_buffers()
+    if wrecon_BUFFER_NAME in WRECON_BUFFERS:
+      return WRECON_BUFFERS[wrecon_BUFFER_NAME]
+    else:
+      return ''
+  
+  #
+  ##### END FUNCTION GET BUFFERS AND BUFFER OF REGISTERED CHANNEL
+  
+  #####
+  #
+  # FUNCTION STATUS CHANNEL
+  # We need to know how many users are joined
+  
+  def get_status_channel():
+    global WRECON_SERVER, WRECON_CHANNEL
+    INFOLIST_CHANNEL  = weechat.infolist_get('irc_channel', '', WRECON_SERVER)
+    CHANNEL_STATUS    = {}
+    DO_RECORD         = False
+    while weechat.infolist_next(INFOLIST_CHANNEL):
+      CHANNEL_FIELDS = weechat.infolist_fields(INFOLIST_CHANNEL).split(",")
+      for CHANNEL_FIELD in CHANNEL_FIELDS:
+        (CHANNEL_FIELD_TYPE, CHANNEL_FIELD_NAME) = CHANNEL_FIELD.split(':', 1)
+        if CHANNEL_FIELD_TYPE == 'i':
+          CHANNEL_FIELD_VALUE = weechat.infolist_integer(INFOLIST_CHANNEL, CHANNEL_FIELD_NAME)
+        elif CHANNEL_FIELD_TYPE == 'p':
+          CHANNEL_FIELD_VALUE = weechat.infolist_pointer(INFOLIST_CHANNEL, CHANNEL_FIELD_NAME)
+        elif CHANNEL_FIELD_TYPE == 's':
+          CHANNEL_FIELD_VALUE = weechat.infolist_string(INFOLIST_CHANNEL, CHANNEL_FIELD_NAME)
+        elif CHANNEL_FIELD_TYPE == 'b':
+          CHANNEL_FIELD_VALUE = weechat.infolist_buffer(INFOLIST_CHANNEL, CHANNEL_FIELD_NAME)
+        elif CHANNEL_FIELD_TYPE == 't':
+          CHANNEL_FIELD_VALUE = weechat.infolist_time(INFOLIST_CHANNEL, CHANNEL_FIELD_NAME)
+        else:
+          CHANNEL_FIELD_VALUE = 'N/A'
+        if CHANNEL_FIELD_NAME == 'buffer_short_name' and CHANNEL_FIELD_VALUE == WRECON_CHANNEL:
+          DO_RECORD = True
+        elif CHANNEL_FIELD_NAME == 'buffer_short_name' and CHANNEL_FIELD_VALUE != WRECON_CHANNEL:
+          DO_RECORD = False
+        if DO_RECORD == True:
+          CHANNEL_STATUS[CHANNEL_FIELD_NAME] = CHANNEL_FIELD_VALUE
+    weechat.infolist_free(INFOLIST_CHANNEL)
+
+    if 'nicks_count' in CHANNEL_STATUS:
+      return CHANNEL_STATUS['nicks_count']
+    else:
+      return 0
+  #
+  ##### END FUNCTION STATUS CHANNEL
+  
+  #####
+  #
+  # HOOK AND UNHOOK BUFFER
+  
+  def hook_buffer():
+    global SCRIPT_CALLBACK_BUFFER, WRECON_BUFFER_HOOKED, WRECON_HOOK_BUFFER, WRECON_BUFFER_CHANNEL
+    WRECON_BUFFER_CHANNEL = get_buffer_channel()
+    if WRECON_BUFFER_HOOKED == False:
+      if WRECON_BUFFER_CHANNEL:
+        WRECON_BUFFER_HOOKED = True
+        WRECON_HOOK_BUFFER    = weechat.hook_print(WRECON_BUFFER_CHANNEL, '', COMMAND_IN_BUFFER, 1, SCRIPT_CALLBACK_BUFFER, '')
+    return weechat.WEECHAT_RC_OK
+  
+  def unhook_buffer():
+    global WRECON_BUFFER_HOOKED, WRECON_HOOK_BUFFER
+    if WRECON_BUFFER_HOOKED == True:
+      WRECON_BUFFER_HOOKED = False
+      weechat.unhook(WRECON_HOOK_BUFFER)
+    return weechat.WEECHAT_RC_OK
+  
+  #
+  ##### END HOOK AND UNHOOK BUFFER
+  
+  #####
+  #
+  # FUNCTION AUTOCONNECT SERVER / AUTOJOIN CHANNEL
+  
+  def autoconnect():
+    global WRECON_SERVER, WRECON_CHANNEL
+    if WRECON_SERVER and WRECON_CHANNEL:
+      if get_status_server() == 0:
+        autoconnect_1_server()
+      else:
+        BUFFER_SERVER = get_buffers()
+        autojoin_1_channel(BUFFER_SERVER['server.%s' % (WRECON_SERVER)])
+    return weechat.WEECHAT_RC_OK
+  
+  #
+  # AUTOCONNECT - SERVER
+  #
+  
+  def autoconnect_1_server():
+    global WRECON_SERVER
+    weechat.command('', '/connect %s' % (WRECON_SERVER))
+    WRECON_HOOK_CONNECT_SERVER = weechat.hook_timer(1*1000, 0, 20, 'autoconnect_2_server_status', '')
+    return weechat.WEECHAT_RC_OK
+  
+  #
+  # AUTOCONNECT - SERVER STATUS
+  #
+  
+  def autoconnect_2_server_status(arg1, arg2):
+    global WRECON_SERVER
+    if get_status_server() == 1:
+      weechat.unhook(WRECON_HOOK_CONNECT_SERVER)
+      WRECON_BUFFERS = get_buffers()
+      autojoin_1_channel(WRECON_BUFFERS['server.%s' % (WRECON_SERVER)])
+    return weechat.WEECHAT_RC_OK
+  
+  #
+  # AUTOJOIN - CHANNEL
+  #
+  
+  def autojoin_1_channel(buffer):
+    global WRECON_CHANNEL, WRECON_CHANNEL_KEY, WRECON_HOOK_JOIN, WRECON_SERVER 
+    weechat.command(buffer, '/join %s %s' % (WRECON_CHANNEL, WRECON_CHANNEL_KEY))
+    WRECON_HOOK_JOIN = weechat.hook_timer(1*1000, 0, 5, 'autojoin_2_channel_status', '')
+    return weechat.WEECHAT_RC_OK
+  
+  #
+  # AUTOJOIN - CHANNEL STATUS
+  #
+  
+  def autojoin_2_channel_status(arg1, arg2):
+    global WRECON_HOOK_JOIN, WRECON_AUTO_ADVERTISED, WRECON_HOOK_BUFFER, WRECON_BUFFER_CHANNEL, SCRIPT_CALLBACK_BUFFER
+    
+    if arg2 == '0':
+      weechat.unhook(WRECON_HOOK_JOIN)
+    
+    if get_status_channel() > 0:
+      weechat.unhook(WRECON_HOOK_JOIN)
+      if WRECON_AUTO_ADVERTISED == False:
+        hook_buffer()
+        f_autoconnect_channel_mode(WRECON_BUFFER_CHANNEL)
+        command_advertise('', WRECON_BUFFER_CHANNEL, '', '')
+        WRECON_AUTO_ADVERTISED = True
+    return weechat.WEECHAT_RC_OK
