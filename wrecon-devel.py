@@ -253,7 +253,10 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
   # Will check my nick is operator, if yes, it will return 1, else 0
   
   def get_status_nick(SERVER_NAME, CHANNEL_NAME)
+  
     RESULT_NICK    = 0
+    
+    # Get name of our nick
     MY_NICK_NAME   = weechat.info_get('irc_nick', SERVER_NAME)
     INFOLIST       = weechat.infolist_get('irc_nick', '', '%s,%s' % (SERVER_NAME, CHANNEL_NAME))
     
@@ -269,13 +272,13 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
   return RESULT_NICK
   
   #
-  ##### END FUNCTION CHECK MY NICK IS OPERATOR
+  ##### END FUNCTION GET STATUS NICK
   
   #####
   #
   # FUNCTION FOR VERIFY CHANNEL SETUP AND POSSIBILITY TO CHANGE MODE IF NECESSARY
   
-  def setup_channel(DATA, BUFFER, SERVER_NAME, CHANNEL_NAME):
+  def setup_channel_mode(DATA, BUFFER, SERVER_NAME, CHANNEL_NAME):
     global WRECON_CHANNEL_KEY
 
     RESULT         = 0
@@ -318,11 +321,11 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
   # ENCRYPT
   #
   
-  def encrypt_string(LEVEL, INPUT_STRING, INPUT_KEY):
+  def string_encrypt(LEVEL, INPUT_STRING, INPUT_KEY):
     global ENCRYPT_LEVEL
     return ENCRYPT_LEVEL[LEVEL]
 
-  def encrypt_string_level_0(INPUT_STRING, INPUT_KEY):
+  def string_encrypt_level_0(INPUT_STRING, INPUT_KEY):
     INPUT_KEY   = correct_key_length(INPUT_STRING, INPUT_KEY)
     OUTPUT_LIST = []
     for INDEX in range(len(INPUT_STRING)):
@@ -331,27 +334,27 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
       OUTPUT_LIST.append(OUTPUT_CHAR)
     return base64.urlsafe_b64encode(''.join(OUTPUT_LIST).encode()).decode()
   
-  def encrypt_string_level_1(INPUT_STRING, INPUT_KEY):
+  def string_encrypt_level_1(INPUT_STRING, INPUT_KEY):
     INPUT_KEY             = correct_key_length(INPUT_STRING, INPUT_KEY)
     NEW_INPUT_KEY         = get_hash(INPUT_KEY)
     SALT_STRING           = f_random_generator(8)
-    OUTPUT_RESULT_LEVEL_1 = encrypt_string_level_0(INPUT_STRING, SALT_STRING + INPUT_KEY)
-    OUTPUT_RESULT_LEVEL_2 = encrypt_string_level_0(SALT_STRING + OUTPUT_RESULT_LEVEL_1, NEW_INPUT_KEY)
+    OUTPUT_RESULT_LEVEL_1 = string_encrypt_level_0(INPUT_STRING, SALT_STRING + INPUT_KEY)
+    OUTPUT_RESULT_LEVEL_2 = string_encrypt_level_0(SALT_STRING + OUTPUT_RESULT_LEVEL_1, NEW_INPUT_KEY)
     return base64.urlsafe_b64encode(OUTPUT_RESULT_LEVEL_2.encode()).decode()
   
   global ENCRYPT_LEVEL
-  ENCRYPT_LEVEL[0] = encrypt_string_level_0
-  ENCRYPT_LEVEL[1] = encrypt_string_level_1
+  ENCRYPT_LEVEL[0] = string_encrypt_level_0
+  ENCRYPT_LEVEL[1] = string_encrypt_level_1
   
   #
   # DECRYPT
   #
   
-  def decrypt_string(LEVEL, INPUT_STRING, INPUT_KEY):
+  def string_decrypt(LEVEL, INPUT_STRING, INPUT_KEY):
     global DECRYPT_LEVEL
     return DECRYPT_LEVEL[LEVEL] 
   
-  def decrypt_string_level_0(INPUT_STRING, INPUT_KEY):
+  def string_decrypt_level_0(INPUT_STRING, INPUT_KEY):
     INPUT_KEY     = correct_key_length(INPUT_STRING, INPUT_KEY)
     OUTPUT_LIST   = []
     DECODE_STRING = base64.urlsafe_b64decode(INPUT_STRING).decode()
@@ -361,18 +364,18 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
       OUTPUT_LIST.append(OUTPUT_CHAR)
     return ''.join(OUTPUT_LIST)
   
-  def decrypt_string_level_1(INPUT_STRING, INPUT_KEY):
+  def string_decrypt_level_1(INPUT_STRING, INPUT_KEY):
     INPUT_KEY             = correct_key_length(INPUT_STRING, INPUT_KEY)
     DECODE_STRING         = base64.urlsafe_b64decode(INPUT_STRING).decode()
     NEW_INPUT_KEY         = get_hash(INPUT_KEY)
-    OUTPUT_RESULT_LEVEL_2 = decrypt_string_level_0(DECODE_STRING, NEW_INPUT_KEY)
+    OUTPUT_RESULT_LEVEL_2 = string_decrypt_level_0(DECODE_STRING, NEW_INPUT_KEY)
     SALT_STRING           = OUTPUT_RESULT_LEVEL_2[:8]
-    OUTPUT_RESULT_LEVEL_1 = decrypt_string_level_0(OUTPUT_RESULT_LEVEL_2[8:], SALT_STRING + INPUT_KEY)
+    OUTPUT_RESULT_LEVEL_1 = string_decrypt_level_0(OUTPUT_RESULT_LEVEL_2[8:], SALT_STRING + INPUT_KEY)
     return OUTPUT_RESULT_LEVEL_1
   
   global DECRYPT_LEVEL
-  DECRYPT_LEVEL[0] = decrypt_string_level_0
-  DECRYPT_LEVEL[1] = decrypt_string_level_1
+  DECRYPT_LEVEL[0] = string_decrypt_level_0
+  DECRYPT_LEVEL[1] = string_decrypt_level_1
   
   #
   #### END FUNCTION ENCRYPT AND DECTRYPT STRING
@@ -665,7 +668,7 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
   
   def get_buffers():
     WRECON_BUFFERS  = {}
-    INFOLIST_BUFFER = weechat.infolist_get('buffer', '', '')
+    INFOLIST_BUFFER = weechat.infolist_get('BUFFER', '', '')
     while weechat.infolist_next(INFOLIST_BUFFER):
       BUFFER_POINTER              = weechat.infolist_pointer(INFOLIST_BUFFER, 'pointer')
       BUFFER_NAME                 = weechat.buffer_get_string(BUFFER_POINTER, 'localvar_name')
@@ -730,16 +733,16 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
   #
   # HOOK AND UNHOOK BUFFER
   
-  def hook_buffer():
+  def buffer_hook():
     global SCRIPT_CALLBACK_BUFFER, WRECON_BUFFER_HOOKED, WRECON_HOOK_BUFFER, WRECON_BUFFER_CHANNEL
     WRECON_BUFFER_CHANNEL = get_buffer_channel()
     if WRECON_BUFFER_HOOKED == False:
       if WRECON_BUFFER_CHANNEL:
         WRECON_BUFFER_HOOKED = True
-        WRECON_HOOK_BUFFER    = weechat.hook_print(WRECON_BUFFER_CHANNEL, '', COMMAND_IN_BUFFER, 1, SCRIPT_CALLBACK_BUFFER, '')
+        WRECON_HOOK_BUFFER   = weechat.hook_print(WRECON_BUFFER_CHANNEL, '', COMMAND_IN_BUFFER, 1, SCRIPT_CALLBACK_BUFFER, '')
     return weechat.WEECHAT_RC_OK
   
-  def unhook_buffer():
+  def buffer_unhook():
     global WRECON_BUFFER_HOOKED, WRECON_HOOK_BUFFER
     if WRECON_BUFFER_HOOKED == True:
       WRECON_BUFFER_HOOKED = False
@@ -789,9 +792,9 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
   # AUTOJOIN - CHANNEL
   #
   
-  def autojoin_1_channel(buffer):
+  def autojoin_1_channel(BUFFER):
     global WRECON_CHANNEL, WRECON_CHANNEL_KEY, WRECON_HOOK_JOIN, WRECON_SERVER 
-    weechat.command(buffer, '/join %s %s' % (WRECON_CHANNEL, WRECON_CHANNEL_KEY))
+    weechat.command(BUFFER, '/join %s %s' % (WRECON_CHANNEL, WRECON_CHANNEL_KEY))
     WRECON_HOOK_JOIN = weechat.hook_timer(1*1000, 0, 5, 'autojoin_2_channel_status', '')
     return weechat.WEECHAT_RC_OK
   
@@ -808,8 +811,36 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
     if get_status_channel() > 0:
       weechat.unhook(WRECON_HOOK_JOIN)
       if WRECON_AUTO_ADVERTISED == False:
-        hook_buffer()
-        f_autoconnect_channel_mode(WRECON_BUFFER_CHANNEL)
-        command_advertise('', WRECON_BUFFER_CHANNEL, '', '')
-        WRECON_AUTO_ADVERTISED = True
+        buffer_hook()
+        setup_channel(WRECON_BUFFER_CHANNEL)
+        # ~ command_advertise('', WRECON_BUFFER_CHANNEL, '', '')
+        # ~ WRECON_AUTO_ADVERTISED = True
     return weechat.WEECHAT_RC_OK
+
+  #
+  ##### END FUNCTION AUTOCONNECT SERVER / AUTOJOIN CHANNEL
+  
+  #####
+  #
+  # FUNCTION SETUP CHANNEL (title of buffer, and mode of channel)
+  
+  def setup_channel(BUFFER):
+    global WRECON_CHANNEL, WRECON_CHANNEL_KEY, WRECON_SERVER
+    setup_buffer_title(BUFFER, WRECON_SERVER, WRECON_CHANNEL)
+    setup_channel_mode('', BUFFER, WRECON_SERVER, WRECON_CHANNEL)
+    return weechat.WEECHAT_RC_OK
+  
+  #
+  ##### END FUNCTION SETUP CHANNEL  
+
+  #####
+  #
+  # FUNCTION CHANGE BUFFER TITLE
+  
+  def setup_buffer_title(BUFFER, WRECON_SERVER, WRECON_CHANNEL):
+    global WRECON_BOT_NAME, WRECON_BOT_ID
+    weechat.buffer_set(BUFFER, 'title', 'Weechat Remote control - %s - %s - %s [%s]' % (WRECON_SERVER, WRECON_CHANNEL, WRECON_BOT_NAME, WRECON_BOT_ID))
+    return weechat.WEECHAT_RC_OK
+  
+  #
+  ##### END FUNCTION CHANGE BUFFER TITLE
