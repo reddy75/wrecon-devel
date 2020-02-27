@@ -71,7 +71,7 @@
 # Weechat, Tmate, Python3
 # Python3 modules:
 # - ast, base64, contextlib, datetime, gnupg, hashlib, json, os, random,
-# - shutil, string, sys, tarfile, time, urllib
+# - shutil, string, sys, tarfile, time, urllib, uuid
 # 
 # 
 # Limitations:
@@ -105,7 +105,7 @@ SCRIPT_UNLOAD    = 'wrecon_unload'
 
 SCRIPT_CONTINUE  = True
 import importlib
-for IMPORT_MOD in ['ast', 'base64', 'contextlib', 'datetime', 'gnupg', 'hashlib', 'json', 'os', 'random', 'shutil', 'string', 'sys', 'tarfile', 'time', 'urllib', 'weechat']:
+for IMPORT_MOD in ['ast', 'base64', 'contextlib', 'datetime', 'gnupg', 'hashlib', 'json', 'os', 'random', 'shutil', 'string', 'sys', 'tarfile', 'time', 'urllib', 'uuid', 'weechat']:
   try:
     IMPORT_OBJECT = importlib.import_module(IMPORT_MOD, package=None)
     globals()[IMPORT_MOD] = IMPORT_OBJECT
@@ -352,7 +352,7 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
   
   def string_decrypt(LEVEL, INPUT_STRING, INPUT_KEY):
     global DECRYPT_LEVEL
-    return DECRYPT_LEVEL[LEVEL] 
+    return DECRYPT_LEVEL[LEVEL]
   
   def string_decrypt_level_0(INPUT_STRING, INPUT_KEY):
     INPUT_KEY     = correct_key_length(INPUT_STRING, INPUT_KEY)
@@ -826,7 +826,7 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
   
   def setup_channel(BUFFER):
     global WRECON_CHANNEL, WRECON_CHANNEL_KEY, WRECON_SERVER
-    setup_buffer_title(BUFFER, WRECON_SERVER, WRECON_CHANNEL)
+    setup_channel_buffer_title(BUFFER, WRECON_SERVER, WRECON_CHANNEL)
     setup_channel_mode('', BUFFER, WRECON_SERVER, WRECON_CHANNEL)
     return weechat.WEECHAT_RC_OK
   
@@ -837,10 +837,27 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
   #
   # FUNCTION CHANGE BUFFER TITLE
   
-  def setup_buffer_title(BUFFER, WRECON_SERVER, WRECON_CHANNEL):
+  def setup_channel_buffer_title(BUFFER, WRECON_SERVER, WRECON_CHANNEL):
     global WRECON_BOT_NAME, WRECON_BOT_ID
     weechat.buffer_set(BUFFER, 'title', 'Weechat Remote control - %s - %s - %s [%s]' % (WRECON_SERVER, WRECON_CHANNEL, WRECON_BOT_NAME, WRECON_BOT_ID))
     return weechat.WEECHAT_RC_OK
   
   #
   ##### END FUNCTION CHANGE BUFFER TITLE
+  
+  #####
+  #
+  # FUNCTION GET DEVICE SEECRETS
+  
+  def get_device_seecrets():
+    USER_HOME = str(os.path.expanduser('~'))
+    USER      = str(USER_HOME.split('/')[-1])
+    DEVICE_ID = str(uuid.uuid1(uuid.getnode(),0)[24:])
+    SEECRETS  = get_hash(USER + USER_HOME + DEVICE_ID)
+    del USER_HOME
+    del USER
+    del DEVICE_ID
+    return str(SEECRETS)
+  
+  #
+  ##### END FUNCTION GET DEVICE SEECRETS
