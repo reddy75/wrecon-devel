@@ -278,7 +278,7 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
   #
   # FUNCTION FOR VERIFY CHANNEL SETUP AND POSSIBILITY TO CHANGE MODE IF NECESSARY
   
-  def setup_channel_mode(DATA, BUFFER, SERVER_NAME, CHANNEL_NAME):
+  def setup_channel_2_mode(DATA, BUFFER, SERVER_NAME, CHANNEL_NAME):
     global WRECON_CHANNEL_KEY
 
     RESULT         = 0
@@ -702,7 +702,7 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
       CHANNEL_FIELDS = weechat.infolist_fields(INFOLIST_CHANNEL).split(",")
       for CHANNEL_FIELD in CHANNEL_FIELDS:
         (CHANNEL_FIELD_TYPE, CHANNEL_FIELD_NAME) = CHANNEL_FIELD.split(':', 1)
-        if CHANNEL_FIELD_TYPE == 'i':
+        if CHANNEL_FIELD_TYPE == 'INDEX':
           CHANNEL_FIELD_VALUE = weechat.infolist_integer(INFOLIST_CHANNEL, CHANNEL_FIELD_NAME)
         elif CHANNEL_FIELD_TYPE == 'p':
           CHANNEL_FIELD_VALUE = weechat.infolist_pointer(INFOLIST_CHANNEL, CHANNEL_FIELD_NAME)
@@ -822,12 +822,12 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
   
   #####
   #
-  # FUNCTION SETUP CHANNEL (title of buffer, and mode of channel)
+  # FUNCTION SETUP CHANNEL (title of BUFFER, and mode of channel)
   
   def setup_channel(BUFFER):
     global WRECON_CHANNEL, WRECON_CHANNEL_KEY, WRECON_SERVER
-    setup_channel_buffer_title(BUFFER, WRECON_SERVER, WRECON_CHANNEL)
-    setup_channel_mode('', BUFFER, WRECON_SERVER, WRECON_CHANNEL)
+    setup_channel_1_title_of_buffer(BUFFER, WRECON_SERVER, WRECON_CHANNEL)
+    setup_channel_2_mode('', BUFFER, WRECON_SERVER, WRECON_CHANNEL)
     return weechat.WEECHAT_RC_OK
   
   #
@@ -837,7 +837,7 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
   #
   # FUNCTION CHANGE BUFFER TITLE
   
-  def setup_channel_buffer_title(BUFFER, WRECON_SERVER, WRECON_CHANNEL):
+  def setup_channel_1_title_of_buffer(BUFFER, WRECON_SERVER, WRECON_CHANNEL):
     global WRECON_BOT_NAME, WRECON_BOT_ID
     weechat.buffer_set(BUFFER, 'title', 'Weechat Remote control - %s - %s - %s [%s]' % (WRECON_SERVER, WRECON_CHANNEL, WRECON_BOT_NAME, WRECON_BOT_ID))
     return weechat.WEECHAT_RC_OK
@@ -847,17 +847,94 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
   
   #####
   #
-  # FUNCTION GET DEVICE SEECRETS
+  # FUNCTION GET DEVICE SECRETS
   
   def get_device_seecrets():
-    USER_HOME = str(os.path.expanduser('~'))
-    USER      = str(USER_HOME.split('/')[-1])
-    DEVICE_ID = str(uuid.uuid1(uuid.getnode(),0)[24:])
-    SEECRETS  = get_hash(USER + USER_HOME + DEVICE_ID)
-    del USER_HOME
-    del USER
-    del DEVICE_ID
-    return str(SEECRETS)
+    SECRET1 = str(os.path.expanduser('~'))
+    SECRET2 = str(SECRET1.split('/')[-1])
+    SECRET3 = str(uuid.uuid1(uuid.getnode(),0)[24:])
+    SECRETS = get_hash(SECRET2 + SECRET3 + SECRET1)
+    del SECRET1
+    del SECRET2
+    del SECRET3
+    return str(SECRETS)
   
   #
-  ##### END FUNCTION GET DEVICE SEECRETS
+  ##### END FUNCTION GET DEVICE SECRETS
+  
+  #####
+  #
+  # FUNCTION SETUP AUTOJOIN ADD / DEL / SAVE
+  
+  def setup_autojoin(BUFFER, FUNCTION, WRECON_SERVER, WRECON_CHANNEL):
+    global CALLBACK_SETUP_AUTOJOIN
+    SAVE_SETUP = False
+    
+    # Check FUNCTION contain 'add' or 'del'
+    if FUNCTION in CALLBACK_SETUP_AUTOJOIN:
+      WEECHAT_SERVER_AUTOJOIN          = weechat.string_eval_expression("${irc.server.%s.autojoin}" % (WRECON_SERVER), {}, {}, {})
+      WEECHAT_SERVER_AUTOJOIN_CHANNELS = WEECHAT_SERVER_AUTOJOIN.split(' ')[0].split(',')
+      WEECHAT_SERVER_AUTOJION_KEYS     = WEECHAT_SERVER_AUTOJOIN.split(' ')[1].split(',')
+      
+      SAVE_SETUP, WEECHAT_SERVER_AUTOJOIN_CHANNELS, WEECHAT_SERVER_AUTOJION_KEYS = CALLBACK_SETUP_AUTOJOIN[FUNCTION](WRECON_CHANNEL, WEECHAT_SERVER_AUTOJOIN_CHANNELS, WEECHAT_SERVER_AUTOJION_KEYS)
+      
+      if SAVE_SETUP == True:
+        setup_autojoin_save(BUFFER, WRECON_SERVER, WEECHAT_SERVER_AUTOJOIN_CHANNELS, WEECHAT_SERVER_AUTOJION_KEYS)
+      
+    return SAVE_SETUP
+  
+  #
+  # FUNCTION SETUP AUTOJOIN ADD
+  #
+  
+  def setup_autojoin_add(WRECON_CHANNEL, WEECHAT_SERVER_AUTOJOIN_CHANNELS, WEECHAT_SERVER_AUTOJION_KEYS):
+    SAVE_SETUP         = False
+    WRECON_CHANNEL_KEY = '${sec.data.wrecon_channel_key}'
+    
+    if not WRECON_CHANNEL in WEECHAT_SERVER_AUTOJOIN_CHANNELS:
+      WEECHAT_SERVER_AUTOJOIN_CHANNELS.append(WRECON_CHANNEL)
+      WEECHAT_SERVER_AUTOJION_KEYS.append(WRECON_CHANNEL_KEY)
+      SAVE_SETUP = True
+    else:
+      # Find index of my registered channel and test it have same setup of secure key
+      CHANNEL_INDEX = [INDEX for INDEX, ELEMENT in enumerate(WEECHAT_SERVER_AUTOJOIN_CHANNELS) if WRECON_CHANNEL in ELEMENT]
+      for INDEX in CHANNEL_INDEX:
+        if not WRECON_CHANNEL_KEY in WEECHAT_SERVER_AUTOJION_KEYS[INDEX]:
+          WEECHAT_SERVER_AUTOJION_KEYS[INDEX] = WRECON_CHANNEL_KEY
+          SAVE_SETUP = True
+
+      return [SAVE_SETUP, WEECHAT_SERVER_AUTOJOIN_CHANNELS, WEECHAT_SERVER_AUTOJION_KEYS]
+  
+  #
+  # FUNCTION SETUP AUTOJOIN DEL
+  #
+  
+  def setup_autojoin_del(WRECON_CHANNEL, WEECHAT_SERVER_AUTOJOIN_CHANNELS, WEECHAT_SERVER_AUTOJION_KEYS):
+    SAVE_SETUP = False
+    
+    if WRECON_CHANNEL in WEECHAT_SERVER_AUTOJOIN_CHANNELS:
+      # Find index of my registered channel
+      CHANNEL_INDEX = [INDEX for INDEX, ELEMENT in enumerate(WEECHAT_SERVER_AUTOJOIN_CHANNELS) if WRECON_CHANNEL in ELEMENT]
+      for INDEX in CHANNEL_INDEX:
+        del WEECHAT_SERVER_AUTOJOIN_CHANNELS[INDEX]
+        del WEECHAT_SERVER_AUTOJION_KEYS[INDEX]
+      SAVE_SETUP = True
+    return [SAVE_SETUP, WEECHAT_SERVER_AUTOJOIN_CHANNELS, WEECHAT_SERVER_AUTOJION_KEYS]
+  
+  #
+  # FUNCTION SETUP AUTOJOIN SAVE
+  #
+  
+  def setup_autojoin_save(BUFFER, WRECON_SERVER, WEECHAT_SERVER_AUTOJOIN_CHANNELS, WEECHAT_SERVER_AUTOJION_KEYS):
+    EXPORT_CHANNELS = ','.join(map(str, WEECHAT_SERVER_AUTOJOIN_CHANNELS))
+    EXPORT_KEYS     = ','.join(map(str, WEECHAT_SERVER_AUTOJION_KEYS))
+    EXPORT_DATA     = '%s %s' % (EXPORT_CHANNELS, EXPORT_KEYS)
+    weechat.command(BUFFER, '/set irc.server.%s.autojoin %s' % (WRECON_SERVER, EXPORT_DATA))
+    return
+  
+  global CALLBACK_SETUP_AUTOJOIN
+  CALLBACK_SETUP_AUTOJOIN['add'] = setup_autojoin_add
+  CALLBACK_SETUP_AUTOJOIN['del'] = setup_autojoin_del
+  
+  #
+  ###### END FUNCTION SETUP AUTOJOIN ADD / DEL / SAVE
