@@ -543,7 +543,7 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
     if UPDATE_CONTINUE == True:
       UPDATE_CONTINUE, UPDATE_NEXT_FUNCTION, OUTPUT_MESSAGE = UPDATE_NEXT_FUNCTION(OUTPUT_MESSAGE, INSTALL_FILE)
     
-    display_message(DATA, BUFFER, OUTPUT_MESSAGE)
+    display_message(BUFFER, OUTPUT_MESSAGE)
     
     # AFTER SUCCESSFUL INSTALLATION WE CAN RESTART
     if UPDATE_CONTINUE == True:
@@ -576,7 +576,7 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
     ERROR_GET = False
     try:
       URL_DATA = urllib.request.urlopen(BASE_API_URL)
-    except (urllib.error.HTTPError, urllib.error.URLerror, urllib.error.ContentTooShortError()) as ERROR:
+    except (urllib.error.HTTPError, urllib.error.ContentTooShortError, OSError) as ERROR:
       ERROR_GET  = True
       ERROR_DATA = ERROR.__dict__
     
@@ -585,7 +585,8 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
       if 'code' in ERROR_DATA and 'msg' in ERROR_DATA:
         OUTPUT_MESSAGE.append('ERROR CODE    : %s' % ERROR_DATA['code'])
         OUTPUT_MESSAGE.append('ERROR MESSAGE : %s' % ERROR_DATA['msg'])
-      OUTPUT_MESSAGE.append('ERROR DATA    : %s' % ERROR_DATA)
+      # ~ for KEY in ERROR_DATA:
+        # ~ OUTPUT_MESSAGE.append('ERROR DATA    : %10s : %s' % (KEY, ERROR_DATA[KEY]))
     else:
       GET_DATA       = json.loads(URL_DATA.read().decode('utf8'))
       LATEST_RELEASE = GET_DATA['tag_name'].split('v')[1]
@@ -1046,3 +1047,5 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
   
   #
   ###### END FUNCTION SETUP AUTOJOIN ADD / DEL (/ SAVE)
+  
+  
