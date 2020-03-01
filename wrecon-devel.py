@@ -226,7 +226,11 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
   
   def get_random_string(STRING_LENGTH):
     STR_LETTERS_AND_DIGITS = string.ascii_letters + string.digits
+    
     return ''.join(random.choice(STR_LETTERS_AND_DIGITS) for INDEX in range(STRING_LENGTH))
+  
+  #
+  ##### END FUNCTION FOR GENERATING RANDOM CHARACTERS AND NUMBERS
   
   #####
   #
@@ -234,7 +238,11 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
   
   def get_hash(INPUT_STRING):
     RESULT = hashlib.md5(INPUT_STRING.encode())
+    
     return str(RESULT.hexdigest())
+  
+  #
+  ##### END FUNCTION GET HASH OF A STRING
   
   #####
   #
@@ -243,16 +251,21 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
   def get_command_uniq_id():
     global WRECON_COMMAND_COUNTER
     WRECON_COMMAND_COUNTER = WRECON_COMMAND_COUNTER + 1
+    
     if WRECON_COMMAND_COUNTER > 9999:
       WRECON_COMMAND_COUNTER = 0
+    
     return '%04d-%s' % (WRECON_COMMAND_COUNTER, get_random_string(4))
+  
+  #
+  ##### END FUNCTION FOR COUNTING COMMANDS AND ADD UNIQ HASH
   
   #####
   #
   # FUNCTION GET STATUS NICK
   # Will check my nick is operator, if yes, it will return 1, else 0
   
-  def get_status_nick(SERVER_NAME, CHANNEL_NAME)
+  def get_status_nick(SERVER_NAME, CHANNEL_NAME):
   
     RESULT_NICK    = 0
     
@@ -269,7 +282,7 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
           RESULT_NICK = 1
     weechat.infolist_free(INFOLIST)
     
-  return RESULT_NICK
+    return RESULT_NICK
   
   #
   ##### END FUNCTION GET STATUS NICK
@@ -303,82 +316,180 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
     if RESULT_NICK == 1:
       if RESULT_MODE == 1 or RESULT_CHANNEL == 1:
         weechat.command(BUFFER, '/mode %s -n+sk %s' % (CHANNEL_NAME, WRECON_CHANNEL_KEY))
-    return RESULT
     
+    return RESULT
+  
+  #
+  ##### END FUNCTION FOR VERIFY CHANNEL SETUP AND POSSIBILITY TO CHANGE MODE IF NECESSARY
+  
   #####
   #
-  # FUNCTION ENCRYPT AND DECTRYPT STRING
-  #
-  # CORRECT LENGTH OF ENCRYPT/DECRYPT KEY
-
-  def correct_key_length(INPUT_STRING, INPUT_KEY):
-    OUTPUT_KEY = INPUT_KEY
-    while len(INPUT_STRING) > len(OUTPUT_KEY):
-      OUTPUT_KEY += INPUT_KEY
-    return OUTPUT_KEY
+  # FUNCTION ENCRYPT AND DECTRYPT STRING, CORRECT LENGTH OF KEY, REVERT STRING
   
   #
   # ENCRYPT
   #
   
-  def string_encrypt(LEVEL, INPUT_STRING, INPUT_KEY):
+  global ENCRYPT_LEVEL
+  ENCRYPT_LEVEL = {}
+  
+  def string_encrypt(LEVEL, INPUT_STRING, INPUT_KEY, INPUT_KEY2):
     global ENCRYPT_LEVEL
-    return ENCRYPT_LEVEL[LEVEL]
+    return ENCRYPT_LEVEL[LEVEL](INPUT_STRING, INPUT_KEY, INPUT_KEY2)
 
-  def string_encrypt_level_0(INPUT_STRING, INPUT_KEY):
-    INPUT_KEY   = correct_key_length(INPUT_STRING, INPUT_KEY)
+  def string_encrypt_function(INPUT_STRING, INPUT_KEY):
+    INPUT_KEY   = string_correct_key_length(INPUT_STRING, INPUT_KEY)
     OUTPUT_LIST = []
+    
     for INDEX in range(len(INPUT_STRING)):
       KEY_CHAR    = INPUT_STRING[INDEX % len(INPUT_STRING)]
       OUTPUT_CHAR = chr((ord(INPUT_KEY[INDEX]) + ord(KEY_CHAR)) % 256)
       OUTPUT_LIST.append(OUTPUT_CHAR)
-    return base64.urlsafe_b64encode(''.join(OUTPUT_LIST).encode()).decode()
+    
+    OUTPUT_LIST = ''.join(OUTPUT_LIST)
+    
+    return OUTPUT_LIST
+    
+  def string_encrypt_level_0(INPUT_STRING, INPUT_KEY, NULL):
+    OUTPUT_LIST = string_encrypt_function(INPUT_STRING, INPUT_KEY)
+    
+    OUTPUT_RESULT = base64.b64encode(OUTPUT_LIST.encode()).decode()
+    
+    return OUTPUT_RESULT
   
-  def string_encrypt_level_1(INPUT_STRING, INPUT_KEY):
-    INPUT_KEY             = correct_key_length(INPUT_STRING, INPUT_KEY)
+  def string_encrypt_level_1(INPUT_STRING, INPUT_KEY, NULL):
     NEW_INPUT_KEY         = get_hash(INPUT_KEY)
-    SALT_STRING           = f_random_generator(8)
-    OUTPUT_RESULT_LEVEL_1 = string_encrypt_level_0(INPUT_STRING, SALT_STRING + INPUT_KEY)
-    OUTPUT_RESULT_LEVEL_2 = string_encrypt_level_0(SALT_STRING + OUTPUT_RESULT_LEVEL_1, NEW_INPUT_KEY)
-    return base64.urlsafe_b64encode(OUTPUT_RESULT_LEVEL_2.encode()).decode()
+    SALT_STRING           = get_random_string(8)
+    OUTPUT_RESULT_LEVEL_1 = str(string_encrypt_function(INPUT_STRING, SALT_STRING + INPUT_KEY))
+    OUTPUT_RESULT_LEVEL_2 = string_encrypt_function(SALT_STRING + OUTPUT_RESULT_LEVEL_1, NEW_INPUT_KEY)
+    
+    OUTPUT_RESULT         = base64.b64encode(OUTPUT_RESULT_LEVEL_2.encode()).decode()
+    
+    return OUTPUT_RESULT
   
-  global ENCRYPT_LEVEL
+  def string_encrypt_level_2(INPUT_STRING, INPUT_KEY, INPUT_KEY2):
+    INPUT_STRING          = string_revert(INPUT_STRING)
+    INPUT_KEY             = string_join_keys(INPUT_KEY2, INPUT_KEY)
+    NEW_INPUT_KEY         = get_hash(INPUT_KEY)
+    SALT_STRING           = get_random_string(8)
+    OUTPUT_RESULT_LEVEL_1 = str(string_encrypt_function(INPUT_STRING, SALT_STRING + INPUT_KEY))
+    OUTPUT_RESULT_LEVEL_2 = string_encrypt_function(SALT_STRING + OUTPUT_RESULT_LEVEL_1, NEW_INPUT_KEY)
+    
+    OUTPUT_RESULT         = base64.b64encode(OUTPUT_RESULT_LEVEL_2.encode()).decode()
+    
+    return OUTPUT_RESULT
+  
   ENCRYPT_LEVEL[0] = string_encrypt_level_0
   ENCRYPT_LEVEL[1] = string_encrypt_level_1
+  ENCRYPT_LEVEL[2] = string_encrypt_level_2
   
   #
   # DECRYPT
   #
   
-  def string_decrypt(LEVEL, INPUT_STRING, INPUT_KEY):
+  global DECRYPT_LEVEL
+  DECRYPT_LEVEL = {}
+  
+  def string_decrypt(LEVEL, INPUT_STRING, INPUT_KEY, INPUT_KEY2):
     global DECRYPT_LEVEL
-    return DECRYPT_LEVEL[LEVEL]
+    
+    return DECRYPT_LEVEL[LEVEL](INPUT_STRING, INPUT_KEY, INPUT_KEY2)
   
-  def string_decrypt_level_0(INPUT_STRING, INPUT_KEY):
-    INPUT_KEY     = correct_key_length(INPUT_STRING, INPUT_KEY)
+  def string_decrypt_function(INPUT_STRING, INPUT_KEY):
+    INPUT_KEY     = string_correct_key_length(INPUT_STRING, INPUT_KEY)
     OUTPUT_LIST   = []
-    DECODE_STRING = base64.urlsafe_b64decode(INPUT_STRING).decode()
-    for INDEX in range(len(DECODE_STRING)):
+    
+    for INDEX in range(len(INPUT_STRING)):
       KEY_CHAR = INPUT_KEY[INDEX % len(INPUT_KEY)]
-      OUTPUT_CHAR = chr((256 + ord(DECODE_STRING[INDEX]) - ord(KEY_CHAR)) % 256)
+      OUTPUT_CHAR = chr((256 + ord(INPUT_STRING[INDEX]) - ord(KEY_CHAR)) % 256)
       OUTPUT_LIST.append(OUTPUT_CHAR)
-    return ''.join(OUTPUT_LIST)
+    
+    OUTPUT_LIST = ''.join(OUTPUT_LIST)
+    
+    return OUTPUT_LIST
   
-  def string_decrypt_level_1(INPUT_STRING, INPUT_KEY):
-    INPUT_KEY             = correct_key_length(INPUT_STRING, INPUT_KEY)
-    DECODE_STRING         = base64.urlsafe_b64decode(INPUT_STRING).decode()
+  def string_decrypt_level_0(INPUT_STRING, INPUT_KEY, NULL):
+    DECODE_STRING = base64.b64decode(INPUT_STRING).decode()
+    
+    OUTPUT_RESULT = string_decrypt_function(DECODE_STRING, INPUT_KEY)
+    
+    return OUTPUT_RESULT
+  
+  def string_decrypt_level_1(INPUT_STRING, INPUT_KEY, NULL):
+    DECODE_STRING         = base64.b64decode(INPUT_STRING).decode()
     NEW_INPUT_KEY         = get_hash(INPUT_KEY)
-    OUTPUT_RESULT_LEVEL_2 = string_decrypt_level_0(DECODE_STRING, NEW_INPUT_KEY)
+    OUTPUT_RESULT_LEVEL_2 = string_decrypt_function(DECODE_STRING, NEW_INPUT_KEY)
     SALT_STRING           = OUTPUT_RESULT_LEVEL_2[:8]
-    OUTPUT_RESULT_LEVEL_1 = string_decrypt_level_0(OUTPUT_RESULT_LEVEL_2[8:], SALT_STRING + INPUT_KEY)
+    OUTPUT_RESULT_LEVEL_1 = string_decrypt_function(OUTPUT_RESULT_LEVEL_2[8:], SALT_STRING + INPUT_KEY)
+    
     return OUTPUT_RESULT_LEVEL_1
   
-  global DECRYPT_LEVEL
+  def string_decrypt_level_2(INPUT_STRING, INPUT_KEY, INPUT_KEY2):
+    DECODE_STRING         = base64.b64decode(INPUT_STRING).decode()
+    
+    INPUT_KEY             = string_join_keys(INPUT_KEY2, INPUT_KEY)
+    NEW_INPUT_KEY         = get_hash(INPUT_KEY)
+    
+    OUTPUT_RESULT_LEVEL_2 = string_decrypt_function(DECODE_STRING, NEW_INPUT_KEY)
+    SALT_STRING           = OUTPUT_RESULT_LEVEL_2[:8]
+    
+    OUTPUT_RESULT_LEVEL_1 = string_decrypt_function(OUTPUT_RESULT_LEVEL_2[8:], SALT_STRING + INPUT_KEY)
+    
+    DECODE_STRING         = string_revert(OUTPUT_RESULT_LEVEL_1)
+    return DECODE_STRING
+    
   DECRYPT_LEVEL[0] = string_decrypt_level_0
   DECRYPT_LEVEL[1] = string_decrypt_level_1
+  DECRYPT_LEVEL[2] = string_decrypt_level_2
   
   #
-  #### END FUNCTION ENCRYPT AND DECTRYPT STRING
+  # CORRECT LENGTH OF KEY
+  #
+
+  def string_correct_key_length(INPUT_STRING, INPUT_KEY):
+    OUTPUT_KEY = INPUT_KEY
+    
+    while len(INPUT_STRING) > len(OUTPUT_KEY):
+      OUTPUT_KEY += INPUT_KEY
+    
+    return OUTPUT_KEY
+  
+  #
+  # REVERT STRING
+  #
+  
+  def string_revert(INPUT_STRING):
+    OUTPUT_STRING = ''
+    
+    for INDEX in range(len(INPUT_STRING)):
+      OUTPUT_STRING = INPUT_STRING[INDEX] + OUTPUT_STRING
+    
+    return OUTPUT_STRING
+  
+  #
+  # JOIN KEYS
+  #
+  
+  def string_join_keys(INPUT_KEY1, INPUT_KEY2):
+    OUTPUT_KEY   = ''
+    INDEX_KEY1   = 0
+    INDEX_KEY2   = 0
+    
+    for INDEX in range(len(INPUT_KEY1 + INPUT_KEY2)):
+      OUTPUT_KEY = OUTPUT_KEY + INPUT_KEY1[INDEX_KEY1] + INPUT_KEY2[INDEX_KEY2]
+      INDEX_KEY1 += 1
+      INDEX_KEY2 += 1
+      
+      if INDEX_KEY1 >= len(INPUT_KEY1):
+        INDEX_KEY1 = 0
+      
+      if INDEX_KEY2 >= len(INPUT_KEY2):
+        INDEX_KEY2 = 0
+    
+    return OUTPUT_KEY
+  
+  #
+  #### END FUNCFUNCTION ENCRYPT AND DECTRYPT STRING, CORRECT LENGTH OF KEY, REVERT STRING
 
   #####
   #
@@ -451,7 +562,7 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
     global SCRIPT_VERSION, SCRIPT_BASE_NAME
     
     UPDATE_EXIST   = False
-    NEXT_FUNCTION  = pass
+    NEXT_FUNCTION  = ''
     
     LATEST_RELEASE, ARCHIVE_FILE, DOWNLOAD_URL, EXTRACT_SUBDIRECTORY  = ['', '', '', '']
 
@@ -505,7 +616,7 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
     DOWNLOAD_DIRECTORY    = '%s/%s' % (ENVIRONMENT_VARIABLES['HOME'], '.wrecon-update')
     
     DIRECTORY_PREPARED    = False
-    NEXT_FUNCTION         = pass
+    NEXT_FUNCTION         = ''
     
     OUTPUT_MESSAGE.append('DOWNLOAD DIR    : %s' % DOWNLOAD_DIRECTORY)
     
@@ -535,11 +646,12 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
     import urllib.request
     
     DOWNLOAD_PREPARED = False
-    NEXT_FUNCTION     = pass
+    NEXT_FUNCTION     = ''
     
     DOWNLOAD_FILE     = os.path.join(DOWNLOAD_DIRECTORY, ARCHIVE_FILE)
     
-    with urllib.request.urlopen(DOWNLOAD_URL) as response, open(DOWNLOAD_FILE, 'wb') as OUT_FILE:
+    try:
+      with urllib.request.urlopen(DOWNLOAD_URL) as response, open(DOWNLOAD_FILE, 'wb') as OUT_FILE:
         shutil.copyfileobj(response, OUT_FILE)
       OUT_FILE.close()
       DOWNLOAD_PREPARED = True
@@ -563,7 +675,7 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
   
   def update_4_extract(OUTPUT_MESSAGE, DOWNLOAD_DIRECTORY, ARCHIVE_FILE):
     EXTRACT_PREPARED = False
-    NEXT_FUNCTION    = pass
+    NEXT_FUNCTION    = ''
     
     os.chdir(DOWNLOAD_DIRECTORY)
     
@@ -594,7 +706,7 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
     global SCRIPT_FILE, SCRIPT_FILE_SIG, PUBLIC_KEY
     
     VERIFY_SUCCESSFUL   = False
-    NEXT_FUNCTION       = pass
+    NEXT_FUNCTION       = ''
     
     NEW_FILE            = os.path.join(DOWNLOAD_DIRECTORY, EXTRACT_SUBDIRECTORY, SCRIPT_FILE)
     NEW_FILE_SIGNATURE  = os.path.join(DOWNLOAD_DIRECTORY, EXTRACT_SUBDIRECTORY, SCRIPT_FILE_SIG)
@@ -643,7 +755,7 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
     DESTINATION_DIRECTORY  = weechat.string_eval_path_home('%h', {}, {}, {})
     DESTINATION_DIRECTORY  = str(os.path.join(DESTINATION_DIRECTORY, 'python'))
     DESTINATION_FILE       = str(os.path.join(DESTINATION_DIRECTORY, SCRIPT_FILE))
-    SOURCE_FILE            = str(os.path.join(INSTALL_FILE)
+    SOURCE_FILE            = str(os.path.join(INSTALL_FILE))
     
     try:
       COPY_RESULT = shutil.copyfile(SOURCE_FILE, DESTINATION_FILE, follow_symlinks=True)
@@ -866,6 +978,9 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
   #
   # FUNCTION SETUP AUTOJOIN ADD / DEL (/ SAVE)
   
+  global CALLBACK_SETUP_AUTOJOIN
+  CALLBACK_SETUP_AUTOJOIN = {}
+  
   def setup_autojoin(BUFFER, FUNCTION, WRECON_SERVER, WRECON_CHANNEL):
     global CALLBACK_SETUP_AUTOJOIN
     SAVE_SETUP = False
@@ -926,7 +1041,6 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
     
     return [SAVE_SETUP, WEECHAT_SERVER_AUTOJOIN_CHANNELS, WEECHAT_SERVER_AUTOJOIN_KEYS]
   
-  global CALLBACK_SETUP_AUTOJOIN
   CALLBACK_SETUP_AUTOJOIN['add'] = setup_autojoin_add
   CALLBACK_SETUP_AUTOJOIN['del'] = setup_autojoin_del
   
