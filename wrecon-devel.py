@@ -988,18 +988,19 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
     
     # Check FUNCTION contain 'add' or 'del'
     if FUNCTION in CALLBACK_SETUP_AUTOJOIN:
-      WEECHAT_SERVER_AUTOJOIN          = weechat.string_eval_expression("${irc.server.%s.autojoin}" % (WRECON_SERVER), {}, {}, {})
-      WEECHAT_SERVER_AUTOJOIN_CHANNELS = WEECHAT_SERVER_AUTOJOIN.split(' ')[0].split(',')
-      WEECHAT_SERVER_AUTOJOIN_KEYS     = WEECHAT_SERVER_AUTOJOIN.split(' ')[1].split(',')
+      WEECHAT_SERVER_AUTOJOIN   = weechat.string_eval_expression("${irc.server.%s.autojoin}" % (WRECON_SERVER), {}, {}, {})
+      WEECHAT_CHANNELS_AUTOJOIN = WEECHAT_SERVER_AUTOJOIN.split(' ')[0].split(',')
+      WEECHAT_CHANNELS_KEYS     = WEECHAT_SERVER_AUTOJOIN.split(' ')[1].split(',')
       
-      SAVE_SETUP, WEECHAT_SERVER_AUTOJOIN_CHANNELS, WEECHAT_SERVER_AUTOJOIN_KEYS = CALLBACK_SETUP_AUTOJOIN[FUNCTION](WRECON_CHANNEL, WEECHAT_SERVER_AUTOJOIN_CHANNELS, WEECHAT_SERVER_AUTOJOIN_KEYS)
+      SAVE_SETUP, WEECHAT_CHANNELS_AUTOJOIN, WEECHAT_CHANNELS_KEYS = CALLBACK_SETUP_AUTOJOIN[FUNCTION](BUFFER, WRECON_SERVER, WRECON_CHANNEL, WEECHAT_CHANNELS_AUTOJOIN, WEECHAT_CHANNELS_KEYS)
       
       # SAVE data in case changes were done
       if SAVE_SETUP == True:
-        EXPORT_CHANNELS = ','.join(map(str, WEECHAT_SERVER_AUTOJOIN_CHANNELS))
-        EXPORT_KEYS     = ','.join(map(str, WEECHAT_SERVER_AUTOJOIN_KEYS))
+        EXPORT_CHANNELS = ','.join(map(str, WEECHAT_CHANNELS_AUTOJOIN))
+        EXPORT_KEYS     = ','.join(map(str, WEECHAT_CHANNELS_KEYS))
         EXPORT_DATA     = '%s %s' % (EXPORT_CHANNELS, EXPORT_KEYS)
         weechat.command(BUFFER, '/set irc.server.%s.autojoin %s' % (WRECON_SERVER, EXPORT_DATA))
+        weechat.command(BUFFER, '/save')
     
     return SAVE_SETUP
   
@@ -1007,40 +1008,56 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
   # FUNCTION SETUP AUTOJOIN ADD
   #
   
-  def setup_autojoin_add(WRECON_CHANNEL, WEECHAT_SERVER_AUTOJOIN_CHANNELS, WEECHAT_SERVER_AUTOJOIN_KEYS):
+  def setup_autojoin_add(BUFFER, WRECON_SERVER, WRECON_CHANNEL, WEECHAT_CHANNELS_AUTOJOIN, WEECHAT_CHANNELS_KEYS):
     SAVE_SETUP         = False
     WRECON_CHANNEL_KEY = '${sec.data.wrecon_channel_key}'
     
-    if not WRECON_CHANNEL in WEECHAT_SERVER_AUTOJOIN_CHANNELS:
-      WEECHAT_SERVER_AUTOJOIN_CHANNELS.append(WRECON_CHANNEL)
-      WEECHAT_SERVER_AUTOJOIN_KEYS.append(WRECON_CHANNEL_KEY)
+    WEECHAT_SERVER_AUTOCONNECT   = weechat.string_eval_expression("${irc.server.%s.autoconnect}" % (WRECON_SERVER), {}, {}, {})
+    WEECHAT_SERVER_AUTORECONNECT = weechat.string_eval_expression("${irc.server.%s.autoreconnect}" % (WRECON_SERVER), {}, {}, {})
+    WEECHAT_CHANNEL_AUTOREJOIN   = weechat.string_eval_expression("${irc.server.%s.autorejoin}" % (WRECON_SERVER), {}, {}, {})
+    
+    if WEECHAT_SERVER_AUTOCONNECT != 'on':
+      weechat.command(BUFFER, '/set irc.server.%s.autoconnect on' % (WRECON_SERVER))
+      SAVE_SETUP = True
+    
+    if WEECHAT_SERVER_AUTORECONNECT != 'on':
+      weechat.command(BUFFER, '/set irc.server.%s.autoreconnect on' % (WRECON_SERVER))
+      SAVE_SETUP = True
+    
+    if WEECHAT_CHANNEL_AUTOREJOIN != 'on':
+      weechat.command(BUFFER, '/set irc.server.%s.autorejoin on' % (wrecon_server))
+      SAVE_SETUP = True
+    
+    if not WRECON_CHANNEL in WEECHAT_CHANNELS_AUTOJOIN:
+      WEECHAT_CHANNELS_AUTOJOIN.append(WRECON_CHANNEL)
+      WEECHAT_CHANNELS_KEYS.append(WRECON_CHANNEL_KEY)
       SAVE_SETUP = True
     else:
       # Find index of my registered channel and test it have same setup of secure key
-      CHANNEL_INDEX = [INDEX for INDEX, ELEMENT in enumerate(WEECHAT_SERVER_AUTOJOIN_CHANNELS) if WRECON_CHANNEL in ELEMENT]
+      CHANNEL_INDEX = [INDEX for INDEX, ELEMENT in enumerate(WEECHAT_CHANNELS_AUTOJOIN) if WRECON_CHANNEL in ELEMENT]
       for INDEX in CHANNEL_INDEX:
-        if not WRECON_CHANNEL_KEY in WEECHAT_SERVER_AUTOJOIN_KEYS[INDEX]:
-          WEECHAT_SERVER_AUTOJOIN_KEYS[INDEX] = WRECON_CHANNEL_KEY
+        if not WRECON_CHANNEL_KEY in WEECHAT_CHANNELS_KEYS[INDEX]:
+          WEECHAT_CHANNELS_KEYS[INDEX] = WRECON_CHANNEL_KEY
           SAVE_SETUP = True
 
-      return [SAVE_SETUP, WEECHAT_SERVER_AUTOJOIN_CHANNELS, WEECHAT_SERVER_AUTOJOIN_KEYS]
+      return [SAVE_SETUP, WEECHAT_CHANNELS_AUTOJOIN, WEECHAT_CHANNELS_KEYS]
   
   #
   # FUNCTION SETUP AUTOJOIN DEL
   #
   
-  def setup_autojoin_del(WRECON_CHANNEL, WEECHAT_SERVER_AUTOJOIN_CHANNELS, WEECHAT_SERVER_AUTOJOIN_KEYS):
+  def setup_autojoin_del(NULL, NULL, WRECON_CHANNEL, WEECHAT_CHANNELS_AUTOJOIN, WEECHAT_CHANNELS_KEYS):
     SAVE_SETUP = False
     
-    if WRECON_CHANNEL in WEECHAT_SERVER_AUTOJOIN_CHANNELS:
+    if WRECON_CHANNEL in WEECHAT_CHANNELS_AUTOJOIN:
       # Find index of my registered channel
-      CHANNEL_INDEX = [INDEX for INDEX, ELEMENT in enumerate(WEECHAT_SERVER_AUTOJOIN_CHANNELS) if WRECON_CHANNEL in ELEMENT]
+      CHANNEL_INDEX = [INDEX for INDEX, ELEMENT in enumerate(WEECHAT_CHANNELS_AUTOJOIN) if WRECON_CHANNEL in ELEMENT]
       for INDEX in CHANNEL_INDEX:
-        del WEECHAT_SERVER_AUTOJOIN_CHANNELS[INDEX]
-        del WEECHAT_SERVER_AUTOJOIN_KEYS[INDEX]
+        del WEECHAT_CHANNELS_AUTOJOIN[INDEX]
+        del WEECHAT_CHANNELS_KEYS[INDEX]
       SAVE_SETUP = True
     
-    return [SAVE_SETUP, WEECHAT_SERVER_AUTOJOIN_CHANNELS, WEECHAT_SERVER_AUTOJOIN_KEYS]
+    return [SAVE_SETUP, WEECHAT_CHANNELS_AUTOJOIN, WEECHAT_CHANNELS_KEYS]
   
   CALLBACK_SETUP_AUTOJOIN['add'] = setup_autojoin_add
   CALLBACK_SETUP_AUTOJOIN['del'] = setup_autojoin_del
