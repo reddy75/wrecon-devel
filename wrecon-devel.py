@@ -923,7 +923,7 @@ else:
   
   def setup_autojoin_add(BUFFER, WRECON_SERVER, WRECON_CHANNEL, WEECHAT_CHANNELS_AUTOJOIN, WEECHAT_CHANNELS_KEYS):
     SAVE_SETUP         = False
-    WRECON_CHANNEL_KEY = '${sec.data.WRECON_CHANNEL_KEY}'
+    WRECON_CHANNEL_KEY = '${sec.data.wrecon_channel_key}'
     
     WEECHAT_SERVER_AUTOCONNECT   = weechat.string_eval_expression("${irc.server.%s.autoconnect}" % (WRECON_SERVER), {}, {}, {})
     WEECHAT_SERVER_AUTORECONNECT = weechat.string_eval_expression("${irc.server.%s.autoreconnect}" % (WRECON_SERVER), {}, {}, {})
