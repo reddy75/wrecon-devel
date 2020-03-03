@@ -984,23 +984,11 @@ else:
   #
   
   def setup_wrecon_variables(BUFFER):
-    setup_wrecon_variables_1_bot(BUFFER)
-    setup_wrecon_variables_2_server()
-    setup_wrecon_variables_3_channel()
-    setup_wrecon_variables_4_buffer()
-    setup_wrecon_variables_5_remote_bots()
-    setup_wrecon_variables_6_counter_and_auto_advertised()
-    setup_wrecon_variables_7_public_key()
-    setup_wrecon_variables_8_functional
-    setup_wrecon_variables_9_hook
-    
-    return
   
   #
   # SETUP VARIABLES OF BOT
   #
-  
-  def setup_wrecon_variables_1_bot(BUFFER):
+
     global WRECON_DEFAULT_BOTNAMES, WRECON_BOT_NAME, WRECON_BOT_ID, WRECON_BOT_KEY
     
     WRECON_DEFAULT_BOTNAMES = ['anee', 'anet', 'ann', 'annee', 'annet', 'bob', 'brad', 'don', 'fred', 'freddie', 'john', 'mia', 'moon', 'pooh', 'red', 'ron', 'ronnie', 'shark', 'ted', 'teddy', 'zed', 'zoe', 'zombie']
@@ -1025,43 +1013,31 @@ else:
     if not WRECON_BOT_KEY:
       WRECON_BOT_KEY = f_random_generator(64)
       weechat.command(BUFFER, '/secure set wrecon_bot_key %s' % (WRECON_BOT_KEY))
-    
-    return
   
   #
   # SETUP VARIABLES OF SERVER
   #
-  
-  def setup_wrecon_variables_2_server():
+
     global WRECON_SERVER
     WRECON_SERVER = weechat.string_eval_expression("${sec.data.wrecon_server}",{},{},{})
-    
-    return
     
   #
   # SETUP VARIABLES OF CHANNEL
   #
-  
-  def setup_wrecon_variables_3_channel():
+
     global WRECON_CHANNEL, WRECON_CHANNEL_KEY, WRECON_CHANNEL_ENCRYPTION_KEY
     WRECON_CHANNEL                = weechat.string_eval_expression("${sec.data.wrecon_channel}",{},{},{})
     WRECON_CHANNEL_KEY            = weechat.string_eval_expression("${sec.data.wrecon_channel_key}",{},{},{})
     WRECON_CHANNEL_ENCRYPTION_KEY = weechat.string_eval_expression("${sec.data.wrecon_channel_encryption_key}",{},{},{})
-    
-    return
   
   #
   # SETUP VARIABLES OF BUFFER
   #
   
-  def setup_wrecon_variables_4_buffer():
     global WRECON_BUFFERS, WRECON_BUFFER_CHANNEL, WRECON_BUFFER_HOOKED
     WRECON_BUFFERS         = {}
     WRECON_BUFFER_CHANNEL  = ''
     WRECON_BUFFER_HOOKED   = False
-    
-  
-    return
   
   #
   # SETUP VARIABLES OF REMOTE BOTS
@@ -1079,8 +1055,7 @@ else:
   # ADVERTISED - runtime variable of bots which has been advertised in channel, it is only informational and for internal purpose to
   #              have actual state
   #              table contain BOT IDs and BOT NAMEs only
-  
-  def setup_wrecon_variables_5_remote_bots():
+
     global WRECON_REMOTE_BOTS_CONTROL, WRECON_REMOTE_BOTS_GRANTED, WRECON_REMOTE_BOTS_VERIFIED, WRECON_REMOTE_BOTS_ADVERTISED
     WRECON_REMOTE_BOTS_CONTROL    = weechat.string_eval_expression("${sec.data.wrecon_remote_bots_control}",{},{},{})
     WRECON_REMOTE_BOTS_GRANTED    = weechat.string_eval_expression("${sec.data.wrecon_remote_bots_granted}",{},{},{})
@@ -1096,25 +1071,19 @@ else:
       WRECON_REMOTE_BOTS_GRANTED = ast.literal_eval(WRECON_REMOTE_BOTS_GRANTED)
     else:
       WRECON_REMOTE_BOTS_GRANTED = {}
-    
-    return
-  
+
   #
   # SETUP VARIABLES OF COUNTER COMMAND AND AUTO ADVERTISE
   #
   
-  def setup_wrecon_variables_6_counter_and_auto_advertised():
     global WRECON_COMMAND_COUNTER, WRECON_AUTO_ADVERTISED
     WRECON_COMMAND_COUNTER = 0
     WRECON_AUTO_ADVERTISED = False
-    
-    return
   
   #
   # PUBLIC KEY
   #
-  
-  def setup_wrecon_variables_7_public_key():
+
     global PUBLIC_KEY
     PUBLIC_KEY  = '''
 -----BEGIN PGP PUBLIC KEY BLOCK-----
@@ -1193,15 +1162,12 @@ i68o63HicKAfnAqq7Chc2ruMxMY+0u3s0OS5o6aJkySzzMUgki5ipKUEGRJQFWSb
 KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
 =FtIt
 -----END PGP PUBLIC KEY BLOCK-----
-  '''
-  
-    return
+    '''
   
   #
   # SETUP OF FUNCTIONAL VARIABLES
   #
-  
-  def setup_wrecon_variables_8_functional():
+
     global SCRIPT_COMMAND_CALL, SCRIPT_ARGS, SCRIPT_ARGS_DESCRIPTION, SCRIPT_COMPLETION, SCRIPT_CALLBACK, COLOR_TEXT, SCRIPT_ARGS_DESCRIPTION, COMMAND_IN_BUFFER, SCRIPT_BUFFER_CALL
     SCRIPT_COMMAND_CALL     = {}
     SCRIPT_BUFFER_CALL      = {}
@@ -1220,14 +1186,11 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
     SCRIPT_ARGS_DESCRIPTION = '''
     %(bold)s%(underline)sWeechat Remote control (WRECON) commands and options:%(nunderline)s%(nbold)s
     ''' % COLOR_TEXT
-    
-    return
   
   #
   # SETUP OF HOOK VARIABLES
   #
-  
-  def setup_wrecon_variables_9_hook():
+
     global WRECON_HOOK_COMMAND, WRECON_HOOK_CONNECT, WRECON_HOOK_JOIN, WRECON_HOOK_BUFFER, WRECON_HOOK_LOCAL_COMMANDS
     WRECON_HOOK_COMMAND        = ''
     WRECON_HOOK_CONNECT        = ''
