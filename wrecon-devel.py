@@ -1209,11 +1209,12 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
   #
   # WEECHAT_DATA BUFFER LOCAL/REMOTE COMMAND TOBOTID FROMBOTID COMMANDID [DATA]
   
-  global ID_CALL_LOCAL, ID_CALL_REMOTE, COMMAND_REQUIREMENTS
+  global ID_CALL_LOCAL, ID_CALL_REMOTE, COMMAND_REQUIREMENTS, VERIFY_REQUIREMENTS
   
   ID_CALL_LOCAL        = {}
   ID_CALL_REMOTE       = {}
   COMMAND_REQUIREMENTS = {}
+  VERIFY_REQUIREMENTS  = {}
   
   def validate_command_execution(WEECHAT_DATA, BUFFER, SOURCE, COMMAND, TO_BOT, FROM_BOT, COMMAND_ID, COMMAND_DATA):
     global ID_CALL_LOCAL, ID_CALL_REMOTE
@@ -1221,7 +1222,7 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
     # WE NEED DISPLAY LOCALLY WHAT IS CALLED, AND WILL BE CHECKED (FEEDBACK)
     display_message(BUFFER, '[%s] %s > %s %s' + (COMMAND_ID, FROM_BOT, COMMAND, COMMAND_DATA))
     
-    EXECUTE_COMMAND = True
+    COMMAND_CAN_BE_EXECUTED = True
     
     UNIQ_COMMAND_ID = FROM_BOT + COMMAND_ID
     
@@ -1235,15 +1236,49 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
     # CHECK WE HAVE ASSIGNED UNIQ_COMMAND_ID FROM CALL
     # This is security feature to block 'fake' execution
     if not UNIQ_COMMAND_ID in ID_CALL:
-      EXECUTE_COMMAND = False
+      COMMAND_CAN_BE_EXECUTED = False
       display_message(BUFFER, '[%s] %s < EXECUTION DENIED' % (COMMAND_ID, FROM_BOT))
     else:
     # CHECK REQUIREMENTS FOR EXECUTION
-      global COMMAND_REQUIREMENTS
-      for VERIFY_REQUIREMENT in COMMAND_REQUIREMENTS:
-        if EXECUTE_COMMAND == True:
-          EXECUTE_COMMAND = VERIFY_REQUIREMENT(BUFFER, COMMAND, FROM_BOT, COMMAND_ID, COMMAND_DATA)
-          if EXECUTE_COMMAND == False:
+      global COMMAND_REQUIREMENTS, VERIFY_REQUIREMENT
+      for COMMAND_REQUIREMENT in COMMAND_REQUIREMENTS:
+        if COMMAND_CAN_BE_EXECUTED == True:
+          COMMAND_CAN_BE_EXECUTED = VERIFY_REQUIREMENT[COMMAND_REQUIREMENT](BUFFER, COMMAND, FROM_BOT, COMMAND_ID, COMMAND_DATA)
+          if COMMAND_CAN_BE_EXECUTED == False:
             display_message(BUFFER, '[%s] %s < EXECUTION DENIED' % (COMMAND_ID, FROM_BOT))
             
-    return EXECUTE_COMMAND
+    return COMMAND_CAN_BE_EXECUTED
+  
+  #
+  # VERIFY WE HAVE ADDED REMOTE BOT FOR REMOTE EXECUTION
+  # (for call)
+  
+  def verify_remote_bot_control(BUFFER, NULL, REMOTE_BOT, COMMAND_ID, NULL):
+    global WRECON_REMOTE_BOTS_CONTROL
+    
+    VERIFY_RESULT = True
+    
+    if not REMOTE_BOT in WRECON_REMOTE_BOTS_CONTROL:
+      VERIFY_RESULT = False
+      display_message(BUFFER, '[%s] %s < REMOTE BOT IS NOT ADDED' % (COMMAND_ID, REMOTE_BOT))
+    
+    return VERIFY_RESULT
+  
+  VERIFY_REQUIREMENT['added'] = verify_remote_bot_control
+  
+  def verify_remote_bot_advertised(BUFFER, COMMAND, FROM_BOT, COMMAND_ID, COMMAND_DATA):
+    pass
+  
+  VERIFY_REQUIREMENT['advertised'] = verify_remote_bot_advertised
+  
+  def verify_remote_bot_validated(BUFFER, COMMAND, FROM_BOT, COMMAND_ID, COMMAND_DATA):
+    pass
+  
+  VERIFY_REQUIREMENT['validated'] = verify_remote_bot_validated
+  
+  def verify_remote_bot_granted(BUFFER, COMMAND, FROM_BOT, COMMAND_ID, COMMAND_DATA):
+    pass
+  
+  VERIFY_REQUIREMENT['granted'] = verify_remote_bot_granted
+  
+  
