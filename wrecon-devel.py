@@ -1240,45 +1240,76 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
       display_message(BUFFER, '[%s] %s < EXECUTION DENIED' % (COMMAND_ID, FROM_BOT))
     else:
     # CHECK REQUIREMENTS FOR EXECUTION
-      global COMMAND_REQUIREMENTS, VERIFY_REQUIREMENT
-      for COMMAND_REQUIREMENT in COMMAND_REQUIREMENTS:
-        if COMMAND_CAN_BE_EXECUTED == True:
-          COMMAND_CAN_BE_EXECUTED = VERIFY_REQUIREMENT[COMMAND_REQUIREMENT](BUFFER, COMMAND, FROM_BOT, COMMAND_ID, COMMAND_DATA)
-          if COMMAND_CAN_BE_EXECUTED == False:
-            display_message(BUFFER, '[%s] %s < EXECUTION DENIED' % (COMMAND_ID, FROM_BOT))
-            
+      global COMMAND_REQUIREMENTS
+      if COMMAND in COMMAND_REQUIREMENTS:
+        COMMAND_CAN_BE_EXECUTED = COMMAND_REQUIREMENTS[COMMAND](BUFFER, FROM_BOT, COMMAND_ID)
+        if COMMAND_CAN_BE_EXECUTED == False:
+          display_message(BUFFER, '[%s] %s < EXECUTION DENIED' % (COMMAND_ID, FROM_BOT))
+    
     return COMMAND_CAN_BE_EXECUTED
   
   #
-  # VERIFY WE HAVE ADDED REMOTE BOT FOR REMOTE EXECUTION
+  # VERIFY WE CAN CONTROL REMOTE BOT FOR REMOTE EXECUTION (added BOT)
   # (for call)
   
-  def verify_remote_bot_control(BUFFER, NULL, REMOTE_BOT, COMMAND_ID, NULL):
+  def verify_remote_bot_control(BUFFER, REMOTE_BOT, COMMAND_ID):
     global WRECON_REMOTE_BOTS_CONTROL
     
     VERIFY_RESULT = True
     
     if not REMOTE_BOT in WRECON_REMOTE_BOTS_CONTROL:
       VERIFY_RESULT = False
-      display_message(BUFFER, '[%s] %s < REMOTE BOT IS NOT ADDED' % (COMMAND_ID, REMOTE_BOT))
+      display_message(BUFFER, '[%s] %s < REMOTE BOT IS NOT ADDED/REGISTERED' % (COMMAND_ID, REMOTE_BOT))
     
     return VERIFY_RESULT
   
-  VERIFY_REQUIREMENT['added'] = verify_remote_bot_control
+  #
+  # VERIFY REMOTE BOT WAS ADVERTISED
+  #
   
-  def verify_remote_bot_advertised(BUFFER, COMMAND, FROM_BOT, COMMAND_ID, COMMAND_DATA):
-    pass
+  def verify_remote_bot_advertised(BUFFER, VERIFY_BOT, COMMAND_ID):
+    global WRECON_REMOTE_BOTS_ADVERTISED
+    
+    # IF WE HAVE DATA OF BOT, NO NEED ADDITIONAL ACTION
+    if VERIFY_BOT in WRECON_REMOTE_BOTS_ADVERTISED:
+      VERIFY_RESULT = True
+    else:
+      # TODO
+      VERIFY_RESULT = advertise_additional(BUFFER, VERIFY_BOT, COMMAND_ID)
+    
+    return VERIFY_RESULT
   
-  VERIFY_REQUIREMENT['advertised'] = verify_remote_bot_advertised
+  #
+  # VERIFY REMOTE BOT WAS VERIFIED
+  # verification require remote BOT is advertised
   
-  def verify_remote_bot_validated(BUFFER, COMMAND, FROM_BOT, COMMAND_ID, COMMAND_DATA):
-    pass
+  def verify_remote_bot_verified(BUFFER, VERIFY_BOT, COMMAND_ID):
+    
+    VERIFY_RESULT = verify_remote_bot_advertised(BUFFER, VERIFY_BOT, COMMAND_ID)
+    
+    # When remote BOT was advertised, we need trigger verification
+    if VERIFY_RESULT == True:
+      global WRECON_REMOTE_BOTS_VERIFIED, WRECON_REMOTE_BOTS_ADVERTISED
+    # Then we need check data of advertised BOT are same as of validated
+    # If not, trigger revalidation
+      if not WRECON_REMOTE_BOTS_VERIFIED[VERIFY_BOT] == WRECON_REMOTE_BOTS_ADVERTISED[VERIFY_BOT]:
+        # TODO
+        VERIFY_RESULT = verify_remote_bot(BUFFER, VERIFY_BOT, COMMAND_ID)
+    
+    return VERIFY_RESULT
+
+  #
+  # VERIFY REMOTE BOT WAS GRANTED (granted BOT)
+  # verification require remote BOT is verified
   
-  VERIFY_REQUIREMENT['validated'] = verify_remote_bot_validated
-  
-  def verify_remote_bot_granted(BUFFER, COMMAND, FROM_BOT, COMMAND_ID, COMMAND_DATA):
-    pass
-  
-  VERIFY_REQUIREMENT['granted'] = verify_remote_bot_granted
-  
+  def verify_remote_bot_granted(BUFFER, VERIFY_BOT, COMMAND_ID):
+    global WRECON_REMOTE_BOTS_GRANTED
+    
+    if not VERIFY_BOT in WRECON_REMOTE_BOTS_GRANTED:
+      VERIFY_RESULT = False
+      display_message(BUFFER, '[%s] %s < REMOTE BOT IS NOT GRANTED' % (COMMAND_ID, REMOTE_BOT))
+    else:
+      VERIFY_RESULT = verify_remote_bot_verified(BUFFER, VERIFY_BOT, COMMAND_ID)
+    
+    return VERIFY_RESULT
   
