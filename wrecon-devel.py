@@ -1200,7 +1200,7 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
     SCRIPT_ARGS_DESCRIPTION = '''
     %(bold)s%(underline)sWeechat Remote control (WRECON) commands and options:%(nunderline)s%(nbold)s
     ''' % COLOR_TEXT
-    TIMEOUT                 = 
+    TIMEOUT                 = 10
   
   #
   # SETUP OF HOOK VARIABLES
