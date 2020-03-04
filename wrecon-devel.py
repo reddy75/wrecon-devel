@@ -704,10 +704,10 @@ else:
   
   def get_buffer_channel():
     global WRECON_SERVER, WRECON_CHANNEL
-    wrecon_BUFFER_NAME = '%s.%s' % (WRECON_SERVER, WRECON_CHANNEL)
+    WRECON_BUFFER_NAME = '%s.%s' % (WRECON_SERVER, WRECON_CHANNEL)
     WRECON_BUFFERS     = get_buffers()
-    if wrecon_BUFFER_NAME in WRECON_BUFFERS:
-      return WRECON_BUFFERS[wrecon_BUFFER_NAME]
+    if WRECON_BUFFER_NAME in WRECON_BUFFERS:
+      return WRECON_BUFFERS[WRECON_BUFFER_NAME]
     else:
       return ''
   
@@ -806,12 +806,17 @@ else:
   # AUTOCONNECT - SERVER STATUS
   #
   
-  def autoconnect_2_server_status(arg1, arg2):
+  def autoconnect_2_server_status(NULL, REMAINING_CALLS):
     global WRECON_SERVER
     if get_status_server() == 1:
       weechat.unhook(WRECON_HOOK_CONNECT_SERVER)
       WRECON_BUFFERS = get_buffers()
       autojoin_1_channel(WRECON_BUFFERS['server.%s' % (WRECON_SERVER)])
+    else:
+      if REMAINING_CALLS = 0:
+        # THERE CAN BE NETWORK ISSUE, WE CAN TRY AGAIN AND AGAIN...
+        weechat.unhook(WRECON_HOOK_CONNECT_SERVER)
+        autoconnect_1_server():
     return weechat.WEECHAT_RC_OK
   
   #
@@ -821,18 +826,27 @@ else:
   def autojoin_1_channel(BUFFER):
     global WRECON_CHANNEL, WRECON_CHANNEL_KEY, WRECON_HOOK_JOIN, WRECON_SERVER 
     weechat.command(BUFFER, '/join %s %s' % (WRECON_CHANNEL, WRECON_CHANNEL_KEY))
-    WRECON_HOOK_JOIN = weechat.hook_timer(1*1000, 0, 5, 'autojoin_2_channel_status', '')
+    WRECON_HOOK_JOIN = weechat.hook_timer(1*1000, 0, 20, 'autojoin_2_channel_status', '')
     return weechat.WEECHAT_RC_OK
   
   #
   # AUTOJOIN - CHANNEL STATUS
   #
   
-  def autojoin_2_channel_status(arg1, arg2):
+  def autojoin_2_channel_status(NULL, REMAINING_CALLS):
     global WRECON_HOOK_JOIN, WRECON_AUTO_ADVERTISED, WRECON_HOOK_BUFFER, WRECON_BUFFER_CHANNEL, SCRIPT_CALLBACK_BUFFER
     
-    if arg2 == '0':
+    if REMAINING_CALLS == '0':
+      global WRECON_CHANNEL
       weechat.unhook(WRECON_HOOK_JOIN)
+      ERROR_MESSAGE     = ['ERROR DURING JOINING TO CHANNEL ' + WRECON_CHANNEL]
+      ERROR_MESSAGE.append('CHANNEL IS INACCESSIBLE')
+      ERROR_MESSAGE.append('')
+      ERROR_MESSAGE.append('POSSIBLE REASONS:')
+      ERROR_MESSAGE.append('- CHANNEL HAS BEEN RELEASED DUE TO ALL YOUR PARTICIPANTS LEFT CHANNEL, NOW OCCUPIED BY A FOREIGN')
+      ERROR_MESSAGE.append('- YOUR CHANNEL KEY HAS BEEN CHANGED BY MISTAKE BY YOUR PARTICIPANT')
+      ERROR_MESSAGE.append('- YOUR CHANNEL KEY HAS BEEN EXPOSED, OR STOLEN, THEN ABUSED TO EMBARRASS ACCESS')
+      display_message('', ERROR_MESSAGE)
     
     if get_status_channel() > 0:
       weechat.unhook(WRECON_HOOK_JOIN)
@@ -1168,7 +1182,7 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
   # SETUP OF FUNCTIONAL VARIABLES
   #
 
-    global SCRIPT_COMMAND_CALL, SCRIPT_ARGS, SCRIPT_ARGS_DESCRIPTION, SCRIPT_COMPLETION, SCRIPT_CALLBACK, COLOR_TEXT, SCRIPT_ARGS_DESCRIPTION, COMMAND_IN_BUFFER, SCRIPT_BUFFER_CALL
+    global SCRIPT_COMMAND_CALL, SCRIPT_ARGS, SCRIPT_ARGS_DESCRIPTION, SCRIPT_COMPLETION, SCRIPT_CALLBACK, COLOR_TEXT, SCRIPT_ARGS_DESCRIPTION, COMMAND_IN_BUFFER, SCRIPT_BUFFER_CALL, TIMEOUT
     SCRIPT_COMMAND_CALL     = {}
     SCRIPT_BUFFER_CALL      = {}
     SCRIPT_ARGS             = ''
@@ -1186,6 +1200,7 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
     SCRIPT_ARGS_DESCRIPTION = '''
     %(bold)s%(underline)sWeechat Remote control (WRECON) commands and options:%(nunderline)s%(nbold)s
     ''' % COLOR_TEXT
+    TIMEOUT                 = 
   
   #
   # SETUP OF HOOK VARIABLES
