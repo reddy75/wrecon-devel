@@ -759,24 +759,121 @@ else:
   #
   # HOOK AND UNHOOK BUFFER
   
-  def buffer_hook():
+  def hook_buffer():
     global SCRIPT_CALLBACK_BUFFER, WRECON_BUFFER_HOOKED, WRECON_HOOK_BUFFER, WRECON_BUFFER_CHANNEL
     WRECON_BUFFER_CHANNEL = get_buffer_channel()
+    
     if WRECON_BUFFER_HOOKED == False:
       if WRECON_BUFFER_CHANNEL:
         WRECON_BUFFER_HOOKED = True
         WRECON_HOOK_BUFFER   = weechat.hook_print(WRECON_BUFFER_CHANNEL, '', COMMAND_IN_BUFFER, 1, SCRIPT_CALLBACK_BUFFER, '')
+    
     return weechat.WEECHAT_RC_OK
   
-  def buffer_unhook():
+  def unhook_buffer():
     global WRECON_BUFFER_HOOKED, WRECON_HOOK_BUFFER
+    
     if WRECON_BUFFER_HOOKED == True:
       WRECON_BUFFER_HOOKED = False
       weechat.unhook(WRECON_HOOK_BUFFER)
+    
     return weechat.WEECHAT_RC_OK
   
   #
   ##### END HOOK AND UNHOOK BUFFER
+  
+  #####
+  #
+  # HOOK USER COMMAND
+  
+  def hook_command_from_user(WEECHAT_DATA, BUFFER, DATA):
+    
+    COMMAND_ID = get_command_uniq_id()
+    
+    if not DATA:
+      display_message(BUFFER, '[%s] ERROR: MISSING COMMAND' % COMMAND_ID)
+    else:
+      global ID_CALL_LOCAL, WRECON_BOT_ID, DISPLAY_COMMAND
+      
+      UNIQ_COMMAND_ID                  = WRECON_BOT_ID + COMMAND_ID
+      DISPLAY_COMMAND[UNIQ_COMMAND_ID] = ''
+      
+      ARGUMENTS = DATA.split(None, 1)
+      COMMAND = ARGUMENTS[0].upper()
+      ARGUMENTS.pop(0)
+      
+      if not ARGUMENTS:
+        COMMAND_ARGUMENTS      = ''
+        COMMAND_ARGUMENTS_LIST = []
+      else:
+        COMMAND_ARGUMENTS      = ARGUMENTS[0]
+        COMMAND_ARGUMENTS_LIST = COMMAND_ARGUMENTS.split(' ')
+        
+      ID_CALL_LOCAL[COMMAND_ID] = [COMMAND, COMMAND_ARGUMENTS_LIST]
+      
+      EXECUTE_COMMAND = validate_command_execution(WEECHAT_DATA, BUFFER, 'LOCAL', COMMAND, WRECON_BOT_ID, WRECON_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS)
+    
+    return weechat.WEECHAT_RC_OK
+  
+  SCRIPT_CALLBACK = 'hook_command_from_user'
+  
+  #
+  ##### END HOOK USER COMMAND
+  
+  #####
+  #
+  # PARSING BUFFER REPLY (COMMAND)
+  
+  def hook_command_from_buffer(WEECHAT_DATA, BUFFER, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, DATA):
+    global ID_CALL_REMOTE, SCRIPT_BUFFER_CALL
+    ARGUMENTS   = DATA.split()
+    COMMAND     = ARGUMENTS[0]
+    
+    if not COMMAND in SCRIPT_BUFFER_CALL:
+      COMMAND_ID    = ARGUMENTS[3]
+      ERROR_MESSAGE = ['[%s] %s' % (COMMAND_ID, DATA)]
+      display_message(BUFFER, '[%s] ERROR: UNKNOWN COMMAND -> %s' % (COMMAND_ID, COMMAND))
+    else:
+      ARGUMENTS.pop(0)
+      TO_BOT     = ARGUMENTS[0]
+      FROM_BOT   = ARGUMENTS[1]
+      COMMAND_ID = ARGUMENTS[2]
+      
+      ARGUMENTS.pop(0)
+      ARGUMENTS.pop(0)
+      ARGUMENTS.pop(0)
+      
+      if not ARGUMENTS:
+        COMMAND_ARGUMENTS      = ''
+        COMMAND_ARGUMENTS_LIST = []
+      else:
+        COMMAND_ARGUMENTS      = ARGUMENTS[0]
+        COMMAND_ARGUMENTS_LIST = COMMAND_ARGUMENTS.split(' ')
+      
+      UNIQ_COMMAND_ID                 = FROM_BOT + COMMAND_ID
+      ID_CALL_REMOTE[UNIQ_COMMAND_ID] = [COMMAND, FROM_BOT, COMMAND_ID, COMMAND_ARGUMENTS_LIST]
+      
+      EXECUTE_COMMAND = validate_command_execution(WEECHAT_DATA, BUFFER, 'REMOTE', COMMAND, TO_BOT, FROM_BOT, COMMAND_ID, COMMAND_ARGUMENTS)
+    
+    return weechat.WEECHAT_RC_OK
+  
+  global SCRIPT_CALLBACK_BUFFER
+  
+  SCRIPT_CALLBACK_BUFFER = 'hook_command_from_buffer'
+  
+  #
+  ##### END PARSING BUFFER REPLY
+  
+  #####
+  #
+  # UNHOOK WRECON
+  
+  def wrecon_unload():
+    weechat.unhook_all()
+    return weechat.WEECHAT_RC_OK
+  
+  #
+  ##### END UNHOOK WRECON
   
   #####
   #
@@ -797,9 +894,9 @@ else:
   #
   
   def autoconnect_1_server():
-    global WRECON_SERVER
+    global WRECON_SERVER. TIMEOUT_CONNECT
     weechat.command('', '/connect %s' % (WRECON_SERVER))
-    WRECON_HOOK_CONNECT_SERVER = weechat.hook_timer(1*1000, 0, 20, 'autoconnect_2_server_status', '')
+    WRECON_HOOK_CONNECT_SERVER = weechat.hook_timer(1*1000, 0, TIMEOUT_CONNECT, 'autoconnect_2_server_status', '')
     return weechat.WEECHAT_RC_OK
   
   #
@@ -824,9 +921,9 @@ else:
   #
   
   def autojoin_1_channel(BUFFER):
-    global WRECON_CHANNEL, WRECON_CHANNEL_KEY, WRECON_HOOK_JOIN, WRECON_SERVER 
+    global WRECON_CHANNEL, WRECON_CHANNEL_KEY, WRECON_HOOK_JOIN, WRECON_SERVER, TIMEOUT_CONNECT
     weechat.command(BUFFER, '/join %s %s' % (WRECON_CHANNEL, WRECON_CHANNEL_KEY))
-    WRECON_HOOK_JOIN = weechat.hook_timer(1*1000, 0, 20, 'autojoin_2_channel_status', '')
+    WRECON_HOOK_JOIN = weechat.hook_timer(1*1000, 0, TIMEOUT_CONNECT, 'autojoin_2_channel_status', '')
     return weechat.WEECHAT_RC_OK
   
   #
@@ -851,7 +948,7 @@ else:
     if get_status_channel() > 0:
       weechat.unhook(WRECON_HOOK_JOIN)
       if WRECON_AUTO_ADVERTISED == False:
-        buffer_hook()
+        hook_buffer()
         setup_channel(WRECON_BUFFER_CHANNEL)
         # ~ command_advertise('', WRECON_BUFFER_CHANNEL, '', '')
         # ~ WRECON_AUTO_ADVERTISED = True
@@ -1182,7 +1279,7 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
   # SETUP OF FUNCTIONAL VARIABLES
   #
 
-    global SCRIPT_COMMAND_CALL, SCRIPT_ARGS, SCRIPT_ARGS_DESCRIPTION, SCRIPT_COMPLETION, SCRIPT_CALLBACK, COLOR_TEXT, SCRIPT_ARGS_DESCRIPTION, COMMAND_IN_BUFFER, SCRIPT_BUFFER_CALL, TIMEOUT
+    global SCRIPT_COMMAND_CALL, SCRIPT_ARGS, SCRIPT_ARGS_DESCRIPTION, SCRIPT_COMPLETION, SCRIPT_CALLBACK, COLOR_TEXT, SCRIPT_ARGS_DESCRIPTION, COMMAND_IN_BUFFER, SCRIPT_BUFFER_CALL, TIMEOUT_COMMAND
     SCRIPT_COMMAND_CALL     = {}
     SCRIPT_BUFFER_CALL      = {}
     SCRIPT_ARGS             = ''
@@ -1200,7 +1297,8 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
     SCRIPT_ARGS_DESCRIPTION = '''
     %(bold)s%(underline)sWeechat Remote control (WRECON) commands and options:%(nunderline)s%(nbold)s
     ''' % COLOR_TEXT
-    TIMEOUT                 = 10
+    TIMEOUT_COMMAND         = 20
+    TIMEOUT_CONNECT         = 30
   
   #
   # SETUP OF HOOK VARIABLES
@@ -1224,44 +1322,84 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
   #
   # WEECHAT_DATA BUFFER LOCAL/REMOTE COMMAND TOBOTID FROMBOTID COMMANDID [DATA]
   
-  global ID_CALL_LOCAL, ID_CALL_REMOTE, COMMAND_REQUIREMENTS, VERIFY_REQUIREMENTS
+  global ID_CALL_LOCAL, ID_CALL_REMOTE, COMMAND_REQUIREMENTS, VERIFY_REQUIREMENTS, DISPLAY_COMMAND
   
   ID_CALL_LOCAL        = {}
   ID_CALL_REMOTE       = {}
   COMMAND_REQUIREMENTS = {}
   VERIFY_REQUIREMENTS  = {}
+  DISPLAY_COMMAND      = {}
   
-  def validate_command_execution(WEECHAT_DATA, BUFFER, SOURCE, COMMAND, TO_BOT, FROM_BOT, COMMAND_ID, COMMAND_DATA):
-    global ID_CALL_LOCAL, ID_CALL_REMOTE
-    
-    # WE NEED DISPLAY LOCALLY WHAT IS CALLED, AND WILL BE CHECKED (FEEDBACK)
-    display_message(BUFFER, '[%s] %s > %s %s' + (COMMAND_ID, FROM_BOT, COMMAND, COMMAND_DATA))
+  def validate_command_execution(WEECHAT_DATA, BUFFER, SOURCE, COMMAND, TO_BOT, FROM_BOT, COMMAND_ID, COMMAND_ARGUMENTS):
+    global ID_CALL_LOCAL, ID_CALL_REMOTE, DISPLAY_COMMAND
     
     COMMAND_CAN_BE_EXECUTED = True
+    UNIQ_COMMAND_ID         = FROM_BOT + COMMAND_ID
     
-    UNIQ_COMMAND_ID = FROM_BOT + COMMAND_ID
+    # SOMETIME WE NEED DISPLAY WHAT IS CALLED
+    if UNIQ_COMMAND_ID in DISPLAY_COMMAND:
+      display_message(BUFFER, '[%s] %s > %s %s' + (COMMAND_ID, FROM_BOT, COMMAND, COMMAND_ARGUMENTS))
+      del DISPLAY_COMMAND[UNIQ_COMMAND_ID]
     
     # CALL FROM USER INPUT (OR INTERNALL CALL)
-    if SOURCE == 'LOCAL':
-      ID_CALL = ID_CALL_LOCAL
+    # PREPARE VARIABLES FOR LOCAL CALL
+      if SOURCE == 'LOCAL':
+        global SCRIPT_COMMAND_CALL
+        ID_CALL     = ID_CALL_LOCAL
+        SCRIPT_CALL = SCRIPT_COMMAND_CALL
     # CALL FROM REMOTE INUT (BUFFER)
-    else:
-      ID_CALL = ID_CALL_REMOTE
-    
+    # PREPARE VARIABLES FOR REMOTE CALL
+      else:
+        global SCRIPT_BUFFER_CALL
+        ID_CALL     = ID_CALL_REMOTE
+        SCRIPT_CALL = SCRIPT_BUFFER_CALL
+        
     # CHECK WE HAVE ASSIGNED UNIQ_COMMAND_ID FROM CALL
     # This is security feature to block 'fake' execution
     if not UNIQ_COMMAND_ID in ID_CALL:
       COMMAND_CAN_BE_EXECUTED = False
       display_message(BUFFER, '[%s] %s < EXECUTION DENIED' % (COMMAND_ID, FROM_BOT))
     else:
+    # CHECK COMMAND EXIST
+      if not COMMAND in SCRIPT_CALL:
+        COMMAND_CAN_BE_EXECUTED = False
+        cleanup_id_variables(SOURCE, UNIQ_COMMAND_ID)
+        display_message(BUFFER, '[%s] ERROR: UNKNOWN COMMAND -> %s' % (COMMAND_ID, COMMAND))
+      else:
     # CHECK REQUIREMENTS FOR EXECUTION
-      global COMMAND_REQUIREMENTS
-      if COMMAND in COMMAND_REQUIREMENTS:
-        COMMAND_CAN_BE_EXECUTED = COMMAND_REQUIREMENTS[COMMAND](BUFFER, FROM_BOT, COMMAND_ID)
-        if COMMAND_CAN_BE_EXECUTED == False:
-          display_message(BUFFER, '[%s] %s < EXECUTION DENIED' % (COMMAND_ID, FROM_BOT))
+        global COMMAND_REQUIREMENTS
+        if COMMAND in COMMAND_REQUIREMENTS:
+          COMMAND_CAN_BE_EXECUTED = COMMAND_REQUIREMENTS[COMMAND](BUFFER, FROM_BOT, COMMAND_ID)
+          if COMMAND_CAN_BE_EXECUTED == False:
+            display_message(BUFFER, '[%s] %s < EXECUTION DENIED' % (COMMAND_ID, FROM_BOT))
     
-    return COMMAND_CAN_BE_EXECUTED
+    if COMMAND_CAN_BE_EXECUTED == True:
+      SCRIPT_CALL[COMMAND](WEECHAT_DATA, BUFFER, COMMAND, )
+    
+    return COMMAND_CAN_BE_EXECUTED(SOURCE, COMMAND_ID, UNIQ_COMMAND_ID):
+  
+  #
+  # CLEANUP ID VARIABLES (LOCAL or REMOTE) AFTER VALIDATION or EXECUTION
+  #
+  
+  def cleanup_id_variables(SOURCE, COMMAND_ID, UNIQ_COMMAND_ID):
+    if SOURCE == 'LOCAL':
+      global ID_CALL_LOCAL
+      if UNIQ_COMMAND_ID in ID_CALL_LOCAL:
+        del ID_CALL_LOCAL[UNIQ_COMMAND_ID]
+    else:
+      global ID_CALL_REMOTE
+      if UNIQ_COMMAND_ID in ID_CALL_REMOTE:
+        del ID_CALL_REMOTE[UNIQ_COMMAND_ID]
+    
+    return
+  
+  #
+  # COMMAND WITH NO REQUIREMENT
+  #
+  
+  def return_execution_allowed(NULL, NULL, NULL):
+    return True
   
   #
   # VERIFY WE CAN CONTROL REMOTE BOT FOR REMOTE EXECUTION (added BOT)
@@ -1272,6 +1410,7 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
     
     VERIFY_RESULT = True
     
+    # CHECK WE HAVE ADDED BOT
     if not REMOTE_BOT in WRECON_REMOTE_BOTS_CONTROL:
       VERIFY_RESULT = False
       display_message(BUFFER, '[%s] %s < REMOTE BOT IS NOT ADDED/REGISTERED' % (COMMAND_ID, REMOTE_BOT))
@@ -1300,6 +1439,7 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
   
   def verify_remote_bot_verified(BUFFER, VERIFY_BOT, COMMAND_ID):
     
+    # VERIFY REQUIRE REMOTE BOT WAS ADVERTISED, WE CHECK IT NOW
     VERIFY_RESULT = verify_remote_bot_advertised(BUFFER, VERIFY_BOT, COMMAND_ID)
     
     # When remote BOT was advertised, we need trigger verification
@@ -1320,10 +1460,12 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
   def verify_remote_bot_granted(BUFFER, VERIFY_BOT, COMMAND_ID):
     global WRECON_REMOTE_BOTS_GRANTED
     
+    # CHECK WE GRANTED REMOTE BOT
     if not VERIFY_BOT in WRECON_REMOTE_BOTS_GRANTED:
       VERIFY_RESULT = False
       display_message(BUFFER, '[%s] %s < REMOTE BOT IS NOT GRANTED' % (COMMAND_ID, REMOTE_BOT))
     else:
+      # THEN CHECK GRANTED BOT WAS VERIFIED
       VERIFY_RESULT = verify_remote_bot_verified(BUFFER, VERIFY_BOT, COMMAND_ID)
     
     return VERIFY_RESULT
