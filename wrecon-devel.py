@@ -1279,7 +1279,7 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
   # SETUP OF FUNCTIONAL VARIABLES
   #
 
-    global SCRIPT_COMMAND_CALL, SCRIPT_ARGS, SCRIPT_ARGS_DESCRIPTION, SCRIPT_COMPLETION, SCRIPT_CALLBACK, COLOR_TEXT, SCRIPT_ARGS_DESCRIPTION, COMMAND_IN_BUFFER, SCRIPT_BUFFER_CALL, TIMEOUT_COMMAND
+    global SCRIPT_COMMAND_CALL, SCRIPT_ARGS, SCRIPT_ARGS_DESCRIPTION, SCRIPT_COMPLETION, SCRIPT_CALLBACK, COLOR_TEXT, SCRIPT_ARGS_DESCRIPTION, COMMAND_IN_BUFFER, SCRIPT_BUFFER_CALL, TIMEOUT_COMMAND, COMMAND_VERSION
     SCRIPT_COMMAND_CALL     = {}
     SCRIPT_BUFFER_CALL      = {}
     SCRIPT_ARGS             = ''
@@ -1299,6 +1299,7 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
     ''' % COLOR_TEXT
     TIMEOUT_COMMAND         = 20
     TIMEOUT_CONNECT         = 30
+    COMMAND_VERSION         = {}
   
   #
   # SETUP OF HOOK VARIABLES
@@ -1368,13 +1369,17 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
         global COMMAND_REQUIREMENTS
         if COMMAND in COMMAND_REQUIREMENTS:
           COMMAND_CAN_BE_EXECUTED = validate_command_3_check_requirements(BUFFER, COMMAND, FROM_BOT, COMMAND_ID)
+      
+      # CHECK VERSION FOR EXECUTION
+      if COMMAND_CAN_BE_EXECUTED == True:
+        COMMAND_CAN_BE_EXECUTED = validate_command_4_check_version(BUFFER, COMMAND, FROM_BOT, COMMAND_ID)
         
       if COMMAND_CAN_BE_EXECUTED == True:
         FUNCTION = SCRIPT_CALL[COMMAND]
       else:
         FUNCTION = ''
         display_message(BUFFER, '[%s] %s < EXECUTION DENIED' % (COMMAND_ID, FROM_BOT))
-        cleanup_id_variables(SOURCE, UNIQ_COMMAND_ID)
+        cleanup_command_id_variables(SOURCE, UNIQ_COMMAND_ID)
     
     return [COMMAND_CAN_BE_EXECUTED, FUNCTION]
   
@@ -1433,15 +1438,36 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
         COMMAND_CAN_BE_EXECUTED = COMMAND_REQUIREMENT[COMMAND](BUFFER, COMMAND, FROM_BOT, COMMAND_ID)
         if COMMAND_CAN_BE_EXECUTED == False:
           display_message(BUFFER, '[%s] %s < REQUIREMENT RESULT UNSUCCESSFUL' % (COMMAND_ID, COMMAND_REQUIREMENT))
-    else:
-      display_message(BUFFER, '[%s] %s < REQUIREMENT UNDEFINED' % (COMMAND_ID, COMMAND))
-      
+    
     return COMMAND_CAN_BE_EXECUTED
+  
+  #
+  # VALIDATE COMMAND VERSION (some commands are not in previous version)
+  #
+  
+  def validate_command_4_check_version(BUFFER, COMMAND, FROM_BOT, COMMAND_ID):
+    global WRECON_BOT_ID
+    
+    VERIFY_RESULT = True
+    
+    if WRECON_BOT_ID == FROM_BOT:
+      return VERIFY_RESULT
+    
+    if VERIFY_RESULT == True:
+      global COMMAND_VERSION
+      VERSION_REMOTE  = WRECON_REMOTE_BOTS_ADVERTISED[VERIFY_BOT].split(' ')[0].split('v')[1]
+      VERSION_COMMAND = COMMAND_VERSION[COMMAND]
+      if VERSION_REMOTE < VERSION_COMMAND:
+        VERIFY_RESULT = False
+        display_message(BUFFER, '[%s] %s < VERSION %s IS REQUIRED' % (COMMAND_ID, COMMAND, VERSION_COMMAND))
+    
+    return VERIFY_RESULT
+  
   #
   # CLEANUP ID VARIABLES (LOCAL or REMOTE) AFTER VALIDATION or EXECUTION
   #
   
-  def cleanup_id_variables(SOURCE, COMMAND_ID, UNIQ_COMMAND_ID):
+  def cleanup_command_id_variables(SOURCE, COMMAND_ID, UNIQ_COMMAND_ID):
     if SOURCE == 'LOCAL':
       global ID_CALL_LOCAL
       if UNIQ_COMMAND_ID in ID_CALL_LOCAL:
@@ -1454,20 +1480,18 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
     return
   
   #
-  # COMMAND WITH NO REQUIREMENT
-  #
-  
-  def return_execution_allowed(NULL, NULL, NULL):
-    return True
-  
-  #
   # VERIFY WE CAN CONTROL REMOTE BOT FOR REMOTE EXECUTION (added BOT)
   # (for call)
   
   def verify_remote_bot_control(BUFFER, REMOTE_BOT, COMMAND_ID):
-    global WRECON_REMOTE_BOTS_CONTROL
+    global WRECON_BOT_ID
     
     VERIFY_RESULT = True
+    
+    if REMOTE_BOT = WRECON_BOT_ID:
+      return VERIFY_RESULT
+    
+    global WRECON_REMOTE_BOTS_CONTROL
     
     # CHECK WE HAVE ADDED BOT
     if not REMOTE_BOT in WRECON_REMOTE_BOTS_CONTROL:
@@ -1481,12 +1505,17 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
   #
   
   def verify_remote_bot_advertised(BUFFER, VERIFY_BOT, COMMAND_ID):
+    global WRECON_BOT_ID
+    
+    VERIFY_RESULT = True
+    
+    if VERIFY_BOT == WRECON_BOT_ID:
+      return VERIFY_RESULT
+    
     global WRECON_REMOTE_BOTS_ADVERTISED
     
     # IF WE HAVE DATA OF BOT, NO NEED ADDITIONAL ACTION
-    if VERIFY_BOT in WRECON_REMOTE_BOTS_ADVERTISED:
-      VERIFY_RESULT = True
-    else:
+    if not VERIFY_BOT in WRECON_REMOTE_BOTS_ADVERTISED:
       # TODO
       VERIFY_RESULT = advertise_additional(BUFFER, VERIFY_BOT, COMMAND_ID)
     
@@ -1497,6 +1526,12 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
   # verification require remote BOT is advertised
   
   def verify_remote_bot_verified(BUFFER, VERIFY_BOT, COMMAND_ID):
+    global WRECON_BOT_ID
+    
+    VERIFY_RESULT = True
+    
+    if VERIFY_BOT == WRECON_BOT_ID:
+      return VERIFY_RESULT
     
     # VERIFY REQUIRE REMOTE BOT WAS ADVERTISED, WE CHECK IT NOW
     VERIFY_RESULT = verify_remote_bot_advertised(BUFFER, VERIFY_BOT, COMMAND_ID)
@@ -1517,6 +1552,13 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
   # verification require remote BOT is verified
   
   def verify_remote_bot_granted(BUFFER, VERIFY_BOT, COMMAND_ID):
+    global WRECON_BOT_ID
+    
+    VERIFY_RESULT = True
+    
+    if VERIFY_BOT == WRECON_BOT_ID:
+      return VERIFY_RESULT
+    
     global WRECON_REMOTE_BOTS_GRANTED
     
     # CHECK WE GRANTED REMOTE BOT
@@ -1528,4 +1570,3 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
       VERIFY_RESULT = verify_remote_bot_verified(BUFFER, VERIFY_BOT, COMMAND_ID)
     
     return VERIFY_RESULT
-  
