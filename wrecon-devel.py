@@ -760,6 +760,38 @@ else:
   
   #####
   #
+  # GET NICK INFO
+  
+  def get_nick_info(TAGS, PREFIX):
+    
+    ACTUAL_DATE_TIME = datetime.datetime.now().strftime('%Y%m%d%H%M%S')
+    
+    NICK_NAME        = TAGS[3].split('_')[1]
+    HOST_NAME        = TAGS[4].split('_')[1]
+    
+    NICK_INFO        = '%s|%s|%s|%s' % (NICK_NAME, HOST_NAME, PREFIX, ACTUAL_DATE_TIME)
+    
+    return NICK_INFO
+  #
+  ##### END GET NICK INFO
+  
+  #####
+  #
+  # GET BASIC DATA OF REMOTE BOT
+  
+  def get_basic_data_of_source_bot(TAGS, PREFIX, COMMAND_ARGUMENTS):
+    
+    SOURCE_BOT_NAME       = COMMAND_ARGUMENTS.split('[')[0].rstrip()
+    SOURCE_BOT_NICK_INFO  = get_nick_info(TAGS, PREFIX)
+    
+    SOURCE_BOT_BASIC_DATA = '%s|%s' % (SOURCE_BOT_NAME, SOURCE_BOT_NICK_INFO)
+    
+    return SOURCE_BOT_BASIC_DATA
+  #
+  ##### END GET BASIC DATA OF REMOTE BOT
+  
+  #####
+  #
   # HOOK AND UNHOOK BUFFER
   
   def hook_buffer():
@@ -796,10 +828,7 @@ else:
     if not DATA:
       display_message(BUFFER, '[%s] ERROR: MISSING COMMAND' % COMMAND_ID)
     else:
-      global ID_CALL_LOCAL, WRECON_BOT_ID, DISPLAY_COMMAND
-      
-      UNIQUE_COMMAND_ID                  = WRECON_BOT_ID + COMMAND_ID
-      DISPLAY_COMMAND[UNIQUE_COMMAND_ID] = True
+      global ID_CALL_LOCAL, WRECON_BOT_ID, DISPLAY_COMMAND, SCRIPT_COMMAND_CALL
       
       ARGUMENTS = DATA.split(None, 1)
       COMMAND = ARGUMENTS[0].upper()
@@ -809,17 +838,19 @@ else:
         COMMAND_ARGUMENTS      = ''
         COMMAND_ARGUMENTS_LIST = []
       else:
-        COMMAND_ARGUMENTS      = ARGUMENTS[0]
+        COMMAND_ARGUMENTS      = ' '.join(ARGUMENTS)
         COMMAND_ARGUMENTS_LIST = COMMAND_ARGUMENTS.split(' ')
-        
-      ID_CALL_LOCAL[COMMAND_ID] = [COMMAND, COMMAND_ARGUMENTS_LIST]
       
-      EXECUTE_ALLOWED, EXECUTE_FUNCTION = validate_command(WEECHAT_DATA, BUFFER, 'LOCAL', COMMAND, WRECON_BOT_ID, WRECON_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS, UNIQUE_COMMAND_ID)
+      UNIQUE_COMMAND_ID                  = WRECON_BOT_ID + COMMAND_ID
+      ID_CALL_LOCAL[UNIQUE_COMMAND_ID]   = [COMMAND, COMMAND_ID, COMMAND_ARGUMENTS_LIST]
+      DISPLAY_COMMAND[UNIQUE_COMMAND_ID] = True
+      
+      EXECUTE_ALLOWED, EXECUTE_LOCAL_COMMAND = validate_command(WEECHAT_DATA, BUFFER, 'LOCAL', COMMAND, WRECON_BOT_ID, WRECON_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS, UNIQUE_COMMAND_ID)
       
       if EXECUTE_ALLOWED == True:
         global WRECON_BUFFER
         NULL = ''
-        EXECUTE_FUNCTION(WEECHAT_DATA, WRECON_BUFFER, NULL, NULL, NULL, NULL, NULL, NULL, WRECON_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS)
+        EXECUTE_LOCAL_COMMAND(WEECHAT_DATA, WRECON_BUFFER, COMMAND_ID, COMMAND_ARGUMENTS_LIST)
     
     return weechat.WEECHAT_RC_OK
   
@@ -830,7 +861,7 @@ else:
   
   #####
   #
-  # PARSING BUFFER REPLY (COMMAND)
+  # PARSING BUFFER COMMAND (RECEIVED A COMMAND FROM BUFFER)
   
   def hook_command_from_buffer(WEECHAT_DATA, BUFFER, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, DATA):
     global ID_CALL_REMOTE, SCRIPT_BUFFER_CALL, DISPLAY_COMMAND
@@ -850,7 +881,7 @@ else:
       COMMAND_ARGUMENTS      = ''
       COMMAND_ARGUMENTS_LIST = []
     else:
-      COMMAND_ARGUMENTS      = ARGUMENTS[0]
+      COMMAND_ARGUMENTS      = ' '.join(ARGUMENTS)
       COMMAND_ARGUMENTS_LIST = COMMAND_ARGUMENTS.split(' ')
     
     UNIQUE_COMMAND_ID                  = SOURCE_BOT_ID + COMMAND_ID
@@ -957,6 +988,7 @@ else:
       if WRECON_AUTO_ADVERTISED == False:
         hook_buffer()
         setup_channel(WRECON_BUFFER_CHANNEL)
+        global SCRIPT_
         hook_command_from_user(WEECHAT_DATA, WRECON_BUFFER_CHANNEL, DATA)
         WRECON_AUTO_ADVERTISED = True
     return weechat.WEECHAT_RC_OK
@@ -1599,15 +1631,16 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
   # COMMAND ADVERTISEMENT
   
   # CALLED FROM USER
-  def command_user_advertisement(WEECHAT_DATA, BUFFER, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS):
+  def command_user_advertise(WEECHAT_DATA, WRECON_BUFFER, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
     global BUFFER_CMD_ADV_EXE, SCRIPT_VERSION, SCRIPT_TIMESTAMP
     
+    # current user command no need to be validated, and will be executed without additional istelsf validation
     weechat.command(BUFFER, '%s %s %s %s v%s %s' % (BUFFER_CMD_ADV_EXE, COMMAND_ID, SOURCE_BOT_ID, COMMAND_ID, SCRIPT_VERSION, SCRIPT_TIMESTAMP))
     
     return weechat.WEECHAT_RC_OK
   
   # RECEIVED FROM BUFFER (REQUESTED INFORMATION ABOUT BOT, WE NOW REPLY)
-  def command_buffer_advertisement_1_requested(WEECHAT_DATA, BUFFER, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS):
+  def command_buffer_advertise_1_requested(WEECHAT_DATA, BUFFER, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS):
     global BUFFER_CMD_ADV_REP, SCRIPT_VERSION, SCRIPT_TIMESTAMP, WRECON_BOT_NAME
     
     weechat.command(BUFFER, '%s %s %s %s %s [v%s %s]' % (BUFFER_CMD_ADV_REP, SOURCE_BOT_ID, TARGET_BOT_ID, COMMAND_ID, WRECON_BOT_NAME, SCRIPT_VERSION, SCRIPT_TIMESTAMP))
@@ -1615,13 +1648,33 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
     return weechat.WEECHAT_RC_OK
   
   # RECEIVED FROM BUFFER (RECEIVED INFORMATION ABOUT BOT, WE NOW SAVE)
-  def command_buffer_advertisement_2_receive(WEECHAT_DATA, BUFFER, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS):
+  def command_buffer_advertise_2_received(WEECHAT_DATA, BUFFER, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS):
+    
+    command_buffer_advertise_save_data(BUFFER, TAGS, PREFIX, SOURCE_BOT_ID, COMMAND_ARGUMENTS)
+    
+    return weechat.WEECHAT_RC_OK
+  
+  # RECEIVED FROM BUFFER (REQUESTED ADDITIONAL ADVERTISEMENT, WE NOW REPLY)
+  def command_buffer_advertise_ada_1_requested(WEECHAT_DATA, BUFFER, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS):
+    global BUFFER_CMD_ADA_REP, SCRIPT_VERSION, SCRIPT_TIMESTAMP, WRECON_BOT_NAME
+    
+    weechat.command(BUFFER, '%s %s %s %s %s [v%s %s]' % (BUFFER_CMD_ADA_REP, SOURCE_BOT_ID, TARGET_BOT_ID, COMMAND_ID, WRECON_BOT_NAME, SCRIPT_VERSION, SCRIPT_TIMESTAMP))
+    
+    return weechat.WEECHAT_RC_OK
+  
+  # RECEIVED FROM BUFFER (RECEIVED INFORMATION ABOUT BOT, WE NOW SAVE)
+  def command_buffer_advertise_ada_2_received(WEECHAT_DATA, BUFFER, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS):
+    
+    command_buffer_advertise_save_data(BUFFER, TAGS, PREFIX, SOURCE_BOT_ID, COMMAND_ARGUMENTS)
+    
+    return weechat.WEECHAT_RC_OK
+  
+  # SAVE AND DISPLAY DATA OF REMOTE BOT
+  def command_buffer_advertise_save_data(BUFFER, TAGS, PREFIX, SOURCE_BOT_ID, COMMAND_ARGUMENTS):
     global WRECON_REMOTE_BOT_ADVERTISED
     
-    SOURCE_BOT_NAME = ''
-    SOURCE_BOT_DATA = ''
-    
-    WRECON_REMOTE_BOT_ADVERTISED[SOURCE_BOT_ID] = SOURCE_BOT_DATA
+    WRECON_REMOTE_BOT_ADVERTISED[SOURCE_BOT_ID] = get_basic_data_of_source_bot(TAGS, PREFIX, COMMAND_ARGUMENTS)
+    SOURCE_BOT_NAME                             = WRECON_REMOTE_BOT_ADVERTISED[SOURCE_BOT_ID].split('|')[0]
     
     display_message(BUFFER, '[%s] REMOTE BOT REGISTERED -> % (%s)' % (COMMAND_ID, SOURCE_BOT_ID, SOURCE_BOT_NAME))
     
@@ -1643,14 +1696,14 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
       /wrecon ADVERTISE
     '''
     SCRIPT_COMPLETION                = SCRIPT_COMPLETION + ' || ADV || ADVERTISE'
-    SCRIPT_COMMAND_CALL['ADV']       = command_user_advertisement
-    SCRIPT_COMMAND_CALL['ADVERTISE'] = command_user_advertisement
+    SCRIPT_COMMAND_CALL['ADV']       = command_user_advertise
+    SCRIPT_COMMAND_CALL['ADVERTISE'] = command_user_advertise
     
-    SCRIPT_BUFFER_CALL[BUFFER_CMD_ADV_EXE] = command_buffer_advertisement_1_requested
-    SCRIPT_BUFFER_CALL[BUFFER_CMD_ADV_REP] = command_buffer_advertisement_2_receive
+    SCRIPT_BUFFER_CALL[BUFFER_CMD_ADV_EXE] = command_buffer_advertise_1_requested
+    SCRIPT_BUFFER_CALL[BUFFER_CMD_ADV_REP] = command_buffer_advertise_2_received
     
-    SCRIPT_BUFFER_CALL[BUFFER_CMD_ADA_EXE] = command_buffer_advertisement_add_1_
-    SCRIPT_BUFFER_CALL[BUFFER_CMD_ADA_REP] = command_buffer_advertisement_add_2_
+    SCRIPT_BUFFER_CALL[BUFFER_CMD_ADA_EXE] = command_buffer_advertise_ada_1_requested
+    SCRIPT_BUFFER_CALL[BUFFER_CMD_ADA_REP] = command_buffer_advertise_ada_2_received
     
     return
     
