@@ -782,9 +782,10 @@ else:
   def get_basic_data_of_source_bot(TAGS, PREFIX, COMMAND_ARGUMENTS):
     
     SOURCE_BOT_NAME       = COMMAND_ARGUMENTS.split('[')[0].rstrip()
+    SOURCE_BOT_VERSION    = COMMAND_ARGUMENTS.split('[')[1].split('v')[1].split(' ')[0]
     SOURCE_BOT_NICK_INFO  = get_nick_info(TAGS, PREFIX)
     
-    SOURCE_BOT_BASIC_DATA = '%s|%s' % (SOURCE_BOT_NAME, SOURCE_BOT_NICK_INFO)
+    SOURCE_BOT_BASIC_DATA = '%s|%s|%s' % (SOURCE_BOT_NAME, SOURCE_BOT_VERSION, SOURCE_BOT_NICK_INFO)
     
     return SOURCE_BOT_BASIC_DATA
   #
@@ -1109,7 +1110,7 @@ else:
   # FUNCTION SETUP AUTOJOIN DEL
   #
   
-  def setup_autojoin_del(NULL, NULL, WRECON_CHANNEL, WEECHAT_CHANNELS_AUTOJOIN, WEECHAT_CHANNELS_KEYS):
+  def setup_autojoin_del(NULL1, NULL2, WRECON_CHANNEL, WEECHAT_CHANNELS_AUTOJOIN, WEECHAT_CHANNELS_KEYS):
     SAVE_SETUP = False
     
     if WRECON_CHANNEL in WEECHAT_CHANNELS_AUTOJOIN:
@@ -1506,12 +1507,13 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
     
     global COMMAND_VERSION
     
-    VERSION_REMOTE_COMMAND  = WRECON_REMOTE_BOTS_ADVERTISED[VERIFY_BOT].split(' ')[0].split('v')[1]
+    REMOTE_BOT_NAME         = WRECON_REMOTE_BOTS_ADVERTISED[VERIFY_BOT].split('|')[0]
+    VERSION_REMOTE_COMMAND  = WRECON_REMOTE_BOTS_ADVERTISED[VERIFY_BOT].split('|')[1]
     VERSION_COMMAND         = COMMAND_VERSION[COMMAND]
     
     if VERSION_REMOTE_COMMAND < VERSION_COMMAND:
       COMMAND_CAN_BE_EXECUTED = False
-      display_message(BUFFER, '[%s] %s < VERSION %s REQUIRED ON %s' % (COMMAND_ID, COMMAND, VERSION_COMMAND, VERIFY_BOT))
+      display_message(BUFFER, '[%s] %s < VERSION %s REQUIRED ON %s (%s)' % (COMMAND_ID, COMMAND, VERSION_COMMAND, VERIFY_BOT, REMOTE_BOT_NAME))
     
     return COMMAND_CAN_BE_EXECUTED
   
@@ -1568,7 +1570,11 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
     
     # IF WE HAVE DATA OF BOT, NO NEED ADDITIONAL ACTION
     if not TARGET_BOT_ID in WRECON_REMOTE_BOTS_ADVERTISED:
+      global VERIFY_RESULT_ADA
+      UNIQ_COMMAND_ID = TARGET_BOT_ID + COMMAND_ID
       VERIFY_RESULT = command_buffer_advertise_ada_1_request('', BUFFER, '', '', '', '', '', TARGET_BOT_ID, WRECON_BOT_ID, COMMAND_ID, '')
+      if UNIQ_COMMAND_ID in VERIFY_RESULT_ADA:
+        del VERIFY_RESULT_ADA[UNIQ_COMMAND_ID]
     
     return VERIFY_RESULT
   
@@ -1645,12 +1651,23 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
     
     weechat.command(BUFFER, '%s %s %s %s %s [v%s %s]' % (BUFFER_CMD_ADV_REP, SOURCE_BOT_ID, TARGET_BOT_ID, COMMAND_ID, WRECON_BOT_NAME, SCRIPT_VERSION, SCRIPT_TIMESTAMP))
     
+    # Clean up variables, we finished
+    UNIQ_COMMAND_ID = SOURCE_BOT_ID + COMMAND_ID
+    cleanup_unique_command_id('REMOTE', UNIQ_COMMAND_ID)
+    
     return weechat.WEECHAT_RC_OK
   
   # ADVERTISE - RECEIVED FROM BUFFER (RECEIVED INFORMATION ABOUT BOT, WE NOW SAVE)
-  def command_buffer_advertise_2_received(WEECHAT_DATA, BUFFER, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS):
+  def command_buffer_advertise_2_result_received(WEECHAT_DATA, BUFFER, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS):
     
     command_buffer_advertise_save_data(BUFFER, TAGS, PREFIX, SOURCE_BOT_ID, COMMAND_ARGUMENTS)
+    
+    # Clean up variables, we finished
+    # Current command has been initiated locally, we also clean up local variable
+    UNIQ_COMMAND_ID = SOURCE_BOT_ID + COMMAND_ID
+    cleanup_unique_command_id('REMOTE', UNIQ_COMMAND_ID)
+    UNIQ_COMMAND_ID = TARGET_BOT_ID + COMMAND_ID
+    cleanup_unique_command_id('LOCAL', UNIQ_COMMAND_ID)
     
     return weechat.WEECHAT_RC_OK
   
@@ -1665,9 +1682,10 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
     
     weechat.command(BUFFER, '%s %s %s %s %v %s' % (BUFFER_CMD_ADA_REQ, SOURCE_BOT_ID, TARGET_BOT_ID, COMMAND_ID, SCRIPT_VERSION, SCRIPT_TIMESTAMP))
     
-    VERIFY_RESULT = weechat.hook_timer(1*1000, 0, TIMEOUT_COMMAND_SHORT, 'command_buffer_advertise_wait_result', UNIQ_COMMAND_ID)
+    global VERIFY_RESULT_ADA
+    VERIFY_RESULT_ADA[UNIQ_COMMAND_ID] = weechat.hook_timer(1*1000, 0, TIMEOUT_COMMAND_SHORT, 'command_buffer_advertise_wait_result', UNIQ_COMMAND_ID)
     
-    return VERIFY_RESULT
+    return VERIFY_RESULT_ADA[UNIQ_COMMAND_ID]
   
   # ADVERTISE - ADDITONAL - RECEIVED FROM BUFFER (RECEIVED REQUEST INFORMATION ABOUT BOT, WE NOW REPLY)
   def command_buffer_advertise_ada_2_requested(WEECHAT_DATA, BUFFER, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS):
@@ -1675,18 +1693,29 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
     
     weechat.command(BUFFER, '%s %s %s %s %s [v%s %s]' % (BUFFER_CMD_ADA_REP, SOURCE_BOT_ID, TARGET_BOT_ID, COMMAND_ID, WRECON_BOT_NAME, SCRIPT_VERSION, SCRIPT_TIMESTAMP))
     
+    # Clean up variables, we finished
+    UNIQ_COMMAND_ID = SOURCE_BOT_ID + COMMAND_ID
+    cleanup_unique_command_id('REMOTE', UNIQ_COMMAND_ID)
+    
     return weechat.WEECHAT_RC_OK
   
   # ADVERTISE -ADDITIONAL - RECEIVED FROM BUFFER (RECEIVED INFORMATION OF REMOTED BOT, WE NOW SAVE)
-  def command_buffer_advertise_ada_3_received(WEECHAT_DATA, BUFFER, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS):
+  def command_buffer_advertise_ada_3_result_received(WEECHAT_DATA, BUFFER, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS):
     
     command_buffer_advertise_save_data(BUFFER, TAGS, PREFIX, SOURCE_BOT_ID, COMMAND_ARGUMENTS)
+    
+    # Clean up variables, we finished
+    # Current command has been initiated locally, we also clean up local variable
+    UNIQ_COMMAND_ID = SOURCE_BOT_ID + COMMAND_ID
+    cleanup_unique_command_id('REMOTE', UNIQ_COMMAND_ID)
+    UNIQ_COMMAND_ID = TARGET_BOT_ID + COMMAND_ID
+    cleanup_unique_command_id('LOCAL', UNIQ_COMMAND_ID)
     
     return weechat.WEECHAT_RC_OK
   
   # ADVERTISE - ADDITIONAL - HOOK TIMER (WAIT FOR RESULT)
   def command_buffer_advertise_wait_result(UNIQ_COMMAND_ID, REMAINING_CALLS):
-    global ADDITIONAL_ADVERTISE, WRECON_REMOTE_BOT_ADVERTISED
+    global ADDITIONAL_ADVERTISE, WRECON_REMOTE_BOT_ADVERTISED, VERIFY_RESULT_ADA
     
     VERIFY_RESULT = False
     VERIFY_BOT    = ADDITIONAL_ADVERTISE[UNIQ_COMMAND_ID]
@@ -1694,9 +1723,10 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
     if VERIFY_BOT in WRECON_REMOTE_BOT_ADVERTISED:
       VERIFY_RESULT = True
     
-    del ADDITIONAL_ADVERTISE[UNIQ_COMMAND_ID]
+    if UNIQ_COMMAND_ID in ADDITIONAL_ADVERTISE:
+      del ADDITIONAL_ADVERTISE[UNIQ_COMMAND_ID]
     
-    weechat.unhook(VERIFY_RESULT)
+    weechat.unhook(VERIFY_RESULT_ADA[UNIQ_COMMAND_ID])
     
     return VERIFY_RESULT
   
@@ -1706,8 +1736,9 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
     
     WRECON_REMOTE_BOT_ADVERTISED[SOURCE_BOT_ID] = get_basic_data_of_source_bot(TAGS, PREFIX, COMMAND_ARGUMENTS)
     SOURCE_BOT_NAME                             = WRECON_REMOTE_BOT_ADVERTISED[SOURCE_BOT_ID].split('|')[0]
+    SOURCE_BOT_VERSION                          = WRECON_REMOTE_BOT_ADVERTISED[SOURCE_BOT_ID].split('|')[1]
     
-    display_message(BUFFER, '[%s] REMOTE BOT REGISTERED -> % (%s)' % (COMMAND_ID, SOURCE_BOT_ID, SOURCE_BOT_NAME))
+    display_message(BUFFER, '[%s] REMOTE BOT REGISTERED -> %s (%s) [v%s]' % (COMMAND_ID, SOURCE_BOT_ID, SOURCE_BOT_NAME, SOURCE_BOT_VERSION))
     
     return weechat.WEECHAT_RC_OK
   
@@ -1731,10 +1762,10 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
     SCRIPT_COMMAND_CALL['ADVERTISE'] = command_user_advertise
     
     SCRIPT_BUFFER_CALL[BUFFER_CMD_ADV_EXE] = command_buffer_advertise_1_requested
-    SCRIPT_BUFFER_CALL[BUFFER_CMD_ADV_REP] = command_buffer_advertise_2_received
+    SCRIPT_BUFFER_CALL[BUFFER_CMD_ADV_REP] = command_buffer_advertise_2_result_received
     
     SCRIPT_BUFFER_CALL[BUFFER_CMD_ADA_EXE] = command_buffer_advertise_ada_2_requested
-    SCRIPT_BUFFER_CALL[BUFFER_CMD_ADA_REP] = command_buffer_advertise_ada_3_received
+    SCRIPT_BUFFER_CALL[BUFFER_CMD_ADA_REP] = command_buffer_advertise_ada_3_result_received
     
     return
     
