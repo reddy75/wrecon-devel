@@ -777,6 +777,17 @@ else:
   
   #####
   #
+  # FUNCTION IGNORE BUFFER COMMAND (do nothing)
+  
+  def ignore_buffer_command(WEECHAT_DATA, BUFFER, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS):
+    UNIQ_COMMAND_ID = SOURCE_BOT_ID + COMMAND_ID
+    cleanup_unique_command_id('REMOTE', UNIQ_COMMAND_ID)
+    return weechat.WEECHAT_RC_OK
+  #
+  ##### END FUNCTION IGNORE BUFFER COMMAND
+  
+  #####
+  #
   # GET BASIC DATA OF REMOTE BOT
   
   def get_basic_data_of_source_bot(TAGS, PREFIX, COMMAND_ARGUMENTS):
@@ -1646,8 +1657,9 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
     
     # Following part ensure we will remember our call
     # We will wait for all results until TIMEOUT_COMMAND_SHORT, then later results will be refused
-    global VERIFY_RESULT_ADV
+    global VERIFY_RESULT_ADV, ID_CALL_LOCAL
     UNIQ_COMMAND_ID                    = COMMAND_ID + COMMAND_ID
+    ID_CALL_LOCAL[UNIQ_COMMAND_ID]     = 'INTERNAL'
     VERIFY_RESULT_ADV[UNIQ_COMMAND_ID] = weechat.hook_timer(1*1000, 0, TIMEOUT_COMMAND_SHORT, 'command_user_advertise_wait_result', UNIQ_COMMAND_ID)
     
     return weechat.WEECHAT_RC_OK
@@ -1670,9 +1682,9 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
     
     UNIQ_LOCAL_COMMAND_ID = COMMAND_ID + COMMAND_ID
     
-    # This is prevetion against repies after timeout, or fake reply
+    # This is prevetion against replies after timeout, or fake replies
     if not UNIQ_LOCAL_COMMAND_ID in ID_CALL_LOCAL:
-      command_buffer_advertise_refuse_data(BUFFER, TAGS, PREFIX, SOURCE_BOT_ID, COMMAND_ARGUMENTS)
+      command_buffer_advertise_refuse_data(BUFFER, COMMAND_ID, SOURCE_BOT_ID)
     else:
       command_buffer_advertise_save_data(BUFFER, TAGS, PREFIX, SOURCE_BOT_ID, COMMAND_ARGUMENTS)
       
@@ -1706,10 +1718,10 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
   def command_buffer_advertise_ada_1_request(WEECHAT_DATA, BUFFER, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS):
     global BUFFER_CMD_ADA_REQ, SCRIPT_VERSION, SCRIPT_TIMESTAMP, WRECON_BOT_NAME, TIMEOUT_COMMAND_SHORT, ADDITIONAL_ADVERTISE
     
-    UNIQ_COMMAND_ID                       = SOURCE_BOT_ID + COMMAND_ID
-    ADDITIONAL_ADVERTISE[UNIQ_COMMAND_ID] = SOURCE_BOT_ID
+    UNIQ_COMMAND_ID                       = TARGET_BOT_ID + COMMAND_ID
+    ADDITIONAL_ADVERTISE[UNIQ_COMMAND_ID] = TARGET_BOT_ID
     
-    weechat.command(BUFFER, '%s %s %s %s %v %s' % (BUFFER_CMD_ADA_REQ, SOURCE_BOT_ID, TARGET_BOT_ID, COMMAND_ID, SCRIPT_VERSION, SCRIPT_TIMESTAMP))
+    weechat.command(BUFFER, '%s %s %s %s %v %s' % (BUFFER_CMD_ADA_REQ, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, SCRIPT_VERSION, SCRIPT_TIMESTAMP))
     
     global VERIFY_RESULT_ADA
     VERIFY_RESULT_ADA[UNIQ_COMMAND_ID] = weechat.hook_timer(1*1000, 0, TIMEOUT_COMMAND_SHORT, 'command_buffer_advertise_ada_wait_result', UNIQ_COMMAND_ID)
@@ -1736,7 +1748,7 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
     
     # This is prevention against reply after timeout, or fake reply
     if not UNIQ_COMMAND_ID in ID_LOCAL_CALL:
-      command_buffer_advertise_refuse_data(BUFFER, TAGS, PREFIX, SOURCE_BOT_ID, COMMAND_ARGUMENTS)
+      command_buffer_advertise_refuse_data(BUFFER, COMMAND_ID, SOURCE_BOT_ID)
     else:
       command_buffer_advertise_save_data(BUFFER, TAGS, PREFIX, SOURCE_BOT_ID, COMMAND_ARGUMENTS)
     
@@ -1766,7 +1778,7 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
     
     return VERIFY_RESULT
   
-  # SAVE AND DISPLAY DATA OF REMOTE BOT
+  # ADVERTISE - SAVE AND DISPLAY DATA OF REMOTE BOT
   def command_buffer_advertise_save_data(BUFFER, TAGS, PREFIX, SOURCE_BOT_ID, COMMAND_ARGUMENTS):
     global WRECON_REMOTE_BOT_ADVERTISED
     
@@ -1778,9 +1790,11 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
     
     return weechat.WEECHAT_RC_OK
   
-  # REFUSE UNVONTED DATA OF REMOTE BOT
-  def command_buffer_advertise_refuse_data(BUFFER, TAGS, PREFIX, SOURCE_BOT_ID, COMMAND_ARGUMENTS):
-    display_message(BUFFER, '[%s] REMOTE BOT REGISTERED -> %s (%s) [v%s]' % (COMMAND_ID, SOURCE_BOT_ID, SOURCE_BOT_NAME, SOURCE_BOT_VERSION))
+  # ADVERTISE - REFUSE DATA AFTER TIMEOUT, OR FAKE DATA OF REMOTE BOT
+  def command_buffer_advertise_refuse_data(BUFFER, COMMAND_ID, SOURCE_BOT_ID):
+    OUT_MESSAGE     = ['[%s] REMOTE BOT REFUSED -> %s ' % (COMMAND_ID, SOURCE_BOT_ID)]
+    OUT_MESSAGE.append('[%s] TIMEOUT OR FAKE REPLY' % COMMAND_ID)
+    display_message(BUFFER, OUT_MESSAGE)
     return weechat.WEECHAT_RC_OK
   
   def setup_command_variables_advertisement():
@@ -1807,6 +1821,8 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
     
     SCRIPT_BUFFER_CALL[BUFFER_CMD_ADA_EXE] = command_buffer_advertise_ada_2_requested
     SCRIPT_BUFFER_CALL[BUFFER_CMD_ADA_REP] = command_buffer_advertise_ada_3_result_received
+    
+    SCRIPT_BUFFER_CALL[BUFFER_CMD_ADV_ERR] = ignore_buffer_command
     
     return
     
