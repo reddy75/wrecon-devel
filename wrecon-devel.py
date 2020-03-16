@@ -1570,8 +1570,9 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
     
     # IF WE HAVE DATA OF BOT, NO NEED ADDITIONAL ACTION
     if not TARGET_BOT_ID in WRECON_REMOTE_BOTS_ADVERTISED:
-      global VERIFY_RESULT_ADA
-      UNIQ_COMMAND_ID = TARGET_BOT_ID + COMMAND_ID
+      global VERIFY_RESULT_ADA, ID_CALL_LOCAL
+      UNIQ_COMMAND_ID                = TARGET_BOT_ID + COMMAND_ID
+      ID_CALL_LOCAL[UNIQ_COMMAND_ID] = 'INTERNAL CALL'
       VERIFY_RESULT = command_buffer_advertise_ada_1_request('', BUFFER, '', '', '', '', '', TARGET_BOT_ID, WRECON_BOT_ID, COMMAND_ID, '')
       if UNIQ_COMMAND_ID in VERIFY_RESULT_ADA:
         del VERIFY_RESULT_ADA[UNIQ_COMMAND_ID]
@@ -1643,6 +1644,12 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
     # current user command no need to be validated, and will be executed without additional istelsf validation
     weechat.command(BUFFER, '%s %s %s %s v%s %s' % (BUFFER_CMD_ADV_EXE, COMMAND_ID, SOURCE_BOT_ID, COMMAND_ID, SCRIPT_VERSION, SCRIPT_TIMESTAMP))
     
+    # Following part ensure we will remember our call
+    # We will wait for all results until TIMEOUT_COMMAND_SHORT, then later results will be refused
+    global VERIFY_RESULT_ADV
+    UNIQ_COMMAND_ID                    = COMMAND_ID + COMMAND_ID
+    VERIFY_RESULT_ADV[UNIQ_COMMAND_ID] = weechat.hook_timer(1*1000, 0, TIMEOUT_COMMAND_SHORT, 'command_user_advertise_wait_result', UNIQ_COMMAND_ID)
+    
     return weechat.WEECHAT_RC_OK
   
   # ADVERTISE - RECEIVED FROM BUFFER (REQUESTED INFORMATION ABOUT BOT, WE NOW REPLY)
@@ -1659,17 +1666,39 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
   
   # ADVERTISE - RECEIVED FROM BUFFER (RECEIVED INFORMATION ABOUT BOT, WE NOW SAVE)
   def command_buffer_advertise_2_result_received(WEECHAT_DATA, BUFFER, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS):
+    global ID_CALL_LOCAL
     
-    command_buffer_advertise_save_data(BUFFER, TAGS, PREFIX, SOURCE_BOT_ID, COMMAND_ARGUMENTS)
+    UNIQ_LOCAL_COMMAND_ID = COMMAND_ID + COMMAND_ID
     
+    # This is prevetion against repies after timeout, or fake reply
+    if not UNIQ_LOCAL_COMMAND_ID in ID_CALL_LOCAL:
+      command_buffer_advertise_refuse_data(BUFFER, TAGS, PREFIX, SOURCE_BOT_ID, COMMAND_ARGUMENTS)
+    else:
+      command_buffer_advertise_save_data(BUFFER, TAGS, PREFIX, SOURCE_BOT_ID, COMMAND_ARGUMENTS)
+      
     # Clean up variables, we finished
-    # Current command has been initiated locally, we also clean up local variable
     UNIQ_COMMAND_ID = SOURCE_BOT_ID + COMMAND_ID
     cleanup_unique_command_id('REMOTE', UNIQ_COMMAND_ID)
-    UNIQ_COMMAND_ID = TARGET_BOT_ID + COMMAND_ID
-    cleanup_unique_command_id('LOCAL', UNIQ_COMMAND_ID)
     
     return weechat.WEECHAT_RC_OK
+  
+  # ADVERTISE - HOOK TIMER (WAIT FOR RESULT)
+  def command_user_advertise_wait_result(UNIQ_COMMAND_ID, REMAINING_CALLS):
+    global INTERNAL_ADVERTISE, VERIFY_RESULT_ADV, ID_CALL_LOCAL
+    
+    VERIFY_RESULT = False
+    VERIFY_BOT    = INTERNAL_ADVERTISE[UNIQ_COMMAND_ID]
+    
+    if UNIQ_COMMAND_ID in INTERLAN_ADVERTISE:
+      del INTERNAL_ADVERTISE[UNIQ_COMMAND_ID]
+    
+    # Command has been called locally, we also clean up LOCAL CALL ID
+    if UNIQ_COMMAND_ID in ID_CALL_LOCAL:
+      del ID_CALL_LOCAL[UNIQ_COMMAND_ID]
+    
+    weechat.unhook(VERIFY_RESULT_ADV[UNIQ_COMMAND_ID])
+    
+    return VERIFY_RESULT
   
   # ADVERTISE - ADDITIONAL - REQUEST (INTERNALLY REQUESTED FROM VALIDATION ADDITIONAL ADVERTISEMENT)
   # CALLED FROM FUNCTION : verify_remote_bot_advertised
@@ -1683,7 +1712,7 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
     weechat.command(BUFFER, '%s %s %s %s %v %s' % (BUFFER_CMD_ADA_REQ, SOURCE_BOT_ID, TARGET_BOT_ID, COMMAND_ID, SCRIPT_VERSION, SCRIPT_TIMESTAMP))
     
     global VERIFY_RESULT_ADA
-    VERIFY_RESULT_ADA[UNIQ_COMMAND_ID] = weechat.hook_timer(1*1000, 0, TIMEOUT_COMMAND_SHORT, 'command_buffer_advertise_wait_result', UNIQ_COMMAND_ID)
+    VERIFY_RESULT_ADA[UNIQ_COMMAND_ID] = weechat.hook_timer(1*1000, 0, TIMEOUT_COMMAND_SHORT, 'command_buffer_advertise_ada_wait_result', UNIQ_COMMAND_ID)
     
     return VERIFY_RESULT_ADA[UNIQ_COMMAND_ID]
   
@@ -1701,21 +1730,24 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
   
   # ADVERTISE -ADDITIONAL - RECEIVED FROM BUFFER (RECEIVED INFORMATION OF REMOTED BOT, WE NOW SAVE)
   def command_buffer_advertise_ada_3_result_received(WEECHAT_DATA, BUFFER, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS):
+    global ID_LOCAL_CALL
     
-    command_buffer_advertise_save_data(BUFFER, TAGS, PREFIX, SOURCE_BOT_ID, COMMAND_ARGUMENTS)
+    UNIQ_COMMAND_ID = SOURCE_BOT_ID + COMMAND_ID
+    
+    # This is prevention against reply after timeout, or fake reply
+    if not UNIQ_COMMAND_ID in ID_LOCAL_CALL:
+      command_buffer_advertise_refuse_data(BUFFER, TAGS, PREFIX, SOURCE_BOT_ID, COMMAND_ARGUMENTS)
+    else:
+      command_buffer_advertise_save_data(BUFFER, TAGS, PREFIX, SOURCE_BOT_ID, COMMAND_ARGUMENTS)
     
     # Clean up variables, we finished
-    # Current command has been initiated locally, we also clean up local variable
-    UNIQ_COMMAND_ID = SOURCE_BOT_ID + COMMAND_ID
     cleanup_unique_command_id('REMOTE', UNIQ_COMMAND_ID)
-    UNIQ_COMMAND_ID = TARGET_BOT_ID + COMMAND_ID
-    cleanup_unique_command_id('LOCAL', UNIQ_COMMAND_ID)
     
     return weechat.WEECHAT_RC_OK
   
   # ADVERTISE - ADDITIONAL - HOOK TIMER (WAIT FOR RESULT)
-  def command_buffer_advertise_wait_result(UNIQ_COMMAND_ID, REMAINING_CALLS):
-    global ADDITIONAL_ADVERTISE, WRECON_REMOTE_BOT_ADVERTISED, VERIFY_RESULT_ADA
+  def command_buffer_advertise_ada_wait_result(UNIQ_COMMAND_ID, REMAINING_CALLS):
+    global ADDITIONAL_ADVERTISE, WRECON_REMOTE_BOT_ADVERTISED, VERIFY_RESULT_ADA, ID_CALL_LOCAL
     
     VERIFY_RESULT = False
     VERIFY_BOT    = ADDITIONAL_ADVERTISE[UNIQ_COMMAND_ID]
@@ -1725,6 +1757,10 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
     
     if UNIQ_COMMAND_ID in ADDITIONAL_ADVERTISE:
       del ADDITIONAL_ADVERTISE[UNIQ_COMMAND_ID]
+    
+    # Command has been called locally, we also clean up LOCAL CALL ID
+    if UNIQ_COMMAND_ID in ID_CALL_LOCAL:
+      del ID_CALL_LOCAL[UNIQ_COMMAND_ID]
     
     weechat.unhook(VERIFY_RESULT_ADA[UNIQ_COMMAND_ID])
     
@@ -1740,6 +1776,11 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
     
     display_message(BUFFER, '[%s] REMOTE BOT REGISTERED -> %s (%s) [v%s]' % (COMMAND_ID, SOURCE_BOT_ID, SOURCE_BOT_NAME, SOURCE_BOT_VERSION))
     
+    return weechat.WEECHAT_RC_OK
+  
+  # REFUSE UNVONTED DATA OF REMOTE BOT
+  def command_buffer_advertise_refuse_data(BUFFER, TAGS, PREFIX, SOURCE_BOT_ID, COMMAND_ARGUMENTS):
+    display_message(BUFFER, '[%s] REMOTE BOT REGISTERED -> %s (%s) [v%s]' % (COMMAND_ID, SOURCE_BOT_ID, SOURCE_BOT_NAME, SOURCE_BOT_VERSION))
     return weechat.WEECHAT_RC_OK
   
   def setup_command_variables_advertisement():
