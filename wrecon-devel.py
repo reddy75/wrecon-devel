@@ -358,7 +358,7 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
   WRECON_HOOK_LOCAL_COMMANDS = ''
   
   global VERIFY_RESULT_ADV
-  VERIFY_RESULT_ADV = []
+  VERIFY_RESULT_ADV = {}
   
   #
   ##### END SETUP BASIC GLOBAL VARIABLES FOR WRECON - BOT, SERVER, CHANNEL etc.
@@ -930,6 +930,7 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
       BUFFER_NAME                 = weechat.buffer_get_string(BUFFER_POINTER, 'localvar_name')
       WRECON_BUFFERS[BUFFER_NAME] = BUFFER_POINTER
     weechat.infolist_free(INFOLIST_BUFFER)
+    
     return WRECON_BUFFERS
   
   def get_buffer_channel():
@@ -1183,12 +1184,15 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
   
   def autoconnect():
     global WRECON_SERVER, WRECON_CHANNEL
+    display_message('', 'WRECON START')
     if WRECON_SERVER and WRECON_CHANNEL:
       if get_status_server() == 0:
         autoconnect_1_server()
       else:
         BUFFER_SERVER = get_buffers()
         autojoin_1_channel(BUFFER_SERVER['server.%s' % (WRECON_SERVER)])
+    else:
+      display_message('', 'NO CHANNEL SETUP FOUND')
     return weechat.WEECHAT_RC_OK
   
   #
@@ -1197,6 +1201,7 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
   
   def autoconnect_1_server():
     global WRECON_SERVER, TIMEOUT_CONNECT
+    display_message('', 'CONNECTING SERVER : %s' % WRECON_SERVER)
     weechat.command('', '/connect %s' % (WRECON_SERVER))
     WRECON_HOOK_CONNECT_SERVER = weechat.hook_timer(1*1000, 0, TIMEOUT_CONNECT, 'autoconnect_2_server_status', '')
     return weechat.WEECHAT_RC_OK
@@ -1224,10 +1229,14 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
   #
   
   def autojoin_1_channel(BUFFER):
-    global WRECON_CHANNEL, WRECON_CHANNEL_KEY, WRECON_HOOK_JOIN, WRECON_SERVER, TIMEOUT_CONNECT
+    global WRECON_CHANNEL, WRECON_CHANNEL_KEY, WRECON_HOOK_JOIN, WRECON_SERVER, TIMEOUT_CONNECT, WRECON_BUFFER_CHANNEL
+    
+    display_message('', 'JOINING CHANNEL : %s' % WRECON_CHANNEL)
     
     weechat.command(BUFFER, '/join %s %s' % (WRECON_CHANNEL, WRECON_CHANNEL_KEY))
     WRECON_HOOK_JOIN = weechat.hook_timer(1*1000, 0, TIMEOUT_CONNECT, 'autojoin_2_channel_status', '')
+    
+    WRECON_BUFFER_CHANNEL = get_buffer_channel()
     
     return weechat.WEECHAT_RC_OK
   
@@ -1272,7 +1281,6 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
     global WRECON_CHANNEL, WRECON_CHANNEL_KEY, WRECON_SERVER, WRECON_BUFFER_CHANNEL
     setup_channel_1_title_of_buffer(BUFFER, WRECON_SERVER, WRECON_CHANNEL)
     setup_channel_2_mode('', BUFFER, WRECON_SERVER, WRECON_CHANNEL)
-    WRECON_BUFFER_CHANNEL = get_buffer_channel()
     return weechat.WEECHAT_RC_OK
   
   #
