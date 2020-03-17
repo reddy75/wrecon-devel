@@ -93,7 +93,7 @@
 # try import modules for python and check version of python
 
 global SCRIPT_NAME, SCRIPT_VERSION, SCRIPT_AUTHOR, SCRIPT_LICENSE, SCRIPT_DESC, SCRIPT_UNLOAD, SCRIPT_CONTINUE, SCRIPT_TIMESTAMP, SCRIPT_FILE, SCRIPT_FILE_SIG, SCRIPT_BASE_NAME
-SCRIPT_NAME      = 'wrecon'
+SCRIPT_NAME      = 'wrecon-devel'
 SCRIPT_VERSION   = '1.18.3 devel'
 SCRIPT_TIMESTAMP = ''
 
@@ -136,6 +136,230 @@ else:
   
   weechat.register(SCRIPT_NAME, SCRIPT_AUTHOR, SCRIPT_VERSION, SCRIPT_LICENSE, SCRIPT_DESC, SCRIPT_UNLOAD, 'UTF-8')
 
+  ######
+  #
+  # SETUP BASIC GLOBAL VARIABLES FOR WRECON - BOT, SERVER, CHANNEL etc.
+  #
+  
+  #
+  # SETUP VARIABLES OF BOT
+  #
+  
+  global WRECON_DEFAULT_BOTNAMES, WRECON_BOT_NAME, WRECON_BOT_ID, WRECON_BOT_KEY
+  
+  WRECON_DEFAULT_BOTNAMES = ['anee', 'anet', 'ann', 'annee', 'annet', 'bob', 'brad', 'don', 'fred', 'freddie', 'john', 'mia', 'moon', 'pooh', 'red', 'ron', 'ronnie', 'shark', 'ted', 'teddy', 'zed', 'zoe', 'zombie']
+  WRECON_BOT_NAME         = weechat.string_eval_expression("${sec.data.wrecon_bot_name}",{},{},{})
+  WRECON_BOT_ID           = weechat.string_eval_expression("${sec.data.wrecon_bot_id}",{},{},{})
+  WRECON_BOT_KEY          = weechat.string_eval_expression("${sec.data.wrecon_bot_key}",{},{},{})
+  
+  # Choice default BOT NAME if not exist and save it
+  
+  if not WRECON_BOT_NAME:
+    WRECON_BOT_NAME = random.choice(WRECON_DEFAULT_BOTNAMES)
+    weechat.command(BUFFER, '/secure set wrecon_bot_name %s' % (WRECON_BOT_NAME))
+  
+  #  Generate BOT ID if not exit and save it
+  
+  if not WRECON_BOT_ID:
+    WRECON_BOT_ID = f_random_generator(16)
+    weechat.command(BUFFER, '/secure set wrecon_bot_id %s' % (WRECON_BOT_ID))
+  
+  # Generate BOT KEY if not exist and save it
+  
+  if not WRECON_BOT_KEY:
+    WRECON_BOT_KEY = f_random_generator(64)
+    weechat.command(BUFFER, '/secure set wrecon_bot_key %s' % (WRECON_BOT_KEY))
+  
+  #
+  # SETUP VARIABLES OF SERVER
+  #
+
+  global WRECON_SERVER
+  WRECON_SERVER = weechat.string_eval_expression("${sec.data.wrecon_server}",{},{},{})
+    
+  #
+  # SETUP VARIABLES OF CHANNEL
+  #
+
+  global WRECON_CHANNEL, WRECON_CHANNEL_KEY, WRECON_CHANNEL_ENCRYPTION_KEY
+  WRECON_CHANNEL                = weechat.string_eval_expression("${sec.data.wrecon_channel}",{},{},{})
+  WRECON_CHANNEL_KEY            = weechat.string_eval_expression("${sec.data.wrecon_channel_key}",{},{},{})
+  WRECON_CHANNEL_ENCRYPTION_KEY = weechat.string_eval_expression("${sec.data.wrecon_channel_encryption_key}",{},{},{})
+  
+  #
+  # SETUP VARIABLES OF BUFFER
+  #
+  
+  global WRECON_BUFFERS, WRECON_BUFFER_CHANNEL, WRECON_BUFFER_HOOKED
+  WRECON_BUFFERS         = {}
+  WRECON_BUFFER_CHANNEL  = ''
+  WRECON_BUFFER_HOOKED   = False
+  
+  #
+  # SETUP VARIABLES OF REMOTE BOTS
+  #
+  # CONTROL    - bots you can control remotely on remote system
+  #              table contain BOT IDs and it's BOT KEYs
+  #
+  # GRANTED    - bots from remote system can control your system (you grant controol of your system)
+  #              table contain only BOT IDs
+  #
+  # VERIFIED   - runtime variable of bots from remote system can control your system only after verification
+  #              table contain BOT IDs and additional info from irc_channel of related NICK
+  #              in case information of remote NICK will be changed, then new verification will be triggered
+  #
+  # ADVERTISED - runtime variable of bots which has been advertised in channel, it is only informational and for internal purpose to
+  #              have actual state
+  #              table contain BOT IDs and BOT NAMEs only
+
+  global WRECON_REMOTE_BOTS_CONTROL, WRECON_REMOTE_BOTS_GRANTED, WRECON_REMOTE_BOTS_VERIFIED, WRECON_REMOTE_BOTS_ADVERTISED
+  WRECON_REMOTE_BOTS_CONTROL    = weechat.string_eval_expression("${sec.data.wrecon_remote_bots_control}",{},{},{})
+  WRECON_REMOTE_BOTS_GRANTED    = weechat.string_eval_expression("${sec.data.wrecon_remote_bots_granted}",{},{},{})
+  WRECON_REMOTE_BOTS_VERIFIED   = {}
+  WRECON_REMOTE_BOTS_ADVERTISED = {}
+  
+  if WRECON_REMOTE_BOTS_CONTROL:
+    WRECON_REMOTE_BOTS_CONTROL = ast.literal_eval(WRECON_REMOTE_BOTS_CONTROL)
+  else:
+    WRECON_REMOTE_BOTS_CONTROL = {}
+  
+  if WRECON_REMOTE_BOTS_GRANTED:
+    WRECON_REMOTE_BOTS_GRANTED = ast.literal_eval(WRECON_REMOTE_BOTS_GRANTED)
+  else:
+    WRECON_REMOTE_BOTS_GRANTED = {}
+
+  #
+  # SETUP VARIABLES OF COUNTER COMMAND AND AUTO ADVERTISE
+  #
+  
+  global WRECON_COMMAND_COUNTER, WRECON_AUTO_ADVERTISED
+  WRECON_COMMAND_COUNTER = 0
+  WRECON_AUTO_ADVERTISED = False
+  
+  #
+  # PUBLIC KEY
+  #
+
+  global PUBLIC_KEY
+  PUBLIC_KEY  = '''
+-----BEGIN PGP PUBLIC KEY BLOCK-----
+
+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
+KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
+=FtIt
+-----END PGP PUBLIC KEY BLOCK-----
+  '''
+  
+  #
+  # SETUP OF FUNCTIONAL VARIABLES
+  #
+
+  global SCRIPT_COMMAND_CALL, SCRIPT_ARGS, SCRIPT_ARGS_DESCRIPTION, SCRIPT_COMPLETION, COLOR_TEXT, SCRIPT_ARGS_DESCRIPTION, COMMAND_IN_BUFFER, SCRIPT_BUFFER_CALL, TIMEOUT_COMMAND, COMMAND_VERSION
+  SCRIPT_COMMAND_CALL     = {}
+  SCRIPT_BUFFER_CALL      = {}
+  SCRIPT_ARGS             = ''
+  SCRIPT_ARGS_DESCRIPTION = ''
+  SCRIPT_COMPLETION       = ''
+  COMMAND_IN_BUFFER       = 'WRECON-CMD>'
+  COLOR_TEXT              = {
+  'bold'       : weechat.color('bold'),
+  'nbold'      : weechat.color('-bold'),
+  'italic'     : weechat.color('italic'),
+  'nitalic'    : weechat.color('-italic'),
+  'underline'  : weechat.color('underline'),
+  'nunderline' : weechat.color('-underline')}
+  SCRIPT_ARGS_DESCRIPTION = '''
+  %(bold)s%(underline)sWeechat Remote control (WRECON) commands and options:%(nunderline)s%(nbold)s
+  ''' % COLOR_TEXT
+  TIMEOUT_COMMAND         = 20
+  TIMEOUT_COMMAND_SHORT   = 5
+  TIMEOUT_CONNECT         = 30
+  COMMAND_VERSION         = {}
+  
+  #
+  # SETUP OF HOOK VARIABLES
+  #
+
+  global WRECON_HOOK_COMMAND, WRECON_HOOK_CONNECT, WRECON_HOOK_JOIN, WRECON_HOOK_BUFFER, WRECON_HOOK_LOCAL_COMMANDS
+  WRECON_HOOK_COMMAND        = ''
+  WRECON_HOOK_CONNECT        = ''
+  WRECON_HOOK_JOIN           = ''
+  WRECON_HOOK_BUFFER         = ''
+  WRECON_HOOK_LOCAL_COMMANDS = ''
+  
+  #
+  ##### END SETUP BASIC GLOBAL VARIABLES FOR WRECON - BOT, SERVER, CHANNEL etc.
+  
   #####
   #
   # FUNCTION FOR GENERATING RANDOM CHARACTERS AND NUMBERS
@@ -807,7 +1031,7 @@ else:
   # HOOK AND UNHOOK BUFFER
   
   def hook_buffer():
-    global SCRIPT_CALLBACK_BUFFER, WRECON_BUFFER_HOOKED, WRECON_HOOK_BUFFER, WRECON_BUFFER_CHANNEL
+    global SCRIPT_CALLBACK_BUFFER, WRECON_BUFFER_HOOKED, WRECON_HOOK_BUFFER, WRECON_BUFFER_CHANNEL, COMMAND_IN_BUFFER
     WRECON_BUFFER_CHANNEL = get_buffer_channel()
     
     if WRECON_BUFFER_HOOKED == False:
@@ -860,12 +1084,16 @@ else:
       EXECUTE_ALLOWED, EXECUTE_LOCAL_COMMAND = validate_command(WEECHAT_DATA, BUFFER, 'LOCAL', COMMAND, WRECON_BOT_ID, WRECON_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS, UNIQUE_COMMAND_ID)
       
       if EXECUTE_ALLOWED == True:
-        global WRECON_BUFFER
-        NULL = ''
-        EXECUTE_LOCAL_COMMAND(WEECHAT_DATA, WRECON_BUFFER, COMMAND_ID, COMMAND_ARGUMENTS_LIST)
+        global WRECON_BUFFER_CHANNEL
+        EXECUTE_LOCAL_COMMAND(WEECHAT_DATA, WRECON_BUFFER_CHANNEL, COMMAND_ID, COMMAND_ARGUMENTS_LIST)
     
     return weechat.WEECHAT_RC_OK
   
+  #
+  # HOOK USER - SETUP VARIABLES
+  #
+  
+  global SCRIPT_CALLBACK
   SCRIPT_CALLBACK = 'hook_command_from_user'
   
   #
@@ -944,7 +1172,7 @@ else:
   #
   
   def autoconnect_1_server():
-    global WRECON_SERVER. TIMEOUT_CONNECT
+    global WRECON_SERVER, TIMEOUT_CONNECT
     weechat.command('', '/connect %s' % (WRECON_SERVER))
     WRECON_HOOK_CONNECT_SERVER = weechat.hook_timer(1*1000, 0, TIMEOUT_CONNECT, 'autoconnect_2_server_status', '')
     return weechat.WEECHAT_RC_OK
@@ -960,10 +1188,10 @@ else:
       WRECON_BUFFERS = get_buffers()
       autojoin_1_channel(WRECON_BUFFERS['server.%s' % (WRECON_SERVER)])
     else:
-      if REMAINING_CALLS = 0:
+      if REMAINING_CALLS == 0:
         # THERE CAN BE NETWORK ISSUE, WE CAN TRY AGAIN AND AGAIN...
         weechat.unhook(WRECON_HOOK_CONNECT_SERVER)
-        autoconnect_1_server():
+        autoconnect_1_server()
     return weechat.WEECHAT_RC_OK
   
   #
@@ -972,8 +1200,10 @@ else:
   
   def autojoin_1_channel(BUFFER):
     global WRECON_CHANNEL, WRECON_CHANNEL_KEY, WRECON_HOOK_JOIN, WRECON_SERVER, TIMEOUT_CONNECT
+    
     weechat.command(BUFFER, '/join %s %s' % (WRECON_CHANNEL, WRECON_CHANNEL_KEY))
     WRECON_HOOK_JOIN = weechat.hook_timer(1*1000, 0, TIMEOUT_CONNECT, 'autojoin_2_channel_status', '')
+    
     return weechat.WEECHAT_RC_OK
   
   #
@@ -1000,9 +1230,9 @@ else:
       if WRECON_AUTO_ADVERTISED == False:
         hook_buffer()
         setup_channel(WRECON_BUFFER_CHANNEL)
-        global SCRIPT_
         hook_command_from_user(WEECHAT_DATA, WRECON_BUFFER_CHANNEL, DATA)
         WRECON_AUTO_ADVERTISED = True
+    
     return weechat.WEECHAT_RC_OK
 
   #
@@ -1013,9 +1243,10 @@ else:
   # FUNCTION SETUP CHANNEL (title of BUFFER, and mode of channel)
   
   def setup_channel(BUFFER):
-    global WRECON_CHANNEL, WRECON_CHANNEL_KEY, WRECON_SERVER
+    global WRECON_CHANNEL, WRECON_CHANNEL_KEY, WRECON_SERVER, WRECON_BUFFER_CHANNEL
     setup_channel_1_title_of_buffer(BUFFER, WRECON_SERVER, WRECON_CHANNEL)
     setup_channel_2_mode('', BUFFER, WRECON_SERVER, WRECON_CHANNEL)
+    WRECON_BUFFER_CHANNEL = get_buffer_channel
     return weechat.WEECHAT_RC_OK
   
   #
@@ -1139,241 +1370,6 @@ else:
   
   #
   ###### END FUNCTION SETUP AUTOJOIN ADD / DEL (/ SAVE)
-  
-  ######
-  #
-  # SETUP BASIC GLOBAL VARIABLES FOR WRECON - BOT, SERVER, CHANNEL etc.
-  #
-  
-  def setup_wrecon_variables(BUFFER):
-  
-  #
-  # SETUP VARIABLES OF BOT
-  #
-
-    global WRECON_DEFAULT_BOTNAMES, WRECON_BOT_NAME, WRECON_BOT_ID, WRECON_BOT_KEY
-    
-    WRECON_DEFAULT_BOTNAMES = ['anee', 'anet', 'ann', 'annee', 'annet', 'bob', 'brad', 'don', 'fred', 'freddie', 'john', 'mia', 'moon', 'pooh', 'red', 'ron', 'ronnie', 'shark', 'ted', 'teddy', 'zed', 'zoe', 'zombie']
-    WRECON_BOT_NAME         = weechat.string_eval_expression("${sec.data.wrecon_bot_name}",{},{},{})
-    WRECON_BOT_ID           = weechat.string_eval_expression("${sec.data.wrecon_bot_id}",{},{},{})
-    WRECON_BOT_KEY          = weechat.string_eval_expression("${sec.data.wrecon_bot_key}",{},{},{})
-  
-    # Choice default BOT NAME if not exist and save it
-    
-    if not WRECON_BOT_NAME:
-      WRECON_BOT_NAME = random.choice(WRECON_DEFAULT_BOTNAMES)
-      weechat.command(BUFFER, '/secure set wrecon_bot_name %s' % (WRECON_BOT_NAME))
-    
-    #  Generate BOT ID if not exit and save it
-    
-    if not WRECON_BOT_ID:
-      WRECON_BOT_ID = f_random_generator(16)
-      weechat.command(BUFFER, '/secure set wrecon_bot_id %s' % (WRECON_BOT_ID))
-    
-    # Generate BOT KEY if not exist and save it
-    
-    if not WRECON_BOT_KEY:
-      WRECON_BOT_KEY = f_random_generator(64)
-      weechat.command(BUFFER, '/secure set wrecon_bot_key %s' % (WRECON_BOT_KEY))
-  
-  #
-  # SETUP VARIABLES OF SERVER
-  #
-
-    global WRECON_SERVER
-    WRECON_SERVER = weechat.string_eval_expression("${sec.data.wrecon_server}",{},{},{})
-    
-  #
-  # SETUP VARIABLES OF CHANNEL
-  #
-
-    global WRECON_CHANNEL, WRECON_CHANNEL_KEY, WRECON_CHANNEL_ENCRYPTION_KEY
-    WRECON_CHANNEL                = weechat.string_eval_expression("${sec.data.wrecon_channel}",{},{},{})
-    WRECON_CHANNEL_KEY            = weechat.string_eval_expression("${sec.data.wrecon_channel_key}",{},{},{})
-    WRECON_CHANNEL_ENCRYPTION_KEY = weechat.string_eval_expression("${sec.data.wrecon_channel_encryption_key}",{},{},{})
-  
-  #
-  # SETUP VARIABLES OF BUFFER
-  #
-  
-    global WRECON_BUFFERS, WRECON_BUFFER_CHANNEL, WRECON_BUFFER_HOOKED
-    WRECON_BUFFERS         = {}
-    WRECON_BUFFER_CHANNEL  = ''
-    WRECON_BUFFER_HOOKED   = False
-  
-  #
-  # SETUP VARIABLES OF REMOTE BOTS
-  #
-  # CONTROL    - bots you can control remotely on remote system
-  #              table contain BOT IDs and it's BOT KEYs
-  #
-  # GRANTED    - bots from remote system can control your system (you grant controol of your system)
-  #              table contain only BOT IDs
-  #
-  # VERIFIED   - runtime variable of bots from remote system can control your system only after verification
-  #              table contain BOT IDs and additional info from irc_channel of related NICK
-  #              in case information of remote NICK will be changed, then new verification will be triggered
-  #
-  # ADVERTISED - runtime variable of bots which has been advertised in channel, it is only informational and for internal purpose to
-  #              have actual state
-  #              table contain BOT IDs and BOT NAMEs only
-
-    global WRECON_REMOTE_BOTS_CONTROL, WRECON_REMOTE_BOTS_GRANTED, WRECON_REMOTE_BOTS_VERIFIED, WRECON_REMOTE_BOTS_ADVERTISED
-    WRECON_REMOTE_BOTS_CONTROL    = weechat.string_eval_expression("${sec.data.wrecon_remote_bots_control}",{},{},{})
-    WRECON_REMOTE_BOTS_GRANTED    = weechat.string_eval_expression("${sec.data.wrecon_remote_bots_granted}",{},{},{})
-    WRECON_REMOTE_BOTS_VERIFIED   = {}
-    WRECON_REMOTE_BOTS_ADVERTISED = {}
-    
-    if WRECON_REMOTE_BOTS_CONTROL:
-      WRECON_REMOTE_BOTS_CONTROL = ast.literal_eval(WRECON_REMOTE_BOTS_CONTROL)
-    else:
-      WRECON_REMOTE_BOTS_CONTROL = {}
-    
-    if WRECON_REMOTE_BOTS_GRANTED:
-      WRECON_REMOTE_BOTS_GRANTED = ast.literal_eval(WRECON_REMOTE_BOTS_GRANTED)
-    else:
-      WRECON_REMOTE_BOTS_GRANTED = {}
-
-  #
-  # SETUP VARIABLES OF COUNTER COMMAND AND AUTO ADVERTISE
-  #
-  
-    global WRECON_COMMAND_COUNTER, WRECON_AUTO_ADVERTISED
-    WRECON_COMMAND_COUNTER = 0
-    WRECON_AUTO_ADVERTISED = False
-  
-  #
-  # PUBLIC KEY
-  #
-
-    global PUBLIC_KEY
-    PUBLIC_KEY  = '''
------BEGIN PGP PUBLIC KEY BLOCK-----
-
-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
-KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
-=FtIt
------END PGP PUBLIC KEY BLOCK-----
-    '''
-  
-  #
-  # SETUP OF FUNCTIONAL VARIABLES
-  #
-
-    global SCRIPT_COMMAND_CALL, SCRIPT_ARGS, SCRIPT_ARGS_DESCRIPTION, SCRIPT_COMPLETION, SCRIPT_CALLBACK, COLOR_TEXT, SCRIPT_ARGS_DESCRIPTION, COMMAND_IN_BUFFER, SCRIPT_BUFFER_CALL, TIMEOUT_COMMAND, COMMAND_VERSION
-    SCRIPT_COMMAND_CALL     = {}
-    SCRIPT_BUFFER_CALL      = {}
-    SCRIPT_ARGS             = ''
-    SCRIPT_ARGS_DESCRIPTION = ''
-    SCRIPT_COMPLETION       = ''
-    SCRIPT_CALLBACK         = ''
-    COMMAND_IN_BUFFER       = 'WRECON-CMD>'
-    COLOR_TEXT              = {
-    'bold'       : weechat.color('bold'),
-    'nbold'      : weechat.color('-bold'),
-    'italic'     : weechat.color('italic'),
-    'nitalic'    : weechat.color('-italic'),
-    'underline'  : weechat.color('underline'),
-    'nunderline' : weechat.color('-underline')}
-    SCRIPT_ARGS_DESCRIPTION = '''
-    %(bold)s%(underline)sWeechat Remote control (WRECON) commands and options:%(nunderline)s%(nbold)s
-    ''' % COLOR_TEXT
-    TIMEOUT_COMMAND         = 20
-    TIMEOUT_COMMAND_SHORT   = 5
-    TIMEOUT_CONNECT         = 30
-    COMMAND_VERSION         = {}
-  
-  #
-  # SETUP OF HOOK VARIABLES
-  #
-
-    global WRECON_HOOK_COMMAND, WRECON_HOOK_CONNECT, WRECON_HOOK_JOIN, WRECON_HOOK_BUFFER, WRECON_HOOK_LOCAL_COMMANDS
-    WRECON_HOOK_COMMAND        = ''
-    WRECON_HOOK_CONNECT        = ''
-    WRECON_HOOK_JOIN           = ''
-    WRECON_HOOK_BUFFER         = ''
-    WRECON_HOOK_LOCAL_COMMANDS = ''
-  
-  #
-  # SETUP COMMAND VARIABLES
-  #
-  
-    setup_command_variables_advertisement
-    
-    return
-  
-  #
-  ##### END SETUP BASIC GLOBAL VARIABLES FOR WRECON - BOT, SERVER, CHANNEL etc.
 
   #####
   #
@@ -1406,7 +1402,7 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
       # SOMETIME WE NEED DISPLAY WHAT IS CALLED (just only in first call)
       global DISPLAY_COMMAND
       if UNIQUE_COMMAND_ID in DISPLAY_COMMAND:
-        display_message(BUFFER, '[%s] EXECUTE %s > %s %s' + (COMMAND_ID, VERIFY_BOT, COMMAND, COMMAND_ARGUMENTS))
+        display_message(BUFFER, '[%s] EXECUTE %s > %s %s' % (COMMAND_ID, VERIFY_BOT, COMMAND, COMMAND_ARGUMENTS))
         del DISPLAY_COMMAND[UNIQUE_COMMAND_ID]
       
       # CHECK WE HAVE ASSIGNED UNIQUE_COMMAND_ID FROM CALL
@@ -1553,7 +1549,7 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
     
     VERIFY_RESULT = True
     
-    if TARGET_BOT_ID = WRECON_BOT_ID:
+    if TARGET_BOT_ID == WRECON_BOT_ID:
       return VERIFY_RESULT
     
     global WRECON_REMOTE_BOTS_CONTROL
@@ -1649,18 +1645,16 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
   # COMMAND ADVERTISEMENT
   
   # ADVERTISE - CALLED FROM USER
-  def command_user_advertise(WEECHAT_DATA, WRECON_BUFFER, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
-    global BUFFER_CMD_ADV_EXE, SCRIPT_VERSION, SCRIPT_TIMESTAMP
+  def command_user_advertise(WEECHAT_DATA, BUFFER, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
+    global BUFFER_CMD_ADV_EXE, ID_CALL_LOCAL
     
     # current user command no need to be validated, and will be executed without additional istelsf validation
-    weechat.command(BUFFER, '%s %s %s %s v%s %s' % (BUFFER_CMD_ADV_EXE, COMMAND_ID, SOURCE_BOT_ID, COMMAND_ID, SCRIPT_VERSION, SCRIPT_TIMESTAMP))
+    weechat.command(BUFFER, '%s %s %s %s' % (BUFFER_CMD_ADV_EXE, COMMAND_ID, SOURCE_BOT_ID, COMMAND_ID))
     
-    # Following part ensure we will remember our call
-    # We will wait for all results until TIMEOUT_COMMAND_SHORT, then later results will be refused
-    global VERIFY_RESULT_ADV, ID_CALL_LOCAL
-    UNIQ_COMMAND_ID                    = COMMAND_ID + COMMAND_ID
-    ID_CALL_LOCAL[UNIQ_COMMAND_ID]     = 'INTERNAL'
-    VERIFY_RESULT_ADV[UNIQ_COMMAND_ID] = weechat.hook_timer(1*1000, 0, TIMEOUT_COMMAND_SHORT, 'command_user_advertise_wait_result', UNIQ_COMMAND_ID)
+    # Following part ensure we will remember our call,
+    # and We will wait for all results until TIMEOUT_COMMAND_SHORT, then later results will be refused
+    global VERIFY_RESULT_ADA
+    VERIFY_RESULT_ADA[COMMAND_ID] = weechat.hook_timer(TIMEOUT_COMMAND_SHORT*1000, 0, 0, 'command_user_advertise_wait_result', COMMAND_ID)
     
     return weechat.WEECHAT_RC_OK
   
@@ -1671,8 +1665,7 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
     weechat.command(BUFFER, '%s %s %s %s %s [v%s %s]' % (BUFFER_CMD_ADV_REP, SOURCE_BOT_ID, TARGET_BOT_ID, COMMAND_ID, WRECON_BOT_NAME, SCRIPT_VERSION, SCRIPT_TIMESTAMP))
     
     # Clean up variables, we finished
-    UNIQ_COMMAND_ID = SOURCE_BOT_ID + COMMAND_ID
-    cleanup_unique_command_id('REMOTE', UNIQ_COMMAND_ID)
+    cleanup_unique_command_id('REMOTE', COMMAND_ID)
     
     return weechat.WEECHAT_RC_OK
   
@@ -1680,53 +1673,49 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
   def command_buffer_advertise_2_result_received(WEECHAT_DATA, BUFFER, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS):
     global ID_CALL_LOCAL
     
-    UNIQ_LOCAL_COMMAND_ID = COMMAND_ID + COMMAND_ID
-    
     # This is prevetion against replies after timeout, or fake replies
-    if not UNIQ_LOCAL_COMMAND_ID in ID_CALL_LOCAL:
+    if not COMMAND_ID in ID_CALL_LOCAL:
       command_buffer_advertise_refuse_data(BUFFER, COMMAND_ID, SOURCE_BOT_ID)
     else:
       command_buffer_advertise_save_data(BUFFER, TAGS, PREFIX, SOURCE_BOT_ID, COMMAND_ARGUMENTS)
       
     # Clean up variables, we finished
-    UNIQ_COMMAND_ID = SOURCE_BOT_ID + COMMAND_ID
-    cleanup_unique_command_id('REMOTE', UNIQ_COMMAND_ID)
+    cleanup_unique_command_id('REMOTE', COMMAND_ID)
     
     return weechat.WEECHAT_RC_OK
   
   # ADVERTISE - HOOK TIMER (WAIT FOR RESULT)
-  def command_user_advertise_wait_result(UNIQ_COMMAND_ID, REMAINING_CALLS):
-    global INTERNAL_ADVERTISE, VERIFY_RESULT_ADV, ID_CALL_LOCAL
+  def command_user_advertise_wait_result(COMMAND_ID, REMAINING_CALLS):
+    global ID_CALL_LOCAL, VERIFY_RESULT_ADA
     
-    VERIFY_RESULT = False
-    VERIFY_BOT    = INTERNAL_ADVERTISE[UNIQ_COMMAND_ID]
-    
-    if UNIQ_COMMAND_ID in INTERLAN_ADVERTISE:
-      del INTERNAL_ADVERTISE[UNIQ_COMMAND_ID]
+    # We need unhook our timer
+    if COMMAND_ID in VERIFY_RESULT_ADA:
+      weechat.unhook(VERIFY_RESULT_ADA[COMMAND_ID])
+      del VERIFY_RESULT_ADA[COMMAND_ID]
     
     # Command has been called locally, we also clean up LOCAL CALL ID
-    if UNIQ_COMMAND_ID in ID_CALL_LOCAL:
-      del ID_CALL_LOCAL[UNIQ_COMMAND_ID]
+    cleanup_unique_command_id('LOCAL', COMMAND_ID)
     
-    weechat.unhook(VERIFY_RESULT_ADV[UNIQ_COMMAND_ID])
-    
-    return VERIFY_RESULT
+    return weechat.WEECHAT_RC_OK
   
   # ADVERTISE - ADDITIONAL - REQUEST (INTERNALLY REQUESTED FROM VALIDATION ADDITIONAL ADVERTISEMENT)
   # CALLED FROM FUNCTION : verify_remote_bot_advertised
   # WE ALSO START TIMER
   def command_buffer_advertise_ada_1_request(WEECHAT_DATA, BUFFER, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS):
-    global BUFFER_CMD_ADA_REQ, SCRIPT_VERSION, SCRIPT_TIMESTAMP, WRECON_BOT_NAME, TIMEOUT_COMMAND_SHORT, ADDITIONAL_ADVERTISE
+    global BUFFER_CMD_ADA_REQ, WRECON_BOT_NAME, TIMEOUT_COMMAND_SHORT, VERIFY_RESULT_ADA, ADDITIONAL_ADVERTISE
     
     UNIQ_COMMAND_ID                       = TARGET_BOT_ID + COMMAND_ID
+    ID_CALL_LOCAL[UNIQ_COMMAND_ID]        = 'INTERNAL'
+    
     ADDITIONAL_ADVERTISE[UNIQ_COMMAND_ID] = TARGET_BOT_ID
     
-    weechat.command(BUFFER, '%s %s %s %s %v %s' % (BUFFER_CMD_ADA_REQ, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, SCRIPT_VERSION, SCRIPT_TIMESTAMP))
+    weechat.command(BUFFER, '%s %s %s %s' % (BUFFER_CMD_ADA_REQ, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID))
     
-    global VERIFY_RESULT_ADA
-    VERIFY_RESULT_ADA[UNIQ_COMMAND_ID] = weechat.hook_timer(1*1000, 0, TIMEOUT_COMMAND_SHORT, 'command_buffer_advertise_ada_wait_result', UNIQ_COMMAND_ID)
+    VERIFY_RESULT_ADA[UNIQ_COMMAND_ID] = weechat.hook_timer(1*1000, 0, TIMEOUT_COMMAND_SHORT, 'command_buffer_advertise_ada_wait_result', [COMMAND_ID, UNIQ_COMMAND_ID])
     
-    return VERIFY_RESULT_ADA[UNIQ_COMMAND_ID]
+    VERIFY_RESULT = ADDITIONAL_ADVERTISE[UNIQ_COMMAND_ID]
+    
+    return VERIFY_RESULT
   
   # ADVERTISE - ADDITONAL - RECEIVED FROM BUFFER (RECEIVED REQUEST INFORMATION ABOUT BOT, WE NOW REPLY)
   def command_buffer_advertise_ada_2_requested(WEECHAT_DATA, BUFFER, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS):
@@ -1758,25 +1747,28 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
     return weechat.WEECHAT_RC_OK
   
   # ADVERTISE - ADDITIONAL - HOOK TIMER (WAIT FOR RESULT)
-  def command_buffer_advertise_ada_wait_result(UNIQ_COMMAND_ID, REMAINING_CALLS):
+  def command_buffer_advertise_ada_wait_result(UNIQ_IDS, REMAINING_CALLS):
     global ADDITIONAL_ADVERTISE, WRECON_REMOTE_BOT_ADVERTISED, VERIFY_RESULT_ADA, ID_CALL_LOCAL
     
-    VERIFY_RESULT = False
-    VERIFY_BOT    = ADDITIONAL_ADVERTISE[UNIQ_COMMAND_ID]
+    ADDITIONAL_ADVERTISE[UNIQ_COMMAND_ID] = False
     
-    if VERIFY_BOT in WRECON_REMOTE_BOT_ADVERTISED:
-      VERIFY_RESULT = True
-    
-    if UNIQ_COMMAND_ID in ADDITIONAL_ADVERTISE:
-      del ADDITIONAL_ADVERTISE[UNIQ_COMMAND_ID]
-    
-    # Command has been called locally, we also clean up LOCAL CALL ID
-    if UNIQ_COMMAND_ID in ID_CALL_LOCAL:
-      del ID_CALL_LOCAL[UNIQ_COMMAND_ID]
+    COMMAND_ID, UNIQ_COMMAND_ID = UNIQ_IDS
     
     weechat.unhook(VERIFY_RESULT_ADA[UNIQ_COMMAND_ID])
     
-    return VERIFY_RESULT
+    VERIFY_BOT    = ADDITIONAL_ADVERTISE[UNIQ_COMMAND_ID]
+    
+    if VERIFY_BOT in WRECON_REMOTE_BOT_ADVERTISED:
+      ADDITIONAL_ADVERTISE[UNIQ_COMMAND_ID] = True
+    
+    # Cleanup all following    
+    if UNIQ_COMMAND_ID in VERIFY_RESULT_ADA:
+      del VERIFY_RESULT_ADA[UNIQ_COMMAND_ID]
+    
+    cleanup_unique_command_id('LOCAL', UNIQ_COMMAND_ID)
+    cleanup_unique_command_id('LOCAL', COMMAND_ID)
+    
+    return weechat.WEECHAT_RC_OK
   
   # ADVERTISE - SAVE AND DISPLAY DATA OF REMOTE BOT
   def command_buffer_advertise_save_data(BUFFER, TAGS, PREFIX, SOURCE_BOT_ID, COMMAND_ARGUMENTS):
@@ -1797,34 +1789,34 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
     display_message(BUFFER, OUT_MESSAGE)
     return weechat.WEECHAT_RC_OK
   
-  def setup_command_variables_advertisement():
-    global BUFFER_CMD_ADV_EXE, BUFFER_CMD_ADV_REP, BUFFER_CMD_ADV_ERR, BUFFER_CMD_ADA_EXE, BUFFER_CMD_ADA_REP
-    BUFFER_CMD_ADV_EXE = '%sE-ADV' % (COMMAND_IN_BUFFER)
-    BUFFER_CMD_ADV_REP = '%sADV-R' % (COMMAND_IN_BUFFER)
-    BUFFER_CMD_ADV_ERR = '%sADV-E' % (COMMAND_IN_BUFFER)
-    BUFFER_CMD_ADA_EXE = '%sE-ADA' % (COMMAND_IN_BUFFER)
-    BUFFER_CMD_ADA_REP = '%sADA-R' % (COMMAND_IN_BUFFER)
-    
-    SCRIPT_ARGS                      = SCRIPT_ARGS + ' | [ADV[ERTISE]]'
-    SCRIPT_ARGS_DESCRIPTION          = SCRIPT_ARGS_DESCRIPTION + '''
-    %(bold)s%(italic)s--- ADV[ERTISE]%(nitalic)s%(nbold)s''' % COLOR_TEXT + '''
-    Show your BOT ID in Channel and also other bots will show their IDs
-      /wrecon ADV
-      /wrecon ADVERTISE
-    '''
-    SCRIPT_COMPLETION                = SCRIPT_COMPLETION + ' || ADV || ADVERTISE'
-    SCRIPT_COMMAND_CALL['ADV']       = command_user_advertise
-    SCRIPT_COMMAND_CALL['ADVERTISE'] = command_user_advertise
-    
-    SCRIPT_BUFFER_CALL[BUFFER_CMD_ADV_EXE] = command_buffer_advertise_1_requested
-    SCRIPT_BUFFER_CALL[BUFFER_CMD_ADV_REP] = command_buffer_advertise_2_result_received
-    
-    SCRIPT_BUFFER_CALL[BUFFER_CMD_ADA_EXE] = command_buffer_advertise_ada_2_requested
-    SCRIPT_BUFFER_CALL[BUFFER_CMD_ADA_REP] = command_buffer_advertise_ada_3_result_received
-    
-    SCRIPT_BUFFER_CALL[BUFFER_CMD_ADV_ERR] = ignore_buffer_command
-    
-    return
+  #
+  # ADVERTISE - SETUP VARIABLES
+  #
+  global BUFFER_CMD_ADV_EXE, BUFFER_CMD_ADV_REP, BUFFER_CMD_ADV_ERR, BUFFER_CMD_ADA_EXE, BUFFER_CMD_ADA_REP
+  BUFFER_CMD_ADV_EXE = '%sE-ADV' % (COMMAND_IN_BUFFER)
+  BUFFER_CMD_ADV_REP = '%sADV-R' % (COMMAND_IN_BUFFER)
+  BUFFER_CMD_ADV_ERR = '%sADV-E' % (COMMAND_IN_BUFFER)
+  BUFFER_CMD_ADA_EXE = '%sE-ADA' % (COMMAND_IN_BUFFER)
+  BUFFER_CMD_ADA_REP = '%sADA-R' % (COMMAND_IN_BUFFER)
+  
+  SCRIPT_ARGS                      = SCRIPT_ARGS + ' | [ADV[ERTISE]]'
+  SCRIPT_ARGS_DESCRIPTION          = SCRIPT_ARGS_DESCRIPTION + '''
+  %(bold)s%(italic)s--- ADV[ERTISE]%(nitalic)s%(nbold)s''' % COLOR_TEXT + '''
+  Show your BOT ID in Channel and also other bots will show their IDs
+    /wrecon ADV
+    /wrecon ADVERTISE
+  '''
+  SCRIPT_COMPLETION                = SCRIPT_COMPLETION + ' || ADV || ADVERTISE'
+  SCRIPT_COMMAND_CALL['ADV']       = command_user_advertise
+  SCRIPT_COMMAND_CALL['ADVERTISE'] = command_user_advertise
+  
+  SCRIPT_BUFFER_CALL[BUFFER_CMD_ADV_EXE] = command_buffer_advertise_1_requested
+  SCRIPT_BUFFER_CALL[BUFFER_CMD_ADV_REP] = command_buffer_advertise_2_result_received
+  
+  SCRIPT_BUFFER_CALL[BUFFER_CMD_ADA_EXE] = command_buffer_advertise_ada_2_requested
+  SCRIPT_BUFFER_CALL[BUFFER_CMD_ADA_REP] = command_buffer_advertise_ada_3_result_received
+  
+  SCRIPT_BUFFER_CALL[BUFFER_CMD_ADV_ERR] = ignore_buffer_command
     
   #
   ###### END COMMAND ADVERTISEMENT
@@ -1836,18 +1828,13 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
   #
   # START WRECON
   
-  def start_wrecon():
-    
-    setup_wrecon_variables
-    
-    global SCRIPT_NAME, SCRIPT_DESC, SCRIPT_ARGS, SCRIPT_ARGS_DESCRIPTION, SCRIPT_COMPLETION, SCRIPT_CALLBACK
-    wrecon_hook_local_commands = weechat.hook_command(SCRIPT_NAME, SCRIPT_DESC, SCRIPT_ARGS, SCRIPT_ARGS_DESCRIPTION, SCRIPT_COMPLETION, SCRIPT_CALLBACK, '')
-    
-    autoconnect
-    
-    return weechat.WEECHAT_RC_OK
+  #
+  # SETUP COMMAND VARIABLES
+  #
   
+  wrecon_hook_local_commands = weechat.hook_command(SCRIPT_NAME, SCRIPT_DESC, SCRIPT_ARGS, SCRIPT_ARGS_DESCRIPTION, SCRIPT_COMPLETION, SCRIPT_CALLBACK, '')
+  
+  autoconnect
+    
   #
   ##### END START WRECON
-  
-  start_wrecon
