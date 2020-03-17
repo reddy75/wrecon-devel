@@ -175,7 +175,7 @@ else:
   #
 
   global WRECON_SERVER
-  WRECON_SERVER = weechat.string_eval_expression("${sec.data.wrecon_server}",{},{},{})
+  WRECON_SERVER = weechat.string_eval_expression("${sec.data.WRECON_SERVER}",{},{},{})
     
   #
   # SETUP VARIABLES OF CHANNEL
@@ -987,6 +987,27 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
   
   #####
   #
+  # FUNCTION GET STATUS SERVER
+  
+  def get_status_server():
+    global WRECON_SERVER
+    INFOLIST_SERVER = weechat.infolist_get('irc_server', '', '')
+    SERVER_STATUS   = {}
+    while  weechat.infolist_next(INFOLIST_SERVER):
+      SERVER_NAME                = weechat.infolist_string(INFOLIST_SERVER, 'name')
+      SERVER_STAT                = weechat.infolist_integer(INFOLIST_SERVER, 'is_connected')
+      SERVER_STATUS[SERVER_NAME] = SERVER_STAT
+    weechat.infolist_free(INFOLIST_SERVER)
+    
+    if WRECON_SERVER in SERVER_STATUS:
+      return SERVER_STATUS[WRECON_SERVER]
+    else:
+      return '0'
+  #
+  ##### END FUNCTION GET STATUS SERVER
+  
+  #####
+  #
   # GET NICK INFO
   
   def get_nick_info(TAGS, PREFIX):
@@ -1195,6 +1216,7 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
         # THERE CAN BE NETWORK ISSUE, WE CAN TRY AGAIN AND AGAIN...
         weechat.unhook(WRECON_HOOK_CONNECT_SERVER)
         autoconnect_1_server()
+    
     return weechat.WEECHAT_RC_OK
   
   #
@@ -1250,7 +1272,7 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
     global WRECON_CHANNEL, WRECON_CHANNEL_KEY, WRECON_SERVER, WRECON_BUFFER_CHANNEL
     setup_channel_1_title_of_buffer(BUFFER, WRECON_SERVER, WRECON_CHANNEL)
     setup_channel_2_mode('', BUFFER, WRECON_SERVER, WRECON_CHANNEL)
-    WRECON_BUFFER_CHANNEL = get_buffer_channel
+    WRECON_BUFFER_CHANNEL = get_buffer_channel()
     return weechat.WEECHAT_RC_OK
   
   #
@@ -1841,7 +1863,7 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
   
   wrecon_hook_local_commands = weechat.hook_command(SCRIPT_NAME, SCRIPT_DESC, SCRIPT_ARGS, SCRIPT_ARGS_DESCRIPTION, SCRIPT_COMPLETION, SCRIPT_CALLBACK, '')
   
-  autoconnect
+  autoconnect()
     
   #
   ##### END START WRECON
