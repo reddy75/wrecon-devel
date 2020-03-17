@@ -357,6 +357,9 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
   WRECON_HOOK_BUFFER         = ''
   WRECON_HOOK_LOCAL_COMMANDS = ''
   
+  global VERIFY_RESULT_ADV
+  VERIFY_RESULT_ADV = []
+  
   #
   ##### END SETUP BASIC GLOBAL VARIABLES FOR WRECON - BOT, SERVER, CHANNEL etc.
   
@@ -1227,6 +1230,7 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
     
     if get_status_channel() > 0:
       weechat.unhook(WRECON_HOOK_JOIN)
+      WRECON_BUFFER_CHANNEL = get_buffer_channel()
       if WRECON_AUTO_ADVERTISED == False:
         hook_buffer()
         setup_channel(WRECON_BUFFER_CHANNEL)
@@ -1577,12 +1581,12 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
     
     # IF WE HAVE DATA OF BOT, NO NEED ADDITIONAL ACTION
     if not TARGET_BOT_ID in WRECON_REMOTE_BOTS_ADVERTISED:
-      global VERIFY_RESULT_ADA, ID_CALL_LOCAL
+      global VERIFY_RESULT_ADV, ID_CALL_LOCAL
       UNIQ_COMMAND_ID                = TARGET_BOT_ID + COMMAND_ID
       ID_CALL_LOCAL[UNIQ_COMMAND_ID] = 'INTERNAL CALL'
       VERIFY_RESULT = command_buffer_advertise_ada_1_request('', BUFFER, '', '', '', '', '', TARGET_BOT_ID, WRECON_BOT_ID, COMMAND_ID, '')
-      if UNIQ_COMMAND_ID in VERIFY_RESULT_ADA:
-        del VERIFY_RESULT_ADA[UNIQ_COMMAND_ID]
+      if UNIQ_COMMAND_ID in VERIFY_RESULT_ADV:
+        del VERIFY_RESULT_ADV[UNIQ_COMMAND_ID]
     
     return VERIFY_RESULT
   
@@ -1646,15 +1650,18 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
   
   # ADVERTISE - CALLED FROM USER
   def command_user_advertise(WEECHAT_DATA, BUFFER, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
-    global BUFFER_CMD_ADV_EXE, ID_CALL_LOCAL
+    global BUFFER_CMD_ADV_EXE, ID_CALL_LOCAL, WRECON_BOT_ID, WRECON_BUFFER_CHANNEL, COUNT_ADVERTISED_BOTS, VERIFY_RESULT_ADV, TIMEOUT_COMMAND_SHORT
     
+    COUNT_ADVERTISED_BOTS = 0
     # current user command no need to be validated, and will be executed without additional istelsf validation
-    weechat.command(BUFFER, '%s %s %s %s' % (BUFFER_CMD_ADV_EXE, COMMAND_ID, SOURCE_BOT_ID, COMMAND_ID))
+    weechat.command(WRECON_BUFFER_CHANNEL, '%s %s %s %s' % (BUFFER_CMD_ADV_EXE, COMMAND_ID, WRECON_BOT_ID, COMMAND_ID))
     
     # Following part ensure we will remember our call,
     # and We will wait for all results until TIMEOUT_COMMAND_SHORT, then later results will be refused
-    global VERIFY_RESULT_ADA
-    VERIFY_RESULT_ADA[COMMAND_ID] = weechat.hook_timer(TIMEOUT_COMMAND_SHORT*1000, 0, 0, 'command_user_advertise_wait_result', COMMAND_ID)
+    # ~ VERIFY_RESULT_ADV[COMMAND_ID] =
+    weechat.hook_timer(TIMEOUT_COMMAND_SHORT * 1000, 0, 1, 'command_user_advertise_wait_result', COMMAND_ID)
+    
+    weechat.command(WRECON_BUFFER_CHANNEL, '[%s] Number of bots advertised : %s' % (COMMAND_ID, COUNT_ADVERTISED_BOTS))
     
     return weechat.WEECHAT_RC_OK
   
@@ -1671,12 +1678,13 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
   
   # ADVERTISE - RECEIVED FROM BUFFER (RECEIVED INFORMATION ABOUT BOT, WE NOW SAVE)
   def command_buffer_advertise_2_result_received(WEECHAT_DATA, BUFFER, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS):
-    global ID_CALL_LOCAL
+    global ID_CALL_LOCAL, COUNT_ADVERTISED_BOTS
     
     # This is prevetion against replies after timeout, or fake replies
     if not COMMAND_ID in ID_CALL_LOCAL:
       command_buffer_advertise_refuse_data(BUFFER, COMMAND_ID, SOURCE_BOT_ID)
     else:
+      COUNT_ADVERTISED_BOTS +=1
       command_buffer_advertise_save_data(BUFFER, TAGS, PREFIX, SOURCE_BOT_ID, COMMAND_ARGUMENTS)
       
     # Clean up variables, we finished
@@ -1686,12 +1694,11 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
   
   # ADVERTISE - HOOK TIMER (WAIT FOR RESULT)
   def command_user_advertise_wait_result(COMMAND_ID, REMAINING_CALLS):
-    global ID_CALL_LOCAL, VERIFY_RESULT_ADA
+    global ID_CALL_LOCAL, VERIFY_RESULT_ADV
     
     # We need unhook our timer
-    if COMMAND_ID in VERIFY_RESULT_ADA:
-      weechat.unhook(VERIFY_RESULT_ADA[COMMAND_ID])
-      del VERIFY_RESULT_ADA[COMMAND_ID]
+    if COMMAND_ID in VERIFY_RESULT_ADV:
+      weechat.unhook(VERIFY_RESULT_ADV[COMMAND_ID])
     
     # Command has been called locally, we also clean up LOCAL CALL ID
     cleanup_unique_command_id('LOCAL', COMMAND_ID)
@@ -1702,7 +1709,7 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
   # CALLED FROM FUNCTION : verify_remote_bot_advertised
   # WE ALSO START TIMER
   def command_buffer_advertise_ada_1_request(WEECHAT_DATA, BUFFER, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS):
-    global BUFFER_CMD_ADA_REQ, WRECON_BOT_NAME, TIMEOUT_COMMAND_SHORT, VERIFY_RESULT_ADA, ADDITIONAL_ADVERTISE
+    global BUFFER_CMD_ADA_REQ, WRECON_BOT_NAME, TIMEOUT_COMMAND_SHORT, VERIFY_RESULT_ADV, ADDITIONAL_ADVERTISE
     
     UNIQ_COMMAND_ID                       = TARGET_BOT_ID + COMMAND_ID
     ID_CALL_LOCAL[UNIQ_COMMAND_ID]        = 'INTERNAL'
@@ -1711,7 +1718,7 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
     
     weechat.command(BUFFER, '%s %s %s %s' % (BUFFER_CMD_ADA_REQ, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID))
     
-    VERIFY_RESULT_ADA[UNIQ_COMMAND_ID] = weechat.hook_timer(1*1000, 0, TIMEOUT_COMMAND_SHORT, 'command_buffer_advertise_ada_wait_result', [COMMAND_ID, UNIQ_COMMAND_ID])
+    VERIFY_RESULT_ADV[UNIQ_COMMAND_ID] = weechat.hook_timer(1*1000, 0, TIMEOUT_COMMAND_SHORT, 'command_buffer_advertise_ada_wait_result', [COMMAND_ID, UNIQ_COMMAND_ID])
     
     VERIFY_RESULT = ADDITIONAL_ADVERTISE[UNIQ_COMMAND_ID]
     
@@ -1748,13 +1755,13 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
   
   # ADVERTISE - ADDITIONAL - HOOK TIMER (WAIT FOR RESULT)
   def command_buffer_advertise_ada_wait_result(UNIQ_IDS, REMAINING_CALLS):
-    global ADDITIONAL_ADVERTISE, WRECON_REMOTE_BOT_ADVERTISED, VERIFY_RESULT_ADA, ID_CALL_LOCAL
+    global ADDITIONAL_ADVERTISE, WRECON_REMOTE_BOT_ADVERTISED, VERIFY_RESULT_ADV, ID_CALL_LOCAL
     
     ADDITIONAL_ADVERTISE[UNIQ_COMMAND_ID] = False
     
     COMMAND_ID, UNIQ_COMMAND_ID = UNIQ_IDS
     
-    weechat.unhook(VERIFY_RESULT_ADA[UNIQ_COMMAND_ID])
+    weechat.unhook(VERIFY_RESULT_ADV[UNIQ_COMMAND_ID])
     
     VERIFY_BOT    = ADDITIONAL_ADVERTISE[UNIQ_COMMAND_ID]
     
@@ -1762,8 +1769,8 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
       ADDITIONAL_ADVERTISE[UNIQ_COMMAND_ID] = True
     
     # Cleanup all following    
-    if UNIQ_COMMAND_ID in VERIFY_RESULT_ADA:
-      del VERIFY_RESULT_ADA[UNIQ_COMMAND_ID]
+    if UNIQ_COMMAND_ID in VERIFY_RESULT_ADV:
+      del VERIFY_RESULT_ADV[UNIQ_COMMAND_ID]
     
     cleanup_unique_command_id('LOCAL', UNIQ_COMMAND_ID)
     cleanup_unique_command_id('LOCAL', COMMAND_ID)
