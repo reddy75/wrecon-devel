@@ -36,6 +36,13 @@
 # -- functions 'encrypt/decrypt' enhanced into levels (also backward compatibility ensure with older script communication)
 # -- 
 #
+# 1.18.3 - Small fix of call ADDITIONAL ADVERTISE
+#        - assignment variables fix (another patch)
+#        - Fix ssh call
+# 1.18.2 - Small fix of call ADDITIONAL ADVERTISE
+#        - assignment variables fix (another patch)
+# 1.18.1 - Small fix of call ADDITIONAL ADVERTISE
+#        - assignment variables fix (another patch)
 # 1.18 - Small fix of call ADDITIONAL ADVERTISE
 #      - assignment variables fixed
 # 1.17 - Small fix of call ADDITIONAL ADVERTISE
@@ -94,7 +101,7 @@
 
 global SCRIPT_NAME, SCRIPT_VERSION, SCRIPT_AUTHOR, SCRIPT_LICENSE, SCRIPT_DESC, SCRIPT_UNLOAD, SCRIPT_CONTINUE, SCRIPT_TIMESTAMP, SCRIPT_FILE, SCRIPT_FILE_SIG, SCRIPT_BASE_NAME
 SCRIPT_NAME      = 'wrecon-devel'
-SCRIPT_VERSION   = '1.18.3 devel'
+SCRIPT_VERSION   = '1.18.4 devel'
 SCRIPT_TIMESTAMP = ''
 
 SCRIPT_FILE      = 'wrecon-devel.py'
@@ -135,6 +142,24 @@ else:
   # INITIALIZE SCRIP FOR WEECHAT
   
   weechat.register(SCRIPT_NAME, SCRIPT_AUTHOR, SCRIPT_VERSION, SCRIPT_LICENSE, SCRIPT_DESC, SCRIPT_UNLOAD, 'UTF-8')
+  
+  #####
+  #
+  # FUNCTION DISPLAY MESSAGE
+  
+  def display_message(BUFFER, INPUT_MESSAGE):
+    global SCRIPT_NAME
+
+    if isinstance(INPUT_MESSAGE, list):
+      for OUTPUT_MESSAGE in INPUT_MESSAGE:
+        weechat.prnt(BUFFER, '[%s]\t%s' % (SCRIPT_NAME, str(OUTPUT_MESSAGE)))
+    else:
+      weechat.prnt(BUFFER, '[%s]\t%s' % (SCRIPT_NAME, str(INPUT_MESSAGE)))
+
+    return weechat.WEECHAT_RC_OK
+  
+  #
+  ##### END FUNCTION DISPLAY MESSAGE
   
   #####
   #
@@ -407,24 +432,6 @@ else:
   #
   #### END FUNCFUNCTION ENCRYPT AND DECTRYPT STRING, CORRECT LENGTH OF KEY, REVERT STRING
 
-  #####
-  #
-  # FUNCTION DISPLAY MESSAGE
-  
-  def display_message(BUFFER, INPUT_MESSAGE):
-    global SCRIPT_NAME
-
-    if isinstance(INPUT_MESSAGE, list):
-      for OUTPUT_MESSAGE in INPUT_MESSAGE:
-        weechat.prnt(BUFFER, '[%s]\t%s' % (SCRIPT_NAME, str(OUTPUT_MESSAGE)))
-    else:
-      weechat.prnt(BUFFER, '[%s]\t%s' % (SCRIPT_NAME, str(INPUT_MESSAGE)))
-
-    return weechat.WEECHAT_RC_OK
-  
-  #
-  ##### END FUNCTION DISPLAY MESSAGE
-  
   ######
   #
   # SETUP BASIC GLOBAL VARIABLES FOR WRECON - BOT, SERVER, CHANNEL etc.
@@ -464,8 +471,8 @@ else:
   #
 
   global WRECON_SERVER
-  WRECON_SERVER = weechat.string_eval_expression("${sec.data.WRECON_SERVER}",{},{},{})
-    
+  WRECON_SERVER = weechat.string_eval_expression("${sec.data.wrecon_server}",{},{},{})
+  
   #
   # SETUP VARIABLES OF CHANNEL
   #
@@ -959,7 +966,7 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
       CHANNEL_FIELDS = weechat.infolist_fields(INFOLIST_CHANNEL).split(",")
       for CHANNEL_FIELD in CHANNEL_FIELDS:
         (CHANNEL_FIELD_TYPE, CHANNEL_FIELD_NAME) = CHANNEL_FIELD.split(':', 1)
-        if CHANNEL_FIELD_TYPE == 'INDEX':
+        if CHANNEL_FIELD_TYPE == 'i':
           CHANNEL_FIELD_VALUE = weechat.infolist_integer(INFOLIST_CHANNEL, CHANNEL_FIELD_NAME)
         elif CHANNEL_FIELD_TYPE == 'p':
           CHANNEL_FIELD_VALUE = weechat.infolist_pointer(INFOLIST_CHANNEL, CHANNEL_FIELD_NAME)
@@ -1014,9 +1021,11 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
   def get_nick_info(TAGS, PREFIX):
     
     ACTUAL_DATE_TIME = datetime.datetime.now().strftime('%Y%m%d%H%M%S')
+
     
-    NICK_NAME        = TAGS[3].split('_')[1]
-    HOST_NAME        = TAGS[4].split('_')[1]
+    NICK_NAME        = TAGS.split(',')[3].split('_')[1]
+    HOST_NAME        = TAGS.split(',')[4]
+    HOST_NAME        = HOST_NAME.split('_')[1]
     
     NICK_INFO        = '%s|%s|%s|%s' % (NICK_NAME, HOST_NAME, PREFIX, ACTUAL_DATE_TIME)
     
@@ -1185,9 +1194,8 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
   def autoconnect():
     global WRECON_SERVER, WRECON_CHANNEL
     
-    display_message('', 'WRECON START')
-    
     if WRECON_SERVER and WRECON_CHANNEL:
+      display_message('', 'CONNECTING SERVER : %s' % WRECON_SERVER)
       if get_status_server() == 0:
         autoconnect_1_server()
       else:
@@ -1205,9 +1213,9 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
   def autoconnect_1_server():
     global WRECON_SERVER, TIMEOUT_CONNECT
     
-    display_message('', 'CONNECTING SERVER : %s' % WRECON_SERVER)
     weechat.command('', '/connect %s' % (WRECON_SERVER))
     WRECON_HOOK_CONNECT_SERVER = weechat.hook_timer(1*1000, 0, TIMEOUT_CONNECT, 'autoconnect_2_server_status', '')
+    
     return weechat.WEECHAT_RC_OK
   
   #
@@ -1235,7 +1243,7 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
   def autojoin_1_channel(BUFFER):
     global WRECON_CHANNEL, WRECON_CHANNEL_KEY, WRECON_HOOK_JOIN, WRECON_SERVER, TIMEOUT_CONNECT, WRECON_BUFFER_CHANNEL
     
-    display_message('', 'JOINING CHANNEL : %s' % WRECON_CHANNEL)
+    display_message('', 'JOINING CHANNEL   : %s' % WRECON_CHANNEL)
     
     weechat.command(BUFFER, '/join %s %s' % (WRECON_CHANNEL, WRECON_CHANNEL_KEY))
     WRECON_HOOK_JOIN = weechat.hook_timer(1*1000, 0, TIMEOUT_CONNECT, 'autojoin_2_channel_status', '')
@@ -1269,7 +1277,7 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
       if WRECON_AUTO_ADVERTISED == False:
         hook_buffer()
         setup_channel(WRECON_BUFFER_CHANNEL)
-        hook_command_from_user(WEECHAT_DATA, WRECON_BUFFER_CHANNEL, DATA)
+        hook_command_from_user('', WRECON_BUFFER_CHANNEL, 'ADV')
         WRECON_AUTO_ADVERTISED = True
     
     return weechat.WEECHAT_RC_OK
@@ -1439,8 +1447,11 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
           
       # SOMETIME WE NEED DISPLAY WHAT IS CALLED (just only in first call)
       global DISPLAY_COMMAND
+      if UNIQUE_COMMAND_ID in DISPLAY_COMMAND and SOURCE == 'LOCAL':
+        display_message(BUFFER, '[%s] %s EXECUTE > %s %s' % (COMMAND_ID, VERIFY_BOT, COMMAND, COMMAND_ARGUMENTS))
+      
+      # REMOVE DISPAY ID
       if UNIQUE_COMMAND_ID in DISPLAY_COMMAND:
-        display_message(BUFFER, '[%s] EXECUTE %s > %s %s' % (COMMAND_ID, VERIFY_BOT, COMMAND, COMMAND_ARGUMENTS))
         del DISPLAY_COMMAND[UNIQUE_COMMAND_ID]
       
       # CHECK WE HAVE ASSIGNED UNIQUE_COMMAND_ID FROM CALL
@@ -1468,6 +1479,7 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
         FUNCTION = SCRIPT_CALL[COMMAND]
       else:
         display_message(BUFFER, '[%s] %s < EXECUTION DENIED' % (COMMAND_ID, VERIFY_BOT))
+      
         
     if COMMAND_CAN_BE_EXECUTED == False:
       FUNCTION = ''
@@ -1550,15 +1562,16 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
     if VERIFY_BOT == WRECON_BOT_ID:
       return COMMAND_CAN_BE_EXECUTED
     
-    global COMMAND_VERSION
+    global COMMAND_VERSION, WRECON_REMOTE_BOTS_ADVERTISED
     
-    REMOTE_BOT_NAME         = WRECON_REMOTE_BOTS_ADVERTISED[VERIFY_BOT].split('|')[0]
-    VERSION_REMOTE_COMMAND  = WRECON_REMOTE_BOTS_ADVERTISED[VERIFY_BOT].split('|')[1]
-    VERSION_COMMAND         = COMMAND_VERSION[COMMAND]
-    
-    if VERSION_REMOTE_COMMAND < VERSION_COMMAND:
-      COMMAND_CAN_BE_EXECUTED = False
-      display_message(BUFFER, '[%s] %s < VERSION %s REQUIRED ON %s (%s)' % (COMMAND_ID, COMMAND, VERSION_COMMAND, VERIFY_BOT, REMOTE_BOT_NAME))
+    if COMMAND in COMMAND_VERSION:
+      REMOTE_BOT_NAME         = WRECON_REMOTE_BOTS_ADVERTISED[VERIFY_BOT].split('|')[0]
+      VERSION_REMOTE_COMMAND  = WRECON_REMOTE_BOTS_ADVERTISED[VERIFY_BOT].split('|')[1]
+      VERSION_COMMAND         = COMMAND_VERSION[COMMAND]
+      
+      if VERSION_REMOTE_COMMAND < VERSION_COMMAND:
+        COMMAND_CAN_BE_EXECUTED = False
+        display_message(BUFFER, '[%s] %s < VERSION %s REQUIRED ON %s (%s)' % (COMMAND_ID, COMMAND, VERSION_COMMAND, VERIFY_BOT, REMOTE_BOT_NAME))
     
     return COMMAND_CAN_BE_EXECUTED
   
@@ -1684,7 +1697,7 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
   
   # ADVERTISE - CALLED FROM USER
   def command_user_advertise(WEECHAT_DATA, BUFFER, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
-    global BUFFER_CMD_ADV_EXE, ID_CALL_LOCAL, WRECON_BOT_ID, WRECON_BUFFER_CHANNEL, COUNT_ADVERTISED_BOTS, VERIFY_RESULT_ADV, TIMEOUT_COMMAND_SHORT
+    global BUFFER_CMD_ADV_EXE, ID_CALL_LOCAL, WRECON_BOT_ID, WRECON_BUFFER_CHANNEL, COUNT_ADVERTISED_BOTS, TIMEOUT_COMMAND_SHORT, VERIFY_RESULT_ADV
     
     COUNT_ADVERTISED_BOTS = 0
     # current user command no need to be validated, and will be executed without additional istelsf validation
@@ -1693,17 +1706,20 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
     # Following part ensure we will remember our call,
     # and We will wait for all results until TIMEOUT_COMMAND_SHORT, then later results will be refused
     # ~ VERIFY_RESULT_ADV[COMMAND_ID] =
-    weechat.hook_timer(TIMEOUT_COMMAND_SHORT * 1000, 0, 1, 'command_user_advertise_wait_result', COMMAND_ID)
     
-    weechat.command(WRECON_BUFFER_CHANNEL, '[%s] Number of bots advertised : %s' % (COMMAND_ID, COUNT_ADVERTISED_BOTS))
+    VERIFY_RESULT_ADV[COMMAND_ID] = weechat.hook_timer(TIMEOUT_COMMAND_SHORT*1000, 0, 1, 'command_user_advertise_wait_result', COMMAND_ID)
     
     return weechat.WEECHAT_RC_OK
   
   # ADVERTISE - RECEIVED FROM BUFFER (REQUESTED INFORMATION ABOUT BOT, WE NOW REPLY)
   def command_buffer_advertise_1_requested(WEECHAT_DATA, BUFFER, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS):
-    global BUFFER_CMD_ADV_REP, SCRIPT_VERSION, SCRIPT_TIMESTAMP, WRECON_BOT_NAME
+    global BUFFER_CMD_ADV_REP, SCRIPT_VERSION, SCRIPT_TIMESTAMP, WRECON_BOT_NAME, WRECON_BOT_ID
     
-    weechat.command(BUFFER, '%s %s %s %s %s [v%s %s]' % (BUFFER_CMD_ADV_REP, SOURCE_BOT_ID, TARGET_BOT_ID, COMMAND_ID, WRECON_BOT_NAME, SCRIPT_VERSION, SCRIPT_TIMESTAMP))
+    SCRIPT_FULL_VERSION = 'v%s %s' % (SCRIPT_VERSION, SCRIPT_TIMESTAMP)
+    SCRIPT_FULL_VERSION = SCRIPT_FULL_VERSION.rstrip()
+    
+    display_message(BUFFER, '[%s] %s < ADVERTISE REQUESTED' % (COMMAND_ID, SOURCE_BOT_ID))
+    weechat.command(BUFFER, '%s %s %s %s %s [%s]' % (BUFFER_CMD_ADV_REP, SOURCE_BOT_ID, WRECON_BOT_ID, COMMAND_ID, WRECON_BOT_NAME, SCRIPT_FULL_VERSION))
     
     # Clean up variables, we finished
     cleanup_unique_command_id('REMOTE', COMMAND_ID)
@@ -1712,14 +1728,17 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
   
   # ADVERTISE - RECEIVED FROM BUFFER (RECEIVED INFORMATION ABOUT BOT, WE NOW SAVE)
   def command_buffer_advertise_2_result_received(WEECHAT_DATA, BUFFER, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS):
-    global ID_CALL_LOCAL, COUNT_ADVERTISED_BOTS
+    global ID_CALL_LOCAL, WRECON_BOT_ID
+    
+    UNIQ_COMMAND_ID = WRECON_BOT_ID + COMMAND_ID
     
     # This is prevetion against replies after timeout, or fake replies
-    if not COMMAND_ID in ID_CALL_LOCAL:
+    if not UNIQ_COMMAND_ID in ID_CALL_LOCAL:
       command_buffer_advertise_refuse_data(BUFFER, COMMAND_ID, SOURCE_BOT_ID)
     else:
+      global COUNT_ADVERTISED_BOTS
       COUNT_ADVERTISED_BOTS +=1
-      command_buffer_advertise_save_data(BUFFER, TAGS, PREFIX, SOURCE_BOT_ID, COMMAND_ARGUMENTS)
+      command_buffer_advertise_save_data(BUFFER, TAGS, PREFIX, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS)
       
     # Clean up variables, we finished
     cleanup_unique_command_id('REMOTE', COMMAND_ID)
@@ -1728,14 +1747,20 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
   
   # ADVERTISE - HOOK TIMER (WAIT FOR RESULT)
   def command_user_advertise_wait_result(COMMAND_ID, REMAINING_CALLS):
-    global ID_CALL_LOCAL, VERIFY_RESULT_ADV
+    global WRECON_BUFFER_CHANNEL, ID_CALL_LOCAL, COUNT_ADVERTISED_BOTS, VERIFY_RESULT_ADV, WRECON_BOT_ID
     
-    # We need unhook our timer
-    if COMMAND_ID in VERIFY_RESULT_ADV:
+    if int(REMAINING_CALLS) == 0:
+      display_message(WRECON_BUFFER_CHANNEL, '[%s] Number of bots advertised : %s' % (COMMAND_ID, COUNT_ADVERTISED_BOTS))
+      
+      # Command has been called locally, we also clean up LOCAL CALL ID
+      UNIQ_COMMAND_ID = WRECON_BOT_ID + COMMAND_ID
+      cleanup_unique_command_id('LOCAL', COMMAND_ID)
+      cleanup_unique_command_id('LOCAL', UNIQ_COMMAND_ID)
+    
+      # We need unhook our timer
       weechat.unhook(VERIFY_RESULT_ADV[COMMAND_ID])
-    
-    # Command has been called locally, we also clean up LOCAL CALL ID
-    cleanup_unique_command_id('LOCAL', COMMAND_ID)
+      
+      del VERIFY_RESULT_ADV[COMMAND_ID]
     
     return weechat.WEECHAT_RC_OK
   
@@ -1752,7 +1777,7 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
     
     weechat.command(BUFFER, '%s %s %s %s' % (BUFFER_CMD_ADA_REQ, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID))
     
-    VERIFY_RESULT_ADV[UNIQ_COMMAND_ID] = weechat.hook_timer(1*1000, 0, TIMEOUT_COMMAND_SHORT, 'command_buffer_advertise_ada_wait_result', [COMMAND_ID, UNIQ_COMMAND_ID])
+    VERIFY_RESULT_ADV[UNIQ_COMMAND_ID] = weechat.hook_timer(TIMEOUT_COMMAND_SHORT * 1000, 0, 1, 'command_buffer_advertise_ada_wait_result', [COMMAND_ID, UNIQ_COMMAND_ID])
     
     VERIFY_RESULT = ADDITIONAL_ADVERTISE[UNIQ_COMMAND_ID]
     
@@ -1780,7 +1805,7 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
     if not UNIQ_COMMAND_ID in ID_LOCAL_CALL:
       command_buffer_advertise_refuse_data(BUFFER, COMMAND_ID, SOURCE_BOT_ID)
     else:
-      command_buffer_advertise_save_data(BUFFER, TAGS, PREFIX, SOURCE_BOT_ID, COMMAND_ARGUMENTS)
+      command_buffer_advertise_save_data(BUFFER, TAGS, PREFIX, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS)
     
     # Clean up variables, we finished
     cleanup_unique_command_id('REMOTE', UNIQ_COMMAND_ID)
@@ -1788,38 +1813,41 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
     return weechat.WEECHAT_RC_OK
   
   # ADVERTISE - ADDITIONAL - HOOK TIMER (WAIT FOR RESULT)
-  def command_buffer_advertise_ada_wait_result(UNIQ_IDS, REMAINING_CALLS):
-    global ADDITIONAL_ADVERTISE, WRECON_REMOTE_BOT_ADVERTISED, VERIFY_RESULT_ADV, ID_CALL_LOCAL
+  def command_buffer_advertise_ada_wait_result(COMMAND_ID, REMAINING_CALLS):
     
-    ADDITIONAL_ADVERTISE[UNIQ_COMMAND_ID] = False
-    
-    COMMAND_ID, UNIQ_COMMAND_ID = UNIQ_IDS
-    
-    weechat.unhook(VERIFY_RESULT_ADV[UNIQ_COMMAND_ID])
-    
-    VERIFY_BOT    = ADDITIONAL_ADVERTISE[UNIQ_COMMAND_ID]
-    
-    if VERIFY_BOT in WRECON_REMOTE_BOT_ADVERTISED:
-      ADDITIONAL_ADVERTISE[UNIQ_COMMAND_ID] = True
-    
-    # Cleanup all following    
-    if UNIQ_COMMAND_ID in VERIFY_RESULT_ADV:
-      del VERIFY_RESULT_ADV[UNIQ_COMMAND_ID]
-    
-    cleanup_unique_command_id('LOCAL', UNIQ_COMMAND_ID)
-    cleanup_unique_command_id('LOCAL', COMMAND_ID)
+    if int(REMAINING_CALLS) == 0:
+      global ADDITIONAL_ADVERTISE, WRECON_REMOTE_BOTS_ADVERTISED, VERIFY_RESULT_ADV, ID_CALL_LOCAL, WRECON_BOT_ID
+      
+      UNIQ_COMMAND_ID = WRECON_BOT_ID + COMMAND_ID
+
+      ADDITIONAL_ADVERTISE[UNIQ_COMMAND_ID] = False
+      
+      weechat.unhook(VERIFY_RESULT_ADV[UNIQ_COMMAND_ID])
+      
+      VERIFY_BOT    = ADDITIONAL_ADVERTISE[UNIQ_COMMAND_ID]
+      
+      if VERIFY_BOT in WRECON_REMOTE_BOTS_ADVERTISED:
+        ADDITIONAL_ADVERTISE[UNIQ_COMMAND_ID] = True
+      
+      # Cleanup all following    
+      if UNIQ_COMMAND_ID in VERIFY_RESULT_ADV:
+        del VERIFY_RESULT_ADV[UNIQ_COMMAND_ID]
+      
+      cleanup_unique_command_id('LOCAL', UNIQ_COMMAND_ID)
+      cleanup_unique_command_id('LOCAL', COMMAND_ID)
     
     return weechat.WEECHAT_RC_OK
   
   # ADVERTISE - SAVE AND DISPLAY DATA OF REMOTE BOT
-  def command_buffer_advertise_save_data(BUFFER, TAGS, PREFIX, SOURCE_BOT_ID, COMMAND_ARGUMENTS):
-    global WRECON_REMOTE_BOT_ADVERTISED
+  def command_buffer_advertise_save_data(BUFFER, TAGS, PREFIX, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS):
+    global WRECON_REMOTE_BOTS_ADVERTISED
     
-    WRECON_REMOTE_BOT_ADVERTISED[SOURCE_BOT_ID] = get_basic_data_of_source_bot(TAGS, PREFIX, COMMAND_ARGUMENTS)
-    SOURCE_BOT_NAME                             = WRECON_REMOTE_BOT_ADVERTISED[SOURCE_BOT_ID].split('|')[0]
-    SOURCE_BOT_VERSION                          = WRECON_REMOTE_BOT_ADVERTISED[SOURCE_BOT_ID].split('|')[1]
+    WRECON_REMOTE_BOTS_ADVERTISED[SOURCE_BOT_ID] = get_basic_data_of_source_bot(TAGS, PREFIX, COMMAND_ARGUMENTS)
+    SOURCE_BOT_NAME                              = WRECON_REMOTE_BOTS_ADVERTISED[SOURCE_BOT_ID].split('|')[0]
+    SOURCE_BOT_VERSION                           = WRECON_REMOTE_BOTS_ADVERTISED[SOURCE_BOT_ID].split('|')[1]
     
     display_message(BUFFER, '[%s] REMOTE BOT REGISTERED -> %s (%s) [v%s]' % (COMMAND_ID, SOURCE_BOT_ID, SOURCE_BOT_NAME, SOURCE_BOT_VERSION))
+    # ~ display_message(BUFFER, '[%s] DATA SAVED : %s' % (COMMAND_ID, WRECON_REMOTE_BOTS_ADVERTISED[SOURCE_BOT_ID]))
     
     return weechat.WEECHAT_RC_OK
   
@@ -1874,6 +1902,11 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
   #
   
   wrecon_hook_local_commands = weechat.hook_command(SCRIPT_NAME, SCRIPT_DESC, SCRIPT_ARGS, SCRIPT_ARGS_DESCRIPTION, SCRIPT_COMPLETION, SCRIPT_CALLBACK, '')
+  
+  SCRIPT_FULL_VERSION = 'v%s %s' % (SCRIPT_VERSION, SCRIPT_TIMESTAMP)
+  SCRIPT_FULL_VERSION = SCRIPT_FULL_VERSION.rstrip()
+  
+  display_message('', 'Script %s %s initialization complete' % (SCRIPT_NAME, SCRIPT_FULL_VERSION))
   
   autoconnect()
     
