@@ -969,6 +969,9 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
     
     SCRIPT_BUFFER_CALL[BUFFER_CMD_UPD_EXE] = user_command_update
     
+    COMMAND_VERSION['UP']         = '1.10'
+    COMMAND_VERSION['UPDATE']     = '1.10'
+    
     return
     
   #
