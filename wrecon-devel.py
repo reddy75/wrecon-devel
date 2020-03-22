@@ -1663,7 +1663,7 @@ HELP               H[ELP]'''
           
       # SOMETIME WE NEED DISPLAY WHAT IS CALLED (just only in first call)
       global DISPLAY_COMMAND
-      if UNIQ_COMMAND_ID in DISPLAY_COMMAND and SOURCE == 'LOCAL':
+      if UNIQ_COMMAND_ID in DISPLAY_COMMAND and SOURCE == 'PRE-LOCAL':
         display_message(BUFFER, '[%s] %s EXECUTE > %s %s' % (COMMAND_ID, VERIFY_BOT, COMMAND, COMMAND_ARGUMENTS))
       
       # REMOVE DISPAY ID
