@@ -160,6 +160,22 @@ else:
 
     return weechat.WEECHAT_RC_OK
   
+  def display_message_info(BUFFER, INPUT_TAG, INPUT_MESSAGE):
+    global WRECON_BOT_NAME, WRECON_BOT_ID
+    
+    OUT_MESSAGE = ['--- %s (%s %s) ---' % (INPUT_TAG, WRECON_BOT_NAME, WRECON_BOT_ID)]
+    
+    if isinstance(INPUT_MESSAGE, list):
+      for OUT_MSG in INPUT_MESSAGE:
+        OUT_MESSAGE.append(OUT_MSG)
+    else:
+      OUT_MESSAGE.append(INPUT_MESSAGE)
+    
+    display_message(BUFFER, OUT_MESSAGE)
+    
+    return weechat.WEECHAT_RC_OK
+  
+  
   # For debug purspose only
   def display_data(FUNCTION, WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
     global ID_CALL_LOCAL, ID_CALL_REMOTE
@@ -179,7 +195,7 @@ else:
     OUT_MESSAGE.append('COMMAND_ARGUMENTS_LIST : %s' % COMMAND_ARGUMENTS_LIST)
     OUT_MESSAGE.append('LOCAL ID CALL          : %s' % ID_CALL_LOCAL)
     OUT_MESSAGE.append('REMOTE ID CALL         : %s' % ID_CALL_REMOTE)
-    display_message(BUFFER, OUT_MESSAGE)
+    display_message_info(BUFFER, 'INFO OF COMMAND > %s < VARIABLES' % COMMAND, OUT_MESSAGE)
     return weechat.WEECHAT_RC_OK
   
   #
@@ -2106,6 +2122,73 @@ ADVERTISE          ADV[ERTISE]'''
   #
   ###### END COMMAND ADVERTISEMENT
   
+  ######
+  #
+  # COMMAND ME
+  
+  def prepare_command_me(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
+    global WRECON_BOT_ID
+    
+    UNIQ_COMMAND_ID = WRECON_BOT_ID + COMMAND_ID
+    
+    TARGET_BOT_ID = WRECON_BOT_ID
+    SOURCE_BOT_ID = WRECON_BOT_ID
+    
+    COMMAND = 'ME'
+    
+    return [COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST, UNIQ_COMMAND_ID]
+  
+  def user_command_me(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
+    global WRECON_BOT_NAME, WRECON_BOT_ID, WRECON_BOT_KEY, SCRIPT_VERSION, SCRIPT_TIMESTAMP
+    
+    OUT_MESSAGE     = ['Bot name  : %s' % WRECON_BOT_NAME]
+    OUT_MESSAGE.append('Bot ID    : %s' % WRECON_BOT_ID)
+    OUT_MESSAGE.append('Bot KEY   : %s' % WRECON_BOT_KEY)
+    OUT_MESSAGE.append('VERSION   : %s' % SCRIPT_VERSION)
+    OUT_MESSAGE.append('TIMESTAMP : %s' % SCRIPT_TIMESTAMP)
+    
+    global WRECON_CHANNEL, WRECON_SERVER, WRECON_CHANNEL_KEY, WRECON_CHANNEL_ENCRYPTION_KEY
+    
+    if WRECON_CHANNEL and WRECON_SERVER:
+      OUT_MESSAGE.append('--- REGISTERED SERVER and CHANNEL ---')
+      OUT_MESSAGE.append('SERVER                 : %s' % WRECON_SERVER)
+      OUT_MESSAGE.append('CHANNEL                : %s' % WRECON_CHANNEL)
+      OUT_MESSAGE.append('CHANNEL KEY            : %s' % WRECON_CHANNEL_KEY)
+      OUT_MESSAGE.append('CHANNEL ENCRYPTION KEY : %s' % WRECON_CHANNEL_ENCRYPTION_KEY)
+    
+    display_message_info(BUFFER, 'INFO', OUT_MESSAGE)
+    
+    UNIQ_COMMAND_ID = WRECON_BOT_ID + COMMAND_ID
+    cleanup_unique_command_id('LOCAL', UNIQ_COMMAND_ID)
+    
+    return weechat.WEECHAT_RC_OK
+  
+  def setup_command_variables_me():
+    global SCRIPT_ARGS, SCRIPT_ARGS_DESCRIPTION, SCRIPT_COMPLETION, SCSCRIPT_COMMAND_CALLRIPT_COMMAND_CALL
+    SCRIPT_ARGS               = SCRIPT_ARGS + '[M[E]]'
+    SCRIPT_ARGS_DESCRIPTION   = SCRIPT_ARGS_DESCRIPTION + '''
+    %(bold)s%(italic)s--- M[E]%(nitalic)s%(nbold)s''' % COLOR_TEXT + '''
+    Show information about your bot Name, ID and KEY. In case you have registered Server and Channel, these informations will be shown as well.
+    Information is displayed only to your buffer and not send to the Channel.
+      /wrecon M
+      /wrecon ME
+    '''
+    SCRIPT_COMPLETION         = SCRIPT_COMPLETION + 'M || ME'
+    SCRIPT_COMMAND_CALL['ME'] = user_command_me
+    
+    global SHORT_HELP
+    SHORT_HELP                       = SHORT_HELP + '''
+ME                 M[E]'''
+    
+    global PREPARE_USER_CALL
+    PREPARE_USER_CALL['M']    = prepare_command_me
+    PREPARE_USER_CALL['ME']   = prepare_command_me
+    
+    return
+  
+  #
+  ###### END COMMAND ME
+  
   #
   ###### END ALL COMMANDS
   
@@ -2127,6 +2210,7 @@ ADVERTISE          ADV[ERTISE]'''
     
     setup_command_variables_advertise()
     setup_command_variables_help()
+    setup_command_variables_me()
     setup_command_variables_update()
     
     return
