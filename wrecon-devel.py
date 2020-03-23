@@ -35,6 +35,10 @@
 # -- function 'user_command_update' fully changed (splitted into functions)
 # -- functions 'encrypt/decrypt' enhanced into levels (also backward compatibility ensure with older script communication)
 # -- 
+#
+# 1.18.8 - Version correction
+# 1.18.7 - Fixed bug of variables (lower cases and UPPER CASEs)
+#        - in commands REGISTER and UNREGISTER
 # 1.18.6 - Fixed bug of variables (lower cases and UPPER CASEs)
 # 1.18.5 - Fixed list command (correction of command arguments)
 # 1.18.4 - Fix command ADVERTISE
@@ -103,7 +107,7 @@
 
 global SCRIPT_NAME, SCRIPT_VERSION, SCRIPT_AUTHOR, SCRIPT_LICENSE, SCRIPT_DESC, SCRIPT_UNLOAD, SCRIPT_CONTINUE, SCRIPT_TIMESTAMP, SCRIPT_FILE, SCRIPT_FILE_SIG, SCRIPT_BASE_NAME
 SCRIPT_NAME      = 'wrecon-devel'
-SCRIPT_VERSION   = '1.18.7 devel'
+SCRIPT_VERSION   = '1.18.8 devel'
 SCRIPT_TIMESTAMP = ''
 
 SCRIPT_FILE      = 'wrecon-devel.py'
@@ -1561,8 +1565,22 @@ HELP               H[ELP]'''
   #
   # FUNCTION SETUP AUTOJOIN ADD / DEL (/ SAVE)
   
-  global CALLBACK_SETUP_AUTOJOIN
-  CALLBACK_SETUP_AUTOJOIN = {}
+  #
+  # SETUP VARIABLES OF FUNCTION setup_autojoin
+  #
+  
+  def setup_wrecon_variables_of_setup_autojoin():
+    global CALLBACK_SETUP_AUTOJOIN
+    CALLBACK_SETUP_AUTOJOIN = {}
+    
+    CALLBACK_SETUP_AUTOJOIN['ADD'] = setup_autojoin_add
+    CALLBACK_SETUP_AUTOJOIN['DEL'] = setup_autojoin_del
+    
+    return
+  
+  #
+  # SETUP AUTOJOIN
+  #
   
   def setup_autojoin(BUFFER, FUNCTION, WRECON_SERVER, WRECON_CHANNEL):
     global CALLBACK_SETUP_AUTOJOIN
@@ -1641,9 +1659,6 @@ HELP               H[ELP]'''
     
     return [SAVE_SETUP, WEECHAT_CHANNELS_AUTOJOIN, WEECHAT_CHANNELS_KEYS]
   
-  CALLBACK_SETUP_AUTOJOIN['add'] = setup_autojoin_add
-  CALLBACK_SETUP_AUTOJOIN['del'] = setup_autojoin_del
-  
   #
   ###### END FUNCTION SETUP AUTOJOIN ADD / DEL (/ SAVE)
 
@@ -1653,13 +1668,20 @@ HELP               H[ELP]'''
   #
   # WEECHAT_DATA BUFFER LOCAL/REMOTE COMMAND TOBOTID FROMBOTID COMMANDID [DATA]
   
-  global ID_CALL_LOCAL, ID_CALL_REMOTE, COMMAND_REQUIREMENTS, VERIFY_REQUIREMENTS, DISPLAY_COMMAND
+  #
+  # SETUP VARIABLES OF FUNCTION command_validate
+  #
   
-  ID_CALL_LOCAL        = {}
-  ID_CALL_REMOTE       = {}
-  COMMAND_REQUIREMENTS = {}
-  VERIFY_REQUIREMENTS  = {}
-  DISPLAY_COMMAND      = {}
+  def setup_wrecon_variables_of_validate_command():
+    global ID_CALL_LOCAL, ID_CALL_REMOTE, COMMAND_REQUIREMENTS, VERIFY_REQUIREMENTS, DISPLAY_COMMAND
+  
+    ID_CALL_LOCAL        = {}
+    ID_CALL_REMOTE       = {}
+    COMMAND_REQUIREMENTS = {}
+    VERIFY_REQUIREMENTS  = {}
+    DISPLAY_COMMAND      = {}
+    
+    return
   
   def validate_command(WEECHAT_DATA, BUFFER, SOURCE, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS, UNIQ_COMMAND_ID):
     
@@ -1934,7 +1956,7 @@ HELP               H[ELP]'''
   #
   # COMMAND ADVERTISEMENT
   
-  # ADVERTISE - CALLED FROM USER
+  # ADVERTISE - CALLED FROM USER (PREPARE FOR VALIDATION)
   
   def prepare_command_advertise(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
     global BUFFER_CMD_ADV_REQ, BUFFER_CMD_ADV_ADA, ID_CALL_LOCAL, WRECON_BOT_ID, SCRIPT_COMMAND_CALL
@@ -1951,6 +1973,10 @@ HELP               H[ELP]'''
       COMMAND         = 'ADVERTISE'
     
     return [COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST, UNIQ_COMMAND_ID]
+  
+  #
+  # ADVERTISE
+  # 
   
   def user_command_advertise(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
     global BUFFER_CMD_ADV_REQ, BUFFER_CMD_ADA_REQ, ID_CALL_LOCAL, WRECON_BOT_ID, WRECON_BUFFER_CHANNEL, COUNT_ADVERTISED_BOTS, TIMEOUT_COMMAND_SHORT, VERIFY_RESULT_ADV
@@ -1976,7 +2002,10 @@ HELP               H[ELP]'''
     # ~ display_data('user_command_advertise', WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST)
     return weechat.WEECHAT_RC_OK
   
+  #
   # ADVERTISE - RECEIVED FROM BUFFER (REQUESTED INFORMATION ABOUT BOT, WE NOW REPLY)
+  #
+  
   def buffer_command_advertise_1_requested(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
     global BUFFER_CMD_ADV_REP, BUFFER_CMD_ADA_REP, BUFFER_CMD_ADA_REQ, SCRIPT_VERSION, SCRIPT_TIMESTAMP, WRECON_BOT_NAME, WRECON_BOT_ID
     
@@ -1999,7 +2028,10 @@ HELP               H[ELP]'''
     # ~ display_data('buffer_command_advertise_1_requested', WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST)
     return weechat.WEECHAT_RC_OK
   
+  #
   # ADVERTISE - RECEIVED FROM BUFFER (RECEIVED INFORMATION ABOUT BOT, WE NOW SAVE)
+  #
+  
   def buffer_command_advertise_2_result_received(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
     global ID_CALL_LOCAL, BUFFER_CMD_ADV_REP, BUFFER_CMD_ADA_REP, VERIFY_RESULT_ADV, COUNT_ADVERTISED_BOTS
     
@@ -2031,7 +2063,10 @@ HELP               H[ELP]'''
     
     return weechat.WEECHAT_RC_OK
   
+  #
   # ADVERTISE - HOOK TIMER (WAIT FOR RESULT)
+  #
+  
   def function_advertise_wait_result(UNIQ_COMMAND_ID, REMAINING_CALLS):
     global WRECON_BUFFER_CHANNEL, ID_CALL_LOCAL, COUNT_ADVERTISED_BOTS, VERIFY_RESULT_ADV, WRECON_BOT_ID
     
@@ -2049,7 +2084,10 @@ HELP               H[ELP]'''
     
     return weechat.WEECHAT_RC_OK
   
+  #
   # ADVERTISE - SAVE AND DISPLAY DATA OF REMOTE BOT
+  #
+  
   def function_advertise_save_data(BUFFER, TAGS, PREFIX, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS):
     global WRECON_REMOTE_BOTS_ADVERTISED
     
@@ -2062,7 +2100,10 @@ HELP               H[ELP]'''
     
     return weechat.WEECHAT_RC_OK
   
+  #
   # ADVERTISE - REFUSE DATA AFTER TIMEOUT, OR FAKE DATA OF REMOTE BOT
+  #
+  
   def function_advertise_refuse_data(BUFFER, COMMAND_ID, SOURCE_BOT_ID):
     OUT_MESSAGE     = ['[%s] REMOTE BOT REFUSED -> %s ' % (COMMAND_ID, SOURCE_BOT_ID)]
     OUT_MESSAGE.append('[%s] TIMEOUT OR FAKE REPLY' % COMMAND_ID)
@@ -2072,6 +2113,7 @@ HELP               H[ELP]'''
   #
   # ADVERTISE - SETUP VARIABLES
   #
+  
   def setup_command_variables_advertise():
     global BUFFER_CMD_ADV_REQ, BUFFER_CMD_ADV_REP, BUFFER_CMD_ADA_REQ, BUFFER_CMD_ADA_REP, BUFFER_CMD_ADV_ERR
     BUFFER_CMD_ADV_REQ = '%sE-ADV' % (COMMAND_IN_BUFFER)
@@ -2124,7 +2166,7 @@ ADVERTISE          ADV[ERTISE]'''
   
   ######
   #
-  # COMMAND ME
+  # COMMAND ME - PREPARE COMMAND FOR VALIDATION (CALLED FROM )
   
   def prepare_command_me(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
     global WRECON_BOT_ID
@@ -2137,6 +2179,10 @@ ADVERTISE          ADV[ERTISE]'''
     COMMAND = 'ME'
     
     return [COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST, UNIQ_COMMAND_ID]
+  
+  #
+  # ME - DISPLAY INFORMATION (CALLED AFTER COMMAND VALIDATED)
+  #
   
   def user_command_me(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
     global WRECON_BOT_NAME, WRECON_BOT_ID, WRECON_BOT_KEY, SCRIPT_VERSION, SCRIPT_TIMESTAMP
@@ -2162,6 +2208,10 @@ ADVERTISE          ADV[ERTISE]'''
     cleanup_unique_command_id('LOCAL', UNIQ_COMMAND_ID)
     
     return weechat.WEECHAT_RC_OK
+  
+  #
+  # ME - SETUP VARIABLES
+  #
   
   def setup_command_variables_me():
     global SCRIPT_ARGS, SCRIPT_ARGS_DESCRIPTION, SCRIPT_COMPLETION, SCSCRIPT_COMMAND_CALLRIPT_COMMAND_CALL
@@ -2189,6 +2239,125 @@ ME                 M[E]'''
   #
   ###### END COMMAND ME
   
+  ######
+  #
+  # COMMAND REGISTER
+  
+  #
+  # REGISTER - PREPARE COMMAND
+  #
+  
+  def prepare_command_register(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
+    global WRECON_BOT_ID
+    
+    UNIQ_COMMAND_ID = WRECON_BOT_ID + COMMAND_ID
+    COMMAND = 'REGISTER'
+    
+    TARGET_BOT_ID = WRECON_BOT_ID
+    SOURCE_BOT_ID = WRECON_BOT_ID
+    
+    return [COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST, UNIQ_COMMAND_ID]
+  
+  #
+  # REGISTER
+  #
+  
+  def user_command_register(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
+    global WRECON_SERVER, WRECON_CHANNEL, WRECON_CHANNEL_KEY, WRECON_CHANNEL_ENCRYPTION_KEY, WRECON_BUFFER_CHANNEL
+    
+    ERROR_REGISTER = False
+    
+    # Check previously registered Server and Channel
+    if WRECON_SERVER and WRECON_CHANNEL:
+      ERROR_REGISTER = True
+      OUT_MESSAGE    = 'ALREADY REGISTERED > First UNREGISTER, then REGISTER again.'
+    
+    # Check we have two parameters
+    if not len(COMMAND_ARGUMENTS_LIST) == 2:
+      ERROR_REGISTER = True
+      OUT_MESSAGE    = 'INCORRECT NUMBER OF PARAMETERS > 2 expected. See help.'
+    
+    # Now we can register Server and Channel when registration is prepared
+    if ERROR_REGISTER == False:
+      # Setup basic variables, CHANNEL KEY and CHANNEL ENCRYPT KEY is provided by USER
+      WRECON_CHANNEL_KEY, WRECON_CHANNEL_ENCRYPTION_KEY = COMMAND_ARGUMENTS_LIST
+      
+      # Rest of variables are taken from actual BUFFER
+      WRECON_SERVER         = weechat.buffer_get_string(BUFFER, 'localvar_server')
+      WRECON_CHANNEL        = weechat.buffer_get_string(BUFFER, 'localvar_channel')
+      WRECON_BUFFER_CHANNEL = BUFFER
+      
+      # Prepare output message of successful registration
+      OUT_MESSAGE     = ['SERVER                 : %s' % WRECON_SERVER]
+      OUT_MESSAGE.append('CHANNEL                : %s' % WRECON_CHANNEL)
+      OUT_MESSAGE.append('CHANNEL KEY            : %s' % WRECON_CHANNEL_KEY)
+      OUT_MESSAGE.append('CHANNEL ENCRYPTION KEY : %s' % WRECON_CHANNEL_ENCRYPTION_KEY)
+      
+      # Save all variables into Weechat ()
+      weechat.command(buffer, '/secure set wrecon_server %s' % (WRECON_SERVER))
+      weechat.command(buffer, '/secure set wrecon_channel %s' % (WRECON_CHANNEL))
+      weechat.command(buffer, '/secure set wrecon_channel_key %s' % (WRECON_CHANNEL_KEY))
+      weechat.command(buffer, '/secure set wrecon_channel_encryption_key %s' % (WRECON_CHANNEL_ENCRYPTION_KEY))
+      
+      # Setup encryption for current SERVER and CHANNEL
+      weechat.command(buffer, '/ircrypt set-key -server %s %s %s' % (WRECON_SERVER, WRECON_CHANNEL, WRECON_CHANNEL_ENCRYPTION_KEY))
+      weechat.command(buffer, '/ircrypt set-cipher -server %s %s aes256' % (WRECON_SERVER, WRECON_CHANNEL))
+      
+      # Setup AUTOCONNECT, AUTORECONNECT, AUTOJOIN and AUTOREJOIN
+      SETUP_RESULT = setup_autojoin(BUFFER, 'ADD', WRECON_SERVER, WRECON_CHANNEL)
+      if SETUP_RESULT == True:
+        OUT_MESSAGE.append('New options has been saved')
+      else:
+        OUT_MESSAGE.append('Nothing has been changed')
+      
+      # Setup MODE of Channel (lock by CHANNEL KEY)
+      setup_channel(WRECON_BUFFER_CHANNEL)
+      
+      # And finally HOOK THE BUFFER
+      hook_buffer()
+    
+    if ERROR_REGISTER == True:
+      display_message_info(BUFFER, 'REGISTER ERROR', OUT_MESSAGE)
+    else:
+      display_message_info(BUFFER, 'REGISTER INFO', OUT_MESSAGE)
+    
+    UNIQ_COMMAND_ID = TARGET_BOT_ID + COMMAND_ID
+    cleanup_unique_command_id('LOCAL', UNIQ_COMMAND_ID)
+    
+    return weechat.WEECHAT_RC_OK
+  
+  #
+  # REGISTER - SETUP VARIABLES
+  #
+  
+  def setup_command_variables_register():
+    global SCRIPT_ARGS, SCRIPT_ARGS_DESCRIPTION, SCRIPT_COMPLETION, SCRIPT_COMMAND_CALL
+    
+    SCRIPT_ARGS                     = SCRIPT_ARGS + ' | [REG[ISTER] <CHANNEL_KEY> <ENCRYPT_KEY>]'
+    SCRIPT_ARGS_DESCRIPTION         = SCRIPT_ARGS_DESCRIPTION + '''
+    %(bold)s%(italic)s--- REG[ISTER] <channel_key> <encrypt_key>%(nitalic)s%(nbold)s''' % COLOR_TEXT + '''
+    Register current channel for controling remote bot's. You have to be actively connected to server and joined in channel you need register.
+    Opposite of command REGISTER is command UNREGISTER.
+      /wrecon REG %s %s
+      /wrecon REGISTER %s %s
+    ''' % (f_random_generator(8), f_random_generator(16), f_random_generator(8), f_random_generator(16))
+    SCRIPT_COMPLETION               = SCRIPT_COMPLETION + ' || REG || REGISTER'
+    SCRIPT_COMMAND_CALL['REG']      = user_command_register
+    SCRIPT_COMMAND_CALL['REGISTER'] = user_command_register
+    
+    global SHORT_HELP
+    SHORT_HELP                       = SHORT_HELP + '''
+REGISTER           REG[ISTER] Channel_Key Channel_Encrypt_Key'''
+    
+    global PREPARE_USER_CALL
+    PREPARE_USER_CALL['REG']      = prepare_command_register
+    PREPARE_USER_CALL['REGISTER'] = prepare_command_register
+    
+    return
+  
+  #
+  ###### END COMMAND REGISTER
+  
   #
   ###### END ALL COMMANDS
   
@@ -2202,15 +2371,20 @@ ME                 M[E]'''
   
   def setup_wrecon_variables():
     
+    # SETUP INTERNAL VARIABLES AND VARIABLES FOR FUNCTIONS
     setup_wrecon_variables_of_local_bot()
     setup_wrecon_variables_of_server_and_channel()
     setup_wrecon_variables_of_public_key()
     setup_wrecon_variables_of_functions()
+    setup_wrecon_variables_of_setup_autojoin()
+    setup_wrecon_variables_of_validate_command()
     setup_wrecon_variables_of_remote_bots()
     
+    # SETUP VARIABLES OF COMMANDS
     setup_command_variables_advertise()
     setup_command_variables_help()
     setup_command_variables_me()
+    setup_command_variables_register()
     setup_command_variables_update()
     
     return
