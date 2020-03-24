@@ -1735,7 +1735,7 @@ HELP               H[ELP]'''
         display_message(BUFFER, '[%s] ERROR: UNKNOWN COMMAND -> %s' % (COMMAND_ID, COMMAND))
       
       # CHECK NUMBER OF COMMAND ARGUMENTS
-      if COMMAND_CAN_BE_EXECUTED == and SOURCE == 'LOCAL':
+      if COMMAND_CAN_BE_EXECUTED == True and SOURCE == 'LOCAL':
         COMMAND_ARGUMENTS_LIST  = COMMAND_ARGUMENTS.split(' ')
         COMMAND_CAN_BE_EXECUTED, ERROR_MESSAGE = function_validate_3_number_of_arguments(COMMAND, COMMAND_ARGUMENTS_LIST)
         if COMMAND_CAN_BE_EXECUTED == False:
