@@ -705,9 +705,9 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
     
     # Number of required or optional arguments of user commands
     #
-    # ARGUMENTS_REQUIRED         - command required strict number of arguments
-    # ARGUMENTS_OPTIONAL (list)  - command required optional number of arguments
-    # ARGUMENTS_REQUIRED_MINIMAL - command required minimum number of argument required, more is allowed
+    # ARGUMENTS_REQUIRED         - == command required strict number of arguments
+    # ARGUMENTS_OPTIONAL (list)  - <= command required optional number of arguments
+    # ARGUMENTS_REQUIRED_MINIMAL - >= command required minimum number of argument required, more is allowed
     global ARGUMENTS_REQUIRED, ARGUMENTS_OPTIONAL, ARGUMENTS_REQUIRED_MINIMAL
     ARGUMENTS_REQUIRED         = {}
     ARGUMENTS_OPTIONAL         = {}
@@ -1049,7 +1049,7 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
 UPDATE             UP[DATE] [botid]'''
     
     global ARGUMENTS_OPTIONAL
-    ARGUMENTS_OPTIONAL['UPDATE'] = [0, 1]
+    ARGUMENTS_OPTIONAL['UPDATE'] = 1
     
     global SCRIPT_COMPLETION, SCRIPT_COMMAND_CALL, PREPARE_USER_CALL, SCRIPT_BUFFER_CALL, COMMAND_VERSION
     SCRIPT_COMPLETION             = SCRIPT_COMPLETION + ' || UP || UPDATE'
@@ -1133,6 +1133,8 @@ UPDATE             UP[DATE] [botid]'''
     
     SHORT_HELP                  = SHORT_HELP + '''
 HELP               H[ELP]'''
+    
+    
     
     PREPARE_USER_CALL['H']      = prepare_command_help
     PREPARE_USER_CALL['HELP']   = prepare_command_help
@@ -1819,7 +1821,7 @@ HELP               H[ELP]'''
       if NUMBER_OF_ARGUMENTS == 0:
         VERIFY_RESULT = True
       else:
-        OUT_MESSAGE = 'NO ARGUMENTS REQUIRED, %s PROVIDED' % NUMBER_OF_ARGUMENTS
+        OUT_MESSAGE = 'NO ARGUMENTS REQUIRED, %s HAS BEEN PROVIDED' % NUMBER_OF_ARGUMENTS
     
     if COMMAND in ARGUMENTS_REQUIRED:
       if NUMBER_OF_ARGUMENTS == ARGUMENTS_REQUIRED[COMMAND]:
@@ -1828,7 +1830,7 @@ HELP               H[ELP]'''
         OUT_MESSAGE = '%s ARGUMENT(S) REQUIRED, %s HAS BEEN PROVIDED' % (ARGUMENTS_REQUIRED[COMMAND], NUMBER_OF_ARGUMENTS)
     
     if COMMAND in ARGUMENTS_OPTIONAL:
-      if NUMBER_OF_ARGUMENTS in ARGUMENTS_OPTIONAL[COMMAND]:
+      if NUMBER_OF_ARGUMENTS <= ARGUMENTS_OPTIONAL[COMMAND]:
         VERIFY_RESULT = True
       else:
         OUT_MESSAGE = '%s AGRUMENT(S) PROVIDED, %s EXPECTED' % (NUMBER_OF_ARGUMENTS, ARGUMENTS_OPTIONAL[COMMAND])
@@ -2194,8 +2196,6 @@ HELP               H[ELP]'''
     SHORT_HELP                       = SHORT_HELP + '''
 ADVERTISE          ADV[ERTISE]'''
     
-    global ARGUMENTS_REQUIRED
-    ARGUMENTS_REQUIRED['ADVERTISE'] = 0
     
     global SCRIPT_COMPLETION, SCRIPT_COMMAND_CALL, PREPARE_USER_CALL, SCRIPT_BUFFER_CALL
     SCRIPT_COMPLETION                = SCRIPT_COMPLETION + ' || ADV || ADVERTISE'
@@ -2291,9 +2291,6 @@ ADVERTISE          ADV[ERTISE]'''
     global SHORT_HELP
     SHORT_HELP                       = SHORT_HELP + '''
 ME                 M[E]'''
-    
-    global ARGUMENTS_REQUIRED
-    ARGUMENTS_REQUIRED['ME'] = 0
     
     global PREPARE_USER_CALL
     PREPARE_USER_CALL['M']    = prepare_command_me
