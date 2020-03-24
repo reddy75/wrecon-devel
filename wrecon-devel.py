@@ -703,6 +703,16 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
     global SCRIPT_NAME
     SHORT_HELP              = ''
     
+    # Number of required or optional arguments of user commands
+    #
+    # ARGUMENTS_REQUIRED         - command required strict number of arguments
+    # ARGUMENTS_OPTIONAL (list)  - command required optional number of arguments
+    # ARGUMENTS_REQUIRED_MINIMAL - command required minimum number of argument required, more is allowed
+    global ARGUMENTS_REQUIRED, ARGUMENTS_OPTIONAL, ARGUMENTS_REQUIRED_MINIMAL
+    ARGUMENTS_REQUIRED         = {}
+    ARGUMENTS_OPTIONAL         = {}
+    ARGUMENTS_REQUIRED_MINIMAL = {}
+    
     #
     # SETUP OF HOOK VARIABLES
     #
@@ -1037,6 +1047,9 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
     global SHORT_HELP
     SHORT_HELP                       = SHORT_HELP + '''
 UPDATE             UP[DATE] [botid]'''
+    
+    global ARGUMENTS_OPTIONAL
+    ARGUMENTS_OPTIONAL['UPDATE'] = [0, 1]
     
     global SCRIPT_COMPLETION, SCRIPT_COMMAND_CALL, PREPARE_USER_CALL, SCRIPT_BUFFER_CALL, COMMAND_VERSION
     SCRIPT_COMPLETION             = SCRIPT_COMPLETION + ' || UP || UPDATE'
@@ -1719,11 +1732,18 @@ HELP               H[ELP]'''
         COMMAND_CAN_BE_EXECUTED = False
         display_message(BUFFER, '[%s] ERROR: UNKNOWN COMMAND -> %s' % (COMMAND_ID, COMMAND))
       
+      # CHECK NUMBER OF COMMAND ARGUMENTS
+      if COMMAND_CAN_BE_EXECUTED == and SOURCE == 'LOCAL':
+        COMMAND_ARGUMENTS_LIST  = COMMAND_ARGUMENTS.split(' ')
+        COMMAND_CAN_BE_EXECUTED, ERROR_MESSAGE = function_validate_3_number_of_arguments(COMMAND, COMMAND_ARGUMENTS_LIST)
+        if COMMAND_CAN_BE_EXECUTED == False:
+          display_message(BUFFER, '[%s] ERROR: %s' % COMMAND_ID, ERROR_MESSAGE)
+      
       # CHECK REQUIREMENTS FOR EXECUTION
       if COMMAND_CAN_BE_EXECUTED == True:
         global COMMAND_REQUIREMENTS
         if COMMAND in COMMAND_REQUIREMENTS:
-          COMMAND_CAN_BE_EXECUTED = function_validate_3_check_requirements(SOURCE, BUFFER, COMMAND, VERIFY_BOT, COMMAND_ID)
+          COMMAND_CAN_BE_EXECUTED = function_validate_4_requirements(SOURCE, BUFFER, COMMAND, VERIFY_BOT, COMMAND_ID)
       
       # CHECK VERSION FOR EXECUTION
       if COMMAND_CAN_BE_EXECUTED == True:
@@ -1785,10 +1805,49 @@ HELP               H[ELP]'''
     return [ID_CALL, SCRIPT_CALL, VERIFY_BOT]
   
   #
+  # VALIDATE COMMAND - CHECK NUMBER OF ARGUMENTS OF COMMAND
+  #
+  
+  def function_validate_3_number_of_arguments(COMMAND, COMMAND_ARGUMENTS_LIST):
+    global ARGUMENTS_REQUIRED, ARGUMENTS_OPTIONAL, ARGUMENTS_REQUIRED_MINIMAL
+    
+    VERIFY_RESULT       = False
+    OUT_MESSAGE         = 'CORRECT NUMBER OF ARGUMENTS'
+    NUMBER_OF_ARGUMENTS = int(len(COMMAND_ARGUMENTS_LIST))
+    
+    if not COMMAND in ARGUMENTS_REQUIRED and not COMMAND in ARGUMENTS_OPTIONAL and not COMMAND in ARGUMENTS_REQUIRED_MINIMAL:
+      if NUMBER_OF_ARGUMENTS == 0:
+        VERIFY_RESULT = True
+      else:
+        OUT_MESSAGE = 'NO ARGUMENTS REQUIRED, %s PROVIDED' % NUMBER_OF_ARGUMENTS
+    
+    if COMMAND in ARGUMENTS_REQUIRED:
+      if NUMBER_OF_ARGUMENTS == ARGUMENTS_REQUIRED[COMMAND]:
+        VERIFY_RESULT = True
+      else:
+        OUT_MESSAGE = '%s ARGUMENT(S) REQUIRED, %s HAS BEEN PROVIDED' % (ARGUMENTS_REQUIRED[COMMAND], NUMBER_OF_ARGUMENTS)
+    
+    if COMMAND in ARGUMENTS_OPTIONAL:
+      if NUMBER_OF_ARGUMENTS in ARGUMENTS_OPTIONAL[COMMAND]:
+        VERIFY_RESULT = True
+      else:
+        OUT_MESSAGE = '%s AGRUMENT(S) PROVIDED, %s EXPECTED' % (NUMBER_OF_ARGUMENTS, ARGUMENTS_OPTIONAL[COMMAND])
+    
+    if COMMAND in ARGUMENTS_REQUIRED_MINIMAL:
+      if NUMBER_OF_ARGUMENTS >= ARGUMENTS_REQUIRED_MINIMAL[COMMAND]:
+        VERIFY_RESULT = True
+      else:
+        OUT_MESSAGE = '%s ARGUMENT(S) PROVIDED, MINIMUM %s EXPECTED' % (NUMBER_OF_ARGUMENTS, ARGUMENTS_OPTIONAL[COMMAND])
+    
+    # True  = return command contain correct number of argumens
+    # False = return command contain incorrect number of arguments
+    
+    return [VERIFY_RESULT, OUT_MESSAGE]
+  #
   # CHECK COMMAND REQUIREMENTS
   #
   
-  def function_validate_3_check_requirements(SOURCE, BUFFER, COMMAND, VERIFY_BOT, COMMAND_ID):
+  def function_validate_4_requirements(SOURCE, BUFFER, COMMAND, VERIFY_BOT, COMMAND_ID):
     global COMMAND_REQUIREMENTS, WRECON_BOT_ID
     COMMAND_CAN_BE_EXECUTED = True
     
@@ -2135,6 +2194,9 @@ HELP               H[ELP]'''
     SHORT_HELP                       = SHORT_HELP + '''
 ADVERTISE          ADV[ERTISE]'''
     
+    global ARGUMENTS_REQUIRED
+    ARGUMENTS_REQUIRED['ADVERTISE'] = 0
+    
     global SCRIPT_COMPLETION, SCRIPT_COMMAND_CALL, PREPARE_USER_CALL, SCRIPT_BUFFER_CALL
     SCRIPT_COMPLETION                = SCRIPT_COMPLETION + ' || ADV || ADVERTISE'
     SCRIPT_COMMAND_CALL['ADV']       = user_command_advertise
@@ -2229,6 +2291,9 @@ ADVERTISE          ADV[ERTISE]'''
     global SHORT_HELP
     SHORT_HELP                       = SHORT_HELP + '''
 ME                 M[E]'''
+    
+    global ARGUMENTS_REQUIRED
+    ARGUMENTS_REQUIRED['ME'] = 0
     
     global PREPARE_USER_CALL
     PREPARE_USER_CALL['M']    = prepare_command_me
@@ -2348,6 +2413,9 @@ ME                 M[E]'''
     global SHORT_HELP
     SHORT_HELP                       = SHORT_HELP + '''
 REGISTER           REG[ISTER] Channel_Key Channel_Encrypt_Key'''
+    
+    global ARGUMENTS_REQUIRED
+    ARGUMENTS_REQUIRED['REGISTER'] = 2
     
     global PREPARE_USER_CALL
     PREPARE_USER_CALL['REG']      = prepare_command_register
