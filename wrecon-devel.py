@@ -1736,10 +1736,9 @@ HELP               H[ELP]'''
       
       # CHECK NUMBER OF COMMAND ARGUMENTS
       if COMMAND_CAN_BE_EXECUTED == True and SOURCE == 'LOCAL':
-        COMMAND_ARGUMENTS_LIST  = COMMAND_ARGUMENTS.split(' ')
-        COMMAND_CAN_BE_EXECUTED, ERROR_MESSAGE = function_validate_3_number_of_arguments(COMMAND, COMMAND_ARGUMENTS_LIST)
+        COMMAND_CAN_BE_EXECUTED, ERROR_MESSAGE = function_validate_3_number_of_arguments(COMMAND, COMMAND_ARGUMENTS)
         if COMMAND_CAN_BE_EXECUTED == False:
-          display_message(BUFFER, '[%s] ERROR: %s' % COMMAND_ID, ERROR_MESSAGE)
+          display_message(BUFFER, '[%s] ERROR: %s' % (COMMAND_ID, ERROR_MESSAGE))
       
       # CHECK REQUIREMENTS FOR EXECUTION
       if COMMAND_CAN_BE_EXECUTED == True:
@@ -1810,12 +1809,19 @@ HELP               H[ELP]'''
   # VALIDATE COMMAND - CHECK NUMBER OF ARGUMENTS OF COMMAND
   #
   
-  def function_validate_3_number_of_arguments(COMMAND, COMMAND_ARGUMENTS_LIST):
+  def function_validate_3_number_of_arguments(COMMAND, COMMAND_ARGUMENTS):
     global ARGUMENTS_REQUIRED, ARGUMENTS_OPTIONAL, ARGUMENTS_REQUIRED_MINIMAL
     
     VERIFY_RESULT       = False
     OUT_MESSAGE         = 'CORRECT NUMBER OF ARGUMENTS'
-    NUMBER_OF_ARGUMENTS = int(len(COMMAND_ARGUMENTS_LIST))
+    if COMMAND_ARGUMENTS == '':
+      NUMBER_OF_ARGUMENTS = 0
+    else:
+      ARGUMENTS_LIST = COMMAND_ARGUMENTS.split(' ')
+      NUMBER_OF_ARGUMENTS = int(len(COMMAND_ARGUMENTS))
+    
+    # ~ global WRECON_BUFFER_CHANNEL
+    # ~ display_message(WRECON_BUFFER_CHANNEL, 'COMMAND : %s  : %s : ARGUMENTS : %s' % (COMMAND, NUMBER_OF_ARGUMENTS, COMMAND_ARGUMENTS))
     
     if not COMMAND in ARGUMENTS_REQUIRED and not COMMAND in ARGUMENTS_OPTIONAL and not COMMAND in ARGUMENTS_REQUIRED_MINIMAL:
       if NUMBER_OF_ARGUMENTS == 0:
@@ -2402,7 +2408,7 @@ ME                 M[E]'''
     Opposite of command REGISTER is command UNREGISTER.
       /wrecon REG %s %s
       /wrecon REGISTER %s %s
-    ''' % (f_random_generator(8), f_random_generator(16), f_random_generator(8), f_random_generator(16))
+    ''' % (get_random_string(8), get_random_string(16), get_random_string(8), get_random_string(16))
     SCRIPT_COMPLETION               = SCRIPT_COMPLETION + ' || REG || REGISTER'
     SCRIPT_COMMAND_CALL['REG']      = user_command_register
     SCRIPT_COMMAND_CALL['REGISTER'] = user_command_register
