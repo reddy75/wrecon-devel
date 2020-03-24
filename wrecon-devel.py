@@ -700,8 +700,9 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
     TIMEOUT_CONNECT         = 30
     COMMAND_VERSION         = {}
     
-    global SCRIPT_NAME
+    global SCRIPT_NAME, HELP_COMMAND
     SHORT_HELP              = ''
+    HELP_COMMAND            = {}
     
     # Number of required or optional arguments of user commands
     #
@@ -1035,8 +1036,10 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
     BUFFER_CMD_UPD_EXE = '%sE-UPD' % (COMMAND_IN_BUFFER)
     
     global SCRIPT_ARGS, SCRIPT_ARGS_DESCRIPTION
-    SCRIPT_ARGS                       = SCRIPT_ARGS + ' | [UP[DATE] [botid]]'
-    SCRIPT_ARGS_DESCRIPTION           = SCRIPT_ARGS_DESCRIPTION + '''
+    
+    global HELP_COMMAND
+    
+    HELP_COMMAND['UP'] = '''
     %(bold)s%(italic)s--- UP[DATE] [botid]%(nitalic)s%(nbold)s''' % COLOR_TEXT + '''
     Update script from github. This will check new released version, and in case newest version is found, it will trigger update.
     You can also update remote BOT if you are GRANTED to do. With no argument it will trigger update of local BOT, else update for remote BOT will be called.
@@ -1044,7 +1047,13 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
         /wrecon UPDATE %s
     ''' % (get_random_string(16))
     
+    HELP_COMMAND['UPDATE'] = HELP_COMMAND['UP']
+    
+    SCRIPT_ARGS                       = SCRIPT_ARGS + ' | [UP[DATE] [botid]]'
+    SCRIPT_ARGS_DESCRIPTION           = SCRIPT_ARGS_DESCRIPTION + HELP_COMMAND['UPDATE']
+    
     global SHORT_HELP
+    
     SHORT_HELP                       = SHORT_HELP + '''
 UPDATE             UP[DATE] [botid]'''
     
@@ -1099,13 +1108,22 @@ UPDATE             UP[DATE] [botid]'''
     else:
       SHOW_TIMESTAMP = ''
     
-    OUT_MESSAGE     = ['']
-    OUT_MESSAGE.append('SHORT HELP %s %s%s' % (SCRIPT_NAME, SCRIPT_VERSION, SHOW_TIMESTAMP))
-    OUT_MESSAGE.append('')
-    OUT_MESSAGE.append('For detailed help type command /weechat help %s' % SCRIPT_NAME)
-    
-    display_message(BUFFER, OUT_MESSAGE)
-    display_message(BUFFER, SHORT_HELP)
+    # Display help, if argument (command) was not provided
+    if not COMMAND_ARGUMENTS_LIST:
+      OUT_MESSAGE     = ['']
+      OUT_MESSAGE.append('SHORT HELP %s %s%s' % (SCRIPT_NAME, SCRIPT_VERSION, SHOW_TIMESTAMP))
+      OUT_MESSAGE.append('')
+      OUT_MESSAGE.append('For detailed help type command /weechat help %s' % SCRIPT_NAME)
+      
+      display_message(BUFFER, OUT_MESSAGE)
+      display_message(BUFFER, SHORT_HELP)
+    # Or display help for given command (if exist)
+    else:
+      COMMAND_HELP = COMMAND_ARGUMENTS_LIST[0].upper()
+      if COMMAND_HELP in HELP_COMMAND:
+        display_message(BUFFER, HELP_COMMAND[COMMAND_HELP])
+      else:
+        display_message(BUFFER, 'ERROR: HELP OF UNKNOWN COMMAND -> %s' % COMMAND_HELP)
     
     cleanup_unique_command_id(SOURCE, UNIQ_COMMAND_ID)
     
@@ -1118,13 +1136,21 @@ UPDATE             UP[DATE] [botid]'''
   def setup_command_variables_help():
     global SCRIPT_ARGS, SCRIPT_ARGS_DESCRIPTION, SCRIPT_COMPLETION, SCRIPT_COMMAND_CALL, PREPARE_USER_CALL
     
-    SCRIPT_ARGS                  = SCRIPT_ARGS + ' | [H[ELP]]'
-    SCRIPT_ARGS_DESCRIPTION      = SCRIPT_ARGS_DESCRIPTION + '''
+    global HELP_COMMAND
+    
+    HELP_COMMAND['H'] = '''
     %(bold)s%(italic)s--- H[ELP]%(nitalic)s%(nbold)s''' % COLOR_TEXT + '''
-    Command will show short help of commands (overview). For detailed help use /help wrecon.
+    Without argument will show short help of commands (overview). For detailed help of all commands use /help wrecon.
+    With argument (command) will show help of given command (argument).
       /wrecon h
       /wrecon help
+      /wrecon h adv
       '''
+    
+    HELP_COMMAND['HELP'] = HELP_COMMAND['H']
+    
+    SCRIPT_ARGS                 = SCRIPT_ARGS + ' | [H[ELP] [COMMAND]'
+    SCRIPT_ARGS_DESCRIPTION     = SCRIPT_ARGS_DESCRIPTION + HELP_COMMAND['HELP']
     SCRIPT_COMPLETION           = SCRIPT_COMPLETION + ' || H || HELP'
     SCRIPT_COMMAND_CALL['H']    = user_command_help
     SCRIPT_COMMAND_CALL['HELP'] = user_command_help
@@ -1132,9 +1158,11 @@ UPDATE             UP[DATE] [botid]'''
     global SHORT_HELP
     
     SHORT_HELP                  = SHORT_HELP + '''
-HELP               H[ELP]'''
+HELP               H[ELP] [COMMAND]'''
     
+    global ARGUMENTS_OPTIONAL
     
+    ARGUMENTS_OPTIONAL['HELP'] = 1
     
     PREPARE_USER_CALL['H']      = prepare_command_help
     PREPARE_USER_CALL['HELP']   = prepare_command_help
@@ -1814,14 +1842,18 @@ HELP               H[ELP]'''
     
     VERIFY_RESULT       = False
     OUT_MESSAGE         = 'CORRECT NUMBER OF ARGUMENTS'
+    
+    
+    
     if COMMAND_ARGUMENTS == '':
       NUMBER_OF_ARGUMENTS = 0
+      ARGUMENTS_LIST = []
     else:
       ARGUMENTS_LIST = COMMAND_ARGUMENTS.split(' ')
-      NUMBER_OF_ARGUMENTS = int(len(COMMAND_ARGUMENTS))
+      NUMBER_OF_ARGUMENTS = int(len(ARGUMENTS_LIST))
     
     # ~ global WRECON_BUFFER_CHANNEL
-    # ~ display_message(WRECON_BUFFER_CHANNEL, 'COMMAND : %s  : %s : ARGUMENTS : %s' % (COMMAND, NUMBER_OF_ARGUMENTS, COMMAND_ARGUMENTS))
+    # ~ display_message(WRECON_BUFFER_CHANNEL, 'COMMAND : %s  : %s : ARGUMENTS : %s' % (COMMAND, NUMBER_OF_ARGUMENTS, ARGUMENTS_LIST))
     
     if not COMMAND in ARGUMENTS_REQUIRED and not COMMAND in ARGUMENTS_OPTIONAL and not COMMAND in ARGUMENTS_REQUIRED_MINIMAL:
       if NUMBER_OF_ARGUMENTS == 0:
@@ -2190,13 +2222,20 @@ HELP               H[ELP]'''
     BUFFER_CMD_ADV_ERR = '%sADV-E' % (COMMAND_IN_BUFFER)
     
     global SCRIPT_ARGS, SCRIPT_ARGS_DESCRIPTION
-    SCRIPT_ARGS                      = SCRIPT_ARGS + ' | [ADV[ERTISE]]'
-    SCRIPT_ARGS_DESCRIPTION          = SCRIPT_ARGS_DESCRIPTION + '''
+    
+    global HELP_COMMAND
+    
+    HELP_COMMAND['ADV'] = '''
     %(bold)s%(italic)s--- ADV[ERTISE]%(nitalic)s%(nbold)s''' % COLOR_TEXT + '''
     Show your BOT ID in Channel and also other bots will show their IDs
       /wrecon ADV
       /wrecon ADVERTISE
     '''
+    
+    HELP_COMMAND['ADVERTISE'] = HELP_COMMAND['ADV']
+    
+    SCRIPT_ARGS                      = SCRIPT_ARGS + ' | [ADV[ERTISE]]'
+    SCRIPT_ARGS_DESCRIPTION          = SCRIPT_ARGS_DESCRIPTION + HELP_COMMAND['ADVERTISE']
     
     global SHORT_HELP
     SHORT_HELP                       = SHORT_HELP + '''
@@ -2283,14 +2322,21 @@ ADVERTISE          ADV[ERTISE]'''
   
   def setup_command_variables_me():
     global SCRIPT_ARGS, SCRIPT_ARGS_DESCRIPTION, SCRIPT_COMPLETION, SCSCRIPT_COMMAND_CALLRIPT_COMMAND_CALL
-    SCRIPT_ARGS               = SCRIPT_ARGS + '[M[E]]'
-    SCRIPT_ARGS_DESCRIPTION   = SCRIPT_ARGS_DESCRIPTION + '''
+    
+    global HELP_COMMAND
+    
+    HELP_COMMAND['M'] = '''
     %(bold)s%(italic)s--- M[E]%(nitalic)s%(nbold)s''' % COLOR_TEXT + '''
     Show information about your bot Name, ID and KEY. In case you have registered Server and Channel, these informations will be shown as well.
     Information is displayed only to your buffer and not send to the Channel.
       /wrecon M
       /wrecon ME
     '''
+    
+    HELP_COMMAND['ME'] = HELP_COMMAND['M']
+    
+    SCRIPT_ARGS               = SCRIPT_ARGS + '[M[E]]'
+    SCRIPT_ARGS_DESCRIPTION   = SCRIPT_ARGS_DESCRIPTION + HELP_COMMAND['ME']
     SCRIPT_COMPLETION         = SCRIPT_COMPLETION + 'M || ME'
     SCRIPT_COMMAND_CALL['ME'] = user_command_me
     
@@ -2401,14 +2447,20 @@ ME                 M[E]'''
   def setup_command_variables_register():
     global SCRIPT_ARGS, SCRIPT_ARGS_DESCRIPTION, SCRIPT_COMPLETION, SCRIPT_COMMAND_CALL
     
-    SCRIPT_ARGS                     = SCRIPT_ARGS + ' | [REG[ISTER] <CHANNEL_KEY> <ENCRYPT_KEY>]'
-    SCRIPT_ARGS_DESCRIPTION         = SCRIPT_ARGS_DESCRIPTION + '''
+    global HELP_COMMAND
+    
+    HELP_COMMAND['REG'] = '''
     %(bold)s%(italic)s--- REG[ISTER] <channel_key> <encrypt_key>%(nitalic)s%(nbold)s''' % COLOR_TEXT + '''
     Register current channel for controling remote bot's. You have to be actively connected to server and joined in channel you need register.
     Opposite of command REGISTER is command UNREGISTER.
       /wrecon REG %s %s
       /wrecon REGISTER %s %s
     ''' % (get_random_string(8), get_random_string(16), get_random_string(8), get_random_string(16))
+    
+    HELP_COMMAND['REGISTER'] = HELP_COMMAND['REG']
+    
+    SCRIPT_ARGS                     = SCRIPT_ARGS + ' | [REG[ISTER] <CHANNEL_KEY> <ENCRYPT_KEY>]'
+    SCRIPT_ARGS_DESCRIPTION         = SCRIPT_ARGS_DESCRIPTION + HELP_COMMAND['REGISTER']
     SCRIPT_COMPLETION               = SCRIPT_COMPLETION + ' || REG || REGISTER'
     SCRIPT_COMMAND_CALL['REG']      = user_command_register
     SCRIPT_COMMAND_CALL['REGISTER'] = user_command_register
