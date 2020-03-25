@@ -36,6 +36,7 @@
 # -- functions 'encrypt/decrypt' enhanced into levels (also backward compatibility ensure with older script communication)
 # -- 
 #
+# 1.18.9 - Bug fix SSH AUTOADVERTISE
 # 1.18.8 - Version correction
 # 1.18.7 - Fixed bug of variables (lower cases and UPPER CASEs)
 #        - in commands REGISTER and UNREGISTER
@@ -107,7 +108,7 @@
 
 global SCRIPT_NAME, SCRIPT_VERSION, SCRIPT_AUTHOR, SCRIPT_LICENSE, SCRIPT_DESC, SCRIPT_UNLOAD, SCRIPT_CONTINUE, SCRIPT_TIMESTAMP, SCRIPT_FILE, SCRIPT_FILE_SIG, SCRIPT_BASE_NAME
 SCRIPT_NAME      = 'wrecon-devel'
-SCRIPT_VERSION   = '1.18.8 devel'
+SCRIPT_VERSION   = '1.18.10 devel'
 SCRIPT_TIMESTAMP = ''
 
 SCRIPT_FILE      = 'wrecon-devel.py'
@@ -167,7 +168,8 @@ else:
   def display_message_info(BUFFER, INPUT_TAG, INPUT_MESSAGE):
     global WRECON_BOT_NAME, WRECON_BOT_ID
     
-    OUT_MESSAGE = ['--- %s (%s %s) ---' % (INPUT_TAG, WRECON_BOT_NAME, WRECON_BOT_ID)]
+    OUT_MESSAGE     = ['']
+    OUT_MESSAGE.append('--- %s (%s %s) ---' % (INPUT_TAG, WRECON_BOT_NAME, WRECON_BOT_ID))
     
     if isinstance(INPUT_MESSAGE, list):
       for OUT_MSG in INPUT_MESSAGE:
@@ -762,7 +764,8 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
       display_message(BUFFER, '[%s] %s < UPDATE REQUESTED' % (COMMAND_ID, TARGET_BOT_ID))
       weechat.command(WRECON_BUFFER_CHANNEL, '%s %s %s %s' % (BUFFER_CMD_UPD_EXE, TARGET_BOT_ID, WRECON_BOT_ID, COMMAND_ID))
     else:
-      OUTPUT_MESSAGE = ['--- WRECON UPDATE CHECK AND INSTALL ---']
+      OUTPUT_MESSAGE = ['']
+      OUTPUT_MESSAGE.append('--- WRECON UPDATE CHECK AND INSTALL ---')
       
       # CALL CHECK FOR NEW UPDATE
       UPDATE_CONTINUE, UPDATE_NEXT_FUNCTION, OUTPUT_MESSAGE, LATEST_RELEASE, ARCHIVE_FILE, DOWNLOAD_URL, EXTRACT_SUBDIRECTORY = function_update_1_check(OUTPUT_MESSAGE)
@@ -1035,7 +1038,7 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
     global BUFFER_CMD_UPD_EXE
     BUFFER_CMD_UPD_EXE = '%sE-UPD' % (COMMAND_IN_BUFFER)
     
-    global SCRIPT_ARGS, SCRIPT_ARGS_DESCRIPTION
+    global SCRIPT_ARGS, SCRIPT_ARGS_DESCRIPTION, COLOR_TEXT
     
     global HELP_COMMAND
     
@@ -1062,11 +1065,10 @@ UPDATE             UP[DATE] [botid]'''
     
     global SCRIPT_COMPLETION, SCRIPT_COMMAND_CALL, PREPARE_USER_CALL, SCRIPT_BUFFER_CALL, COMMAND_VERSION
     SCRIPT_COMPLETION             = SCRIPT_COMPLETION + ' || UP || UPDATE'
-    SCRIPT_COMMAND_CALL['UP']     = user_command_update
     SCRIPT_COMMAND_CALL['UPDATE'] = user_command_update
     
     PREPARE_USER_CALL['UP']       = prepare_command_update
-    PREPARE_USER_CALL['UPDATE']   = prepare_command_update
+    PREPARE_USER_CALL['UPDATE']   = PREPARE_USER_CALL['UP']
     
     SCRIPT_BUFFER_CALL[BUFFER_CMD_UPD_EXE] = buffer_command_update_received
     
@@ -1108,18 +1110,21 @@ UPDATE             UP[DATE] [botid]'''
     else:
       SHOW_TIMESTAMP = ''
     
+    OUT_MESSAGE     = ['']
+      
     # Display help, if argument (command) was not provided
     if not COMMAND_ARGUMENTS_LIST:
-      OUT_MESSAGE     = ['']
       OUT_MESSAGE.append('SHORT HELP %s %s%s' % (SCRIPT_NAME, SCRIPT_VERSION, SHOW_TIMESTAMP))
       OUT_MESSAGE.append('')
-      OUT_MESSAGE.append('For detailed help type command /weechat help %s' % SCRIPT_NAME)
+      OUT_MESSAGE.append('For detailed help of all commands type command /weechat help %s' % SCRIPT_NAME)
+      OUT_MESSAGE.append('For detailed help of a command type command /%s help COMMAND' % SCRIPT_NAME)
       
       display_message(BUFFER, OUT_MESSAGE)
       display_message(BUFFER, SHORT_HELP)
     # Or display help for given command (if exist)
     else:
       COMMAND_HELP = COMMAND_ARGUMENTS_LIST[0].upper()
+      OUT_MESSAGE.append('')
       if COMMAND_HELP in HELP_COMMAND:
         display_message(BUFFER, HELP_COMMAND[COMMAND_HELP])
       else:
@@ -1134,7 +1139,7 @@ UPDATE             UP[DATE] [botid]'''
   #
   
   def setup_command_variables_help():
-    global SCRIPT_ARGS, SCRIPT_ARGS_DESCRIPTION, SCRIPT_COMPLETION, SCRIPT_COMMAND_CALL, PREPARE_USER_CALL
+    global SCRIPT_ARGS, SCRIPT_ARGS_DESCRIPTION, SCRIPT_COMPLETION, SCRIPT_COMMAND_CALL, PREPARE_USER_CALL, COLOR_TEXT
     
     global HELP_COMMAND
     
@@ -1152,7 +1157,6 @@ UPDATE             UP[DATE] [botid]'''
     SCRIPT_ARGS                 = SCRIPT_ARGS + ' | [H[ELP] [COMMAND]'
     SCRIPT_ARGS_DESCRIPTION     = SCRIPT_ARGS_DESCRIPTION + HELP_COMMAND['HELP']
     SCRIPT_COMPLETION           = SCRIPT_COMPLETION + ' || H || HELP'
-    SCRIPT_COMMAND_CALL['H']    = user_command_help
     SCRIPT_COMMAND_CALL['HELP'] = user_command_help
     
     global SHORT_HELP
@@ -1165,7 +1169,7 @@ HELP               H[ELP] [COMMAND]'''
     ARGUMENTS_OPTIONAL['HELP'] = 1
     
     PREPARE_USER_CALL['H']      = prepare_command_help
-    PREPARE_USER_CALL['HELP']   = prepare_command_help
+    PREPARE_USER_CALL['HELP']   = PREPARE_USER_CALL['H']
     
     return
   
@@ -1632,8 +1636,17 @@ HELP               H[ELP] [COMMAND]'''
     # Check FUNCTION contain 'add' or 'del'
     if FUNCTION in CALLBACK_SETUP_AUTOJOIN:
       WEECHAT_SERVER_AUTOJOIN   = weechat.string_eval_expression("${irc.server.%s.autojoin}" % (WRECON_SERVER), {}, {}, {})
-      WEECHAT_CHANNELS_AUTOJOIN = WEECHAT_SERVER_AUTOJOIN.split(' ')[0].split(',')
-      WEECHAT_CHANNELS_KEYS     = WEECHAT_SERVER_AUTOJOIN.split(' ')[1].split(',')
+      
+      if WEECHAT_SERVER_AUTOJOIN == '':
+        WEECHAT_CHANNELS_AUTOJOIN = []
+        WEECHAT_CHANNELS_KEYS     = []
+      else:
+        WEECHAT_CHANNELS_AND_KEYS = WEECHAT_SERVER_AUTOJOIN.split(' ')
+        WEECHAT_CHANNELS_AUTOJOIN = WEECHAT_CHANNELS_AND_KEYS[0].split(',')
+        if len(WEECHAT_CHANNELS_AND_KEYS) > 1:
+          WEECHAT_CHANNELS_KEYS = WEECHAT_CHANNELS_AND_KEYS[1].split(',')
+        else:
+          WEECHAT_CHANNELS_KEYS = []
       
       SAVE_SETUP, WEECHAT_CHANNELS_AUTOJOIN, WEECHAT_CHANNELS_KEYS = CALLBACK_SETUP_AUTOJOIN[FUNCTION](BUFFER, WRECON_SERVER, WRECON_CHANNEL, WEECHAT_CHANNELS_AUTOJOIN, WEECHAT_CHANNELS_KEYS)
       
@@ -1682,14 +1695,14 @@ HELP               H[ELP] [COMMAND]'''
         if not WRECON_CHANNEL_KEY in WEECHAT_CHANNELS_KEYS[INDEX]:
           WEECHAT_CHANNELS_KEYS[INDEX] = WRECON_CHANNEL_KEY
           SAVE_SETUP = True
-
-      return [SAVE_SETUP, WEECHAT_CHANNELS_AUTOJOIN, WEECHAT_CHANNELS_KEYS]
+    
+    return [SAVE_SETUP, WEECHAT_CHANNELS_AUTOJOIN, WEECHAT_CHANNELS_KEYS]
   
   #
   # FUNCTION SETUP AUTOJOIN DEL
   #
   
-  def setup_autojoin_del(NULL1, NULL2, WRECON_CHANNEL, WEECHAT_CHANNELS_AUTOJOIN, WEECHAT_CHANNELS_KEYS):
+  def setup_autojoin_del(BUFFER, WRECON_SERVER, WRECON_CHANNEL, WEECHAT_CHANNELS_AUTOJOIN, WEECHAT_CHANNELS_KEYS):
     SAVE_SETUP = False
     
     if WRECON_CHANNEL in WEECHAT_CHANNELS_AUTOJOIN:
@@ -2214,7 +2227,7 @@ HELP               H[ELP] [COMMAND]'''
   #
   
   def setup_command_variables_advertise():
-    global BUFFER_CMD_ADV_REQ, BUFFER_CMD_ADV_REP, BUFFER_CMD_ADA_REQ, BUFFER_CMD_ADA_REP, BUFFER_CMD_ADV_ERR
+    global BUFFER_CMD_ADV_REQ, BUFFER_CMD_ADV_REP, BUFFER_CMD_ADA_REQ, BUFFER_CMD_ADA_REP, BUFFER_CMD_ADV_ERR, COLOR_TEXT
     BUFFER_CMD_ADV_REQ = '%sE-ADV' % (COMMAND_IN_BUFFER)
     BUFFER_CMD_ADV_REP = '%sADV-R' % (COMMAND_IN_BUFFER)
     BUFFER_CMD_ADA_REQ = '%sE-ADA' % (COMMAND_IN_BUFFER)
@@ -2244,19 +2257,18 @@ ADVERTISE          ADV[ERTISE]'''
     
     global SCRIPT_COMPLETION, SCRIPT_COMMAND_CALL, PREPARE_USER_CALL, SCRIPT_BUFFER_CALL
     SCRIPT_COMPLETION                = SCRIPT_COMPLETION + ' || ADV || ADVERTISE'
-    SCRIPT_COMMAND_CALL['ADV']       = user_command_advertise
     SCRIPT_COMMAND_CALL['ADVERTISE'] = user_command_advertise
-    SCRIPT_COMMAND_CALL['ADA']       = user_command_advertise
+    SCRIPT_COMMAND_CALL['ADA']       = SCRIPT_COMMAND_CALL['ADVERTISE']
     
     PREPARE_USER_CALL['ADV']         = prepare_command_advertise
-    PREPARE_USER_CALL['ADVERTISE']   = prepare_command_advertise
-    PREPARE_USER_CALL['ADA']         = prepare_command_advertise
+    PREPARE_USER_CALL['ADVERTISE']   = PREPARE_USER_CALL['ADV']
+    PREPARE_USER_CALL['ADA']         = PREPARE_USER_CALL['ADV']
     
     SCRIPT_BUFFER_CALL[BUFFER_CMD_ADV_REQ] = buffer_command_advertise_1_requested
     SCRIPT_BUFFER_CALL[BUFFER_CMD_ADV_REP] = buffer_command_advertise_2_result_received
     
-    SCRIPT_BUFFER_CALL[BUFFER_CMD_ADA_REQ] = buffer_command_advertise_1_requested
-    SCRIPT_BUFFER_CALL[BUFFER_CMD_ADA_REP] = buffer_command_advertise_2_result_received
+    SCRIPT_BUFFER_CALL[BUFFER_CMD_ADA_REQ] = SCRIPT_BUFFER_CALL[BUFFER_CMD_ADV_REQ]
+    SCRIPT_BUFFER_CALL[BUFFER_CMD_ADA_REP] = SCRIPT_BUFFER_CALL[BUFFER_CMD_ADV_REP]
     
     # ~ SCRIPT_BUFFER_CALL[BUFFER_CMD_ADA_REQ] = command_buffer_advertise_ada_2_requested
     # ~ SCRIPT_BUFFER_CALL[BUFFER_CMD_ADA_REP] = command_buffer_advertise_ada_3_result_received
@@ -2294,7 +2306,8 @@ ADVERTISE          ADV[ERTISE]'''
   def user_command_me(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
     global WRECON_BOT_NAME, WRECON_BOT_ID, WRECON_BOT_KEY, SCRIPT_VERSION, SCRIPT_TIMESTAMP
     
-    OUT_MESSAGE     = ['Bot name  : %s' % WRECON_BOT_NAME]
+    OUT_MESSAGE     = ['']
+    OUT_MESSAGE.append('Bot name  : %s' % WRECON_BOT_NAME)
     OUT_MESSAGE.append('Bot ID    : %s' % WRECON_BOT_ID)
     OUT_MESSAGE.append('Bot KEY   : %s' % WRECON_BOT_KEY)
     OUT_MESSAGE.append('VERSION   : %s' % SCRIPT_VERSION)
@@ -2309,6 +2322,7 @@ ADVERTISE          ADV[ERTISE]'''
       OUT_MESSAGE.append('CHANNEL KEY            : %s' % WRECON_CHANNEL_KEY)
       OUT_MESSAGE.append('CHANNEL ENCRYPTION KEY : %s' % WRECON_CHANNEL_ENCRYPTION_KEY)
     
+    OUT_MESSAGE.append('')
     display_message_info(BUFFER, 'INFO', OUT_MESSAGE)
     
     UNIQ_COMMAND_ID = WRECON_BOT_ID + COMMAND_ID
@@ -2321,7 +2335,7 @@ ADVERTISE          ADV[ERTISE]'''
   #
   
   def setup_command_variables_me():
-    global SCRIPT_ARGS, SCRIPT_ARGS_DESCRIPTION, SCRIPT_COMPLETION, SCSCRIPT_COMMAND_CALLRIPT_COMMAND_CALL
+    global SCRIPT_ARGS, SCRIPT_ARGS_DESCRIPTION, SCRIPT_COMPLETION, SCSCRIPT_COMMAND_CALLRIPT_COMMAND_CALL, COLOR_TEXT
     
     global HELP_COMMAND
     
@@ -2346,7 +2360,7 @@ ME                 M[E]'''
     
     global PREPARE_USER_CALL
     PREPARE_USER_CALL['M']    = prepare_command_me
-    PREPARE_USER_CALL['ME']   = prepare_command_me
+    PREPARE_USER_CALL['ME']   = PREPARE_USER_CALL['M']
     
     return
   
@@ -2381,15 +2395,20 @@ ME                 M[E]'''
     
     ERROR_REGISTER = False
     
+    WRECON_SERVERX  = weechat.string_eval_expression("${sec.data.wrecon_server}",{},{},{})
+    WRECON_CHANNELX = weechat.string_eval_expression("${sec.data.wrecon_channel}",{},{},{})
+    
+    OUT_MESSAGE = ['']
+    
     # Check previously registered Server and Channel
-    if WRECON_SERVER and WRECON_CHANNEL:
+    if WRECON_SERVERX and WRECON_CHANNELX:
       ERROR_REGISTER = True
-      OUT_MESSAGE    = 'ALREADY REGISTERED > First UNREGISTER, then REGISTER again.'
+      OUT_MESSAGE.append('ALREADY REGISTERED > First UNREGISTER, then REGISTER again.')
     
     # Check we have two parameters
     if not len(COMMAND_ARGUMENTS_LIST) == 2:
       ERROR_REGISTER = True
-      OUT_MESSAGE    = 'INCORRECT NUMBER OF PARAMETERS > 2 expected. See help.'
+      OUT_MESSAGE.append('INCORRECT NUMBER OF PARAMETERS > 2 expected. See help.')
     
     # Now we can register Server and Channel when registration is prepared
     if ERROR_REGISTER == False:
@@ -2402,20 +2421,20 @@ ME                 M[E]'''
       WRECON_BUFFER_CHANNEL = BUFFER
       
       # Prepare output message of successful registration
-      OUT_MESSAGE     = ['SERVER                 : %s' % WRECON_SERVER]
+      OUT_MESSAGE.append('SERVER                 : %s' % WRECON_SERVER)
       OUT_MESSAGE.append('CHANNEL                : %s' % WRECON_CHANNEL)
       OUT_MESSAGE.append('CHANNEL KEY            : %s' % WRECON_CHANNEL_KEY)
       OUT_MESSAGE.append('CHANNEL ENCRYPTION KEY : %s' % WRECON_CHANNEL_ENCRYPTION_KEY)
       
       # Save all variables into Weechat ()
-      weechat.command(buffer, '/secure set wrecon_server %s' % (WRECON_SERVER))
-      weechat.command(buffer, '/secure set wrecon_channel %s' % (WRECON_CHANNEL))
-      weechat.command(buffer, '/secure set wrecon_channel_key %s' % (WRECON_CHANNEL_KEY))
-      weechat.command(buffer, '/secure set wrecon_channel_encryption_key %s' % (WRECON_CHANNEL_ENCRYPTION_KEY))
+      weechat.command(BUFFER, '/secure set wrecon_server %s' % (WRECON_SERVER))
+      weechat.command(BUFFER, '/secure set wrecon_channel %s' % (WRECON_CHANNEL))
+      weechat.command(BUFFER, '/secure set wrecon_channel_key %s' % (WRECON_CHANNEL_KEY))
+      weechat.command(BUFFER, '/secure set wrecon_channel_encryption_key %s' % (WRECON_CHANNEL_ENCRYPTION_KEY))
       
       # Setup encryption for current SERVER and CHANNEL
-      weechat.command(buffer, '/ircrypt set-key -server %s %s %s' % (WRECON_SERVER, WRECON_CHANNEL, WRECON_CHANNEL_ENCRYPTION_KEY))
-      weechat.command(buffer, '/ircrypt set-cipher -server %s %s aes256' % (WRECON_SERVER, WRECON_CHANNEL))
+      weechat.command(BUFFER, '/ircrypt set-key -server %s %s %s' % (WRECON_SERVER, WRECON_CHANNEL, WRECON_CHANNEL_ENCRYPTION_KEY))
+      weechat.command(BUFFER, '/ircrypt set-cipher -server %s %s aes256' % (WRECON_SERVER, WRECON_CHANNEL))
       
       # Setup AUTOCONNECT, AUTORECONNECT, AUTOJOIN and AUTOREJOIN
       SETUP_RESULT = setup_autojoin(BUFFER, 'ADD', WRECON_SERVER, WRECON_CHANNEL)
@@ -2429,6 +2448,8 @@ ME                 M[E]'''
       
       # And finally HOOK THE BUFFER
       hook_buffer()
+    
+    OUT_MESSAGE.append('')
     
     if ERROR_REGISTER == True:
       display_message_info(BUFFER, 'REGISTER ERROR', OUT_MESSAGE)
@@ -2445,7 +2466,7 @@ ME                 M[E]'''
   #
   
   def setup_command_variables_register():
-    global SCRIPT_ARGS, SCRIPT_ARGS_DESCRIPTION, SCRIPT_COMPLETION, SCRIPT_COMMAND_CALL
+    global SCRIPT_ARGS, SCRIPT_ARGS_DESCRIPTION, SCRIPT_COMPLETION, SCRIPT_COMMAND_CALL, COLOR_TEXT, PREPARE_USER_CALL
     
     global HELP_COMMAND
     
@@ -2462,24 +2483,130 @@ ME                 M[E]'''
     SCRIPT_ARGS                     = SCRIPT_ARGS + ' | [REG[ISTER] <CHANNEL_KEY> <ENCRYPT_KEY>]'
     SCRIPT_ARGS_DESCRIPTION         = SCRIPT_ARGS_DESCRIPTION + HELP_COMMAND['REGISTER']
     SCRIPT_COMPLETION               = SCRIPT_COMPLETION + ' || REG || REGISTER'
-    SCRIPT_COMMAND_CALL['REG']      = user_command_register
     SCRIPT_COMMAND_CALL['REGISTER'] = user_command_register
     
     global SHORT_HELP
     SHORT_HELP                       = SHORT_HELP + '''
 REGISTER           REG[ISTER] Channel_Key Channel_Encrypt_Key'''
     
-    global ARGUMENTS_REQUIRED
-    ARGUMENTS_REQUIRED['REGISTER'] = 2
-    
-    global PREPARE_USER_CALL
     PREPARE_USER_CALL['REG']      = prepare_command_register
     PREPARE_USER_CALL['REGISTER'] = prepare_command_register
     
+    global ARGUMENTS_REQUIRED
+    ARGUMENTS_REQUIRED['REGISTER'] = 2
     return
   
   #
   ###### END COMMAND REGISTER
+  
+  ######
+  #
+  # COMMAND UNREGISTER
+  
+  def prepare_command_unregister(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
+    global WRECON_BOT_ID
+    
+    UNIQ_COMMAND_ID = WRECON_BOT_ID + COMMAND_ID
+    TARGET_BOT_ID   = WRECON_BOT_ID
+    SOURCE_BOT_ID   = WRECON_BOT_ID
+    
+    COMMAND = 'UNREGISTER'
+    
+    return [COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST, UNIQ_COMMAND_ID]
+  
+  #
+  # UNREGISTER
+  #
+  
+  def user_command_unregister(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
+    global SCRIPT_NAME, WRECON_SERVER, WRECON_CHANNEL, WRECON_CHANNEL_ENCRYPTION_KEY, WRECON_CHANNEL_ENCRYPTION_KEY
+    
+    UNIQ_COMMAND_ID = TARGET_BOT_ID + COMMAND_ID
+    
+    WRECON_SERVER  = weechat.string_eval_expression("${sec.data.wrecon_server}",{},{},{})
+    WRECON_CHANNEL = weechat.string_eval_expression("${sec.data.wrecon_channel}",{},{},{})
+    
+    ERROR_UNREGISTER = False
+    
+    OUT_MESSAGE = ['']
+    
+    if not WRECON_SERVER and not WRECON_CHANNEL:
+      ERROR_UNREGISTER = True
+      OUT_MESSAGE.append('YOU HAVE NOTE REGISTERED SERVER AND CHANNEL')
+      OUT_MESSAGE.append('Nothing to do')
+    else:
+      OUT_MESSAGE.append('SERVER  : %s' % WRECON_SERVER)
+      OUT_MESSAGE.append('CHANNEL : %s' % WRECON_CHANNEL)
+      
+      # Remove all variables from Weechat
+      weechat.command(BUFFER, '/secure del wrecon_server')
+      weechat.command(BUFFER, '/secure del wrecon_channel')
+      weechat.command(BUFFER, '/secure del wrecon_channel_key')
+      weechat.command(BUFFER, '/secure del wrecon_channel_encryption_key')
+      
+      # Remove encryption for current SERVER and CHANNEL
+      weechat.command(BUFFER, '/ircrypt remove-key -server %s %s %s' % (WRECON_SERVER, WRECON_CHANNEL, WRECON_CHANNEL_ENCRYPTION_KEY))
+      weechat.command(BUFFER, '/ircrypt remove-cipher -server %s %s aes256' % (WRECON_SERVER, WRECON_CHANNEL))
+      
+      WRECON_SERVER                 = ''
+      WRECON_CHANNEL                = ''
+      WRECON_CHANNEL_KEY            = ''
+      WRECON_CHANNEL_ENCRYPTION_KEY = ''
+      
+      SETUP_RESULT = setup_autojoin(BUFFER, 'DEL', WRECON_SERVER, WRECON_CHANNEL)
+      if SETUP_RESULT == True:
+        OUT_MESSAGE.append('Unregistration completed successfully')
+      else:
+        OUT_MESSAGE.append('Unexpected error occured during unregistration,')
+        OUT_MESSAGE.append('options of autojoin has been removed out, but not by %s' % SCRIPT_NAME)
+        ERROR_UNREGISTER = True
+    
+    OUT_MESSAGE.append('')
+    
+    if ERROR_UNREGISTER == True:
+      display_message_info(BUFFER, 'UNREGISTER ERROR', OUT_MESSAGE)
+    else:
+      display_message_info(BUFFER, 'UNREGISTER INFO', OUT_MESSAGE)
+    
+    cleanup_unique_command_id('LOCAL', UNIQ_COMMAND_ID)
+    
+    return weechat.WEECHAT_RC_OK
+  
+  #
+  # UNREGISTER - SETUP VARIABLES
+  #
+  
+  def setup_command_variables_unregister():
+    global SCRIPT_ARGS, SCRIPT_ARGS_DESCRIPTION, SCRIPT_COMPLETION, SCRIPT_COMMAND_CALL, COLOR_TEXT, PREPARE_USER_CALL
+    
+    global HELP_COMMAND
+    
+    HELP_COMMAND['UN'] = '''
+    %(bold)s%(italic)s--- UN[REGIISTER]%(nitalic)s%(nbold)s''' % COLOR_TEXT + '''
+    Unregister channel of controling remote bot's.
+        /wrecon UN
+        /wrecon UNREGISTER
+    '''
+    
+    HELP_COMMAND['UNREGISTER'] = HELP_COMMAND['UN']
+    
+    global SHORT_HELP
+    SHORT_HELP                        = SHORT_HELP + '''
+UNREGISTER         UN[REGISTER]'''
+    
+    SCRIPT_ARGS                       = SCRIPT_ARGS + ' | [UN[REGISTER]]'
+    SCRIPT_ARGS_DESCRIPTION           = SCRIPT_ARGS_DESCRIPTION + HELP_COMMAND['UNREGISTER']
+    
+    SCRIPT_COMPLETION                 = SCRIPT_COMPLETION + ' || UNREG || UNREGISTER'
+    SCRIPT_COMMAND_CALL['UNREGISTER'] = user_command_unregister
+    
+    PREPARE_USER_CALL['UN']           = prepare_command_unregister
+    PREPARE_USER_CALL['UNREGISTER']   = PREPARE_USER_CALL['UN']
+    
+    return
+    
+  #
+  ###### END COMMAND UNREGISTER
   
   #
   ###### END ALL COMMANDS
@@ -2508,6 +2635,7 @@ REGISTER           REG[ISTER] Channel_Key Channel_Encrypt_Key'''
     setup_command_variables_help()
     setup_command_variables_me()
     setup_command_variables_register()
+    setup_command_variables_unregister()
     setup_command_variables_update()
     
     return
