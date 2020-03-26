@@ -1646,16 +1646,13 @@ HELP               H[ELP] [COMMAND]'''
     if FUNCTION in CALLBACK_SETUP_AUTOJOIN:
       WEECHAT_SERVER_AUTOJOIN   = weechat.string_eval_expression("${irc.server.%s.autojoin}" % (WRECON_SERVER), {}, {}, {})
       
-      if WEECHAT_SERVER_AUTOJOIN == '':
-        WEECHAT_CHANNELS_AUTOJOIN = []
-        WEECHAT_CHANNELS_KEYS     = []
+      CHANNELS_AND_PASSWORDS    = WEECHAT_SERVER_AUTOJOIN.split(' ')
+      WEECHAT_CHANNELS_AUTOJOIN = CHANNELS_AND_PASSWORDS[0].split(',')
+      
+      if len(CHANNELS_AND_PASSWORDS) == 1:
+        WEECHAT_CHANNELS_KEYS   = []
       else:
-        WEECHAT_CHANNELS_AND_KEYS = WEECHAT_SERVER_AUTOJOIN.split(' ')
-        WEECHAT_CHANNELS_AUTOJOIN = WEECHAT_CHANNELS_AND_KEYS[0].split(',')
-        if len(WEECHAT_CHANNELS_AND_KEYS) > 1:
-          WEECHAT_CHANNELS_KEYS = WEECHAT_CHANNELS_AND_KEYS[1].split(',')
-        else:
-          WEECHAT_CHANNELS_KEYS = []
+        WEECHAT_CHANNELS_KEYS   = CHANNELS_AND_PASSWORDS[1].split(',')
       
       SAVE_SETUP, WEECHAT_CHANNELS_AUTOJOIN, WEECHAT_CHANNELS_KEYS = CALLBACK_SETUP_AUTOJOIN[FUNCTION](BUFFER, WRECON_SERVER, WRECON_CHANNEL, WEECHAT_CHANNELS_AUTOJOIN, WEECHAT_CHANNELS_KEYS)
       
@@ -2646,6 +2643,11 @@ UNREGISTER         UN[REGISTER]'''
     setup_command_variables_register()
     setup_command_variables_unregister()
     setup_command_variables_update()
+    
+    global SHORT_HELP
+    SHORT_HELP = SHORT_HELP + '''
+
+'''
     
     return
   
