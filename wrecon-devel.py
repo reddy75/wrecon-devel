@@ -36,6 +36,8 @@
 # -- functions 'encrypt/decrypt' enhanced into levels (also backward compatibility ensure with older script communication)
 # -- 
 #
+# 1.18.11 - Bug fix UPDATE CHECK VERSION
+# 1.18.10 - Bug fix SSH AUTOADVETISE
 # 1.18.9 - Bug fix SSH AUTOADVERTISE
 # 1.18.8 - Version correction
 # 1.18.7 - Fixed bug of variables (lower cases and UPPER CASEs)
@@ -745,6 +747,7 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
     
     if not COMMAND_ARGUMENTS_LIST:
       TARGET_BOT_ID = WRECON_BOT_ID
+      COMMAND = 'UPDATE'
     else:
       TARGET_BOT_ID = COMMAND_ARGUMENTS_LIST[0]
       COMMAND       = BUFFER_CMD_UPD_EXE
@@ -839,6 +842,12 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
       LATEST_RELEASE = GET_DATA['tag_name'].split('v')[1]
       
       OUTPUT_MESSAGE.append('LATEST RELEASE  : %s' % LATEST_RELEASE)
+      
+      ACTUAL_VER = SCRIPT_VERSION.split('.')
+      LATEST_VER = LATEST_RELEASE.split('.')
+      
+      ACTUAL_VERSION = list(map(int, ACTUAL_VER))
+      LATEST_RELEASE = list(map(int, LATEST_VER))
       
       if ACTUAL_VERSION >= LATEST_RELEASE:
         OUTPUT_MESSAGE.append('WRECON IS UP TO DATE')
