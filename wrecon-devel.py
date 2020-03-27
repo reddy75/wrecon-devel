@@ -1638,33 +1638,73 @@ HELP               H[ELP] [COMMAND]'''
   # SETUP AUTOJOIN
   #
   
-  def setup_autojoin(BUFFER, FUNCTION, WRECON_SERVER, WRECON_CHANNEL):
+  def setup_autojoin(BUFFER, FUNCTION, INPUT_WRECON_SERVER, INPUT_WRECON_CHANNEL):
     global CALLBACK_SETUP_AUTOJOIN
     SAVE_SETUP = False
     
+    
     # Check FUNCTION contain 'add' or 'del'
     if FUNCTION in CALLBACK_SETUP_AUTOJOIN:
-      WEECHAT_SERVER_AUTOJOIN   = weechat.string_eval_expression("${irc.server.%s.autojoin}" % (WRECON_SERVER), {}, {}, {})
       
-      CHANNELS_AND_PASSWORDS    = WEECHAT_SERVER_AUTOJOIN.split(' ')
-      WEECHAT_CHANNELS_AUTOJOIN = CHANNELS_AND_PASSWORDS[0].split(',')
-      
-      if len(CHANNELS_AND_PASSWORDS) == 1:
-        WEECHAT_CHANNELS_KEYS   = []
+      if FUNCTION == 'DEL':
+        global WRECON_SERVER, WRECON_CHANNEL
       else:
-        WEECHAT_CHANNELS_KEYS   = CHANNELS_AND_PASSWORDS[1].split(',')
+        WRECON_SERVER, WRECON_CHANNEL = [INPUT_WRECON_SERVER, INPUT_WRECON_CHANNEL]
+      
+      WEECHAT_SERVER_AUTOJOIN = weechat.string_eval_expression("${irc.server.%s.autojoin}" % (WRECON_SERVER), {}, {}, {})
+      
+      WEECHAT_CHANNELS_AUTOJOIN, WEECHAT_CHANNELS_KEYS = setup_autojoin_convert_string2list(WEECHAT_SERVER_AUTOJOIN)
       
       SAVE_SETUP, WEECHAT_CHANNELS_AUTOJOIN, WEECHAT_CHANNELS_KEYS = CALLBACK_SETUP_AUTOJOIN[FUNCTION](BUFFER, WRECON_SERVER, WRECON_CHANNEL, WEECHAT_CHANNELS_AUTOJOIN, WEECHAT_CHANNELS_KEYS)
       
       # SAVE data in case changes were done
       if SAVE_SETUP == True:
-        EXPORT_CHANNELS = ','.join(map(str, WEECHAT_CHANNELS_AUTOJOIN))
-        EXPORT_KEYS     = ','.join(map(str, WEECHAT_CHANNELS_KEYS))
-        EXPORT_DATA     = '%s %s' % (EXPORT_CHANNELS, EXPORT_KEYS)
+        
+        WEECHAT_CHANNELS_KEYS = [WEECHAT_CHANNELS_AUTOJOIN, WEECHAT_CHANNELS_KEYS]
+        EXPORT_DATA = setup_autojoin_convert_list2string(WEECHAT_CHANNELS_KEYS)
+        
         weechat.command(BUFFER, '/set irc.server.%s.autojoin %s' % (WRECON_SERVER, EXPORT_DATA))
         weechat.command(BUFFER, '/save')
     
     return SAVE_SETUP
+  
+  #
+  # FUNCTION SETUP AUTOJOIN CONVERT STRING TO LIST
+  #
+  
+  def setup_autojoin_convert_string2list(INPUT_STRING):
+    
+    CHANNELS_AND_KEYS = INPUT_STRING.split(' ')
+    CHANNELS_LIST     = CHANNELS_AND_KEYS[0].split(',')
+    KEYS_LIST         = ['']
+    
+    if len(CHANNELS_AND_KEYS) == 2:
+      KEYS_LIST       = CHANNELS_AND_KEYS[1].split(',')
+      
+    OUTPUT_LIST       = [CHANNELS_LIST, KEYS_LIST]
+    
+    return OUTPUT_LIST
+  
+  #
+  # FUNCTION SETUP AUTOJOIN CONVERT LIST TO STRING
+  #
+  
+  def setup_autojoin_convert_list2string(INPUT_LIST):
+    global WRECON_BUFFER_CHANNEL
+    
+    display_message(WRECON_BUFFER_CHANNEL, 'LIST TO STRING : %s' % INPUT_LIST)
+    
+    CHANNELS = INPUT_LIST[0]
+    KEYS     = INPUT_LIST[1]
+    
+    CHANNELS_STRING = ','.join(map(str, CHANNELS))
+    KEYS_STRING     = ','.join(map(str, KEYS))
+    
+    CHANNELS_KEYS   = [CHANNELS_STRING, KEYS_STRING]
+    
+    OUTPUT_STRING   = ' '.join(map(str, CHANNELS_KEYS))
+    
+    return OUTPUT_STRING
   
   #
   # FUNCTION SETUP AUTOJOIN ADD
@@ -1715,8 +1755,8 @@ HELP               H[ELP] [COMMAND]'''
       # Find index of my registered channel
       CHANNEL_INDEX = [INDEX for INDEX, ELEMENT in enumerate(WEECHAT_CHANNELS_AUTOJOIN) if WRECON_CHANNEL in ELEMENT]
       for INDEX in CHANNEL_INDEX:
-        del WEECHAT_CHANNELS_AUTOJOIN[INDEX]
-        del WEECHAT_CHANNELS_KEYS[INDEX]
+        WEECHAT_CHANNELS_AUTOJOIN.pop(INDEX)
+        WEECHAT_CHANNELS_KEYS.pop(INDEX)
       SAVE_SETUP = True
     
     return [SAVE_SETUP, WEECHAT_CHANNELS_AUTOJOIN, WEECHAT_CHANNELS_KEYS]
@@ -2544,6 +2584,8 @@ REGISTER           REG[ISTER] Channel_Key Channel_Encrypt_Key'''
       OUT_MESSAGE.append('SERVER  : %s' % WRECON_SERVER)
       OUT_MESSAGE.append('CHANNEL : %s' % WRECON_CHANNEL)
       
+      SETUP_RESULT = setup_autojoin(BUFFER, 'DEL', WRECON_SERVER, WRECON_CHANNEL)
+      
       # Remove all variables from Weechat
       weechat.command(BUFFER, '/secure del wrecon_server')
       weechat.command(BUFFER, '/secure del wrecon_channel')
@@ -2559,7 +2601,6 @@ REGISTER           REG[ISTER] Channel_Key Channel_Encrypt_Key'''
       WRECON_CHANNEL_KEY            = ''
       WRECON_CHANNEL_ENCRYPTION_KEY = ''
       
-      SETUP_RESULT = setup_autojoin(BUFFER, 'DEL', WRECON_SERVER, WRECON_CHANNEL)
       if SETUP_RESULT == True:
         OUT_MESSAGE.append('Unregistration completed successfully')
       else:
