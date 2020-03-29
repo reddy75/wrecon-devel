@@ -712,13 +712,22 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
     
     # Number of required or optional arguments of user commands
     #
-    # ARGUMENTS_REQUIRED         - == command required strict number of arguments
-    # ARGUMENTS_OPTIONAL (list)  - <= command required optional number of arguments
-    # ARGUMENTS_REQUIRED_MINIMAL - >= command required minimum number of argument required, more is allowed
+    # ARGUMENTS_REQUIRED         == ARGUMENTS - command requires strict number of arguments
+    # ARGUMENTS_OPTIONAL (list)  >= ARGUMENTS - command requires optional number of arguments
+    #                                         - there can be no argument, or number of arguments up to limit number
+    # ARGUMENTS_REQUIRED_MINIMAL <= ARGUMENTS - command requires minimum number of arguments, more is allowed
+    #                                         - there should be minimum number of arguments
     global ARGUMENTS_REQUIRED, ARGUMENTS_OPTIONAL, ARGUMENTS_REQUIRED_MINIMAL
     ARGUMENTS_REQUIRED         = {}
     ARGUMENTS_OPTIONAL         = {}
     ARGUMENTS_REQUIRED_MINIMAL = {}
+    
+    #
+    # SETUP OF VARIABLES FOR LOCAL or REMOTE REQUIREMENTS
+    #
+    global COMMAND_REQUIREMENTS_LOCAL, COMMAND_REQUIREMENTS_REMOTE
+    COMMAND_REQUIREMENTS_LOCAL  = {}
+    COMMAND_REQUIREMENTS_REMOTE = {}
     
     #
     # SETUP OF HOOK VARIABLES
@@ -742,465 +751,6 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
   
   #
   ##### END SETUP BASIC GLOBAL VARIABLES FOR WRECON - BOT, SERVER, CHANNEL etc.
-  
-  #####
-  #
-  # COMMAND AND FUNCTION CHECK AND UPDATE
-  
-  #
-  # UPDATE - PREPARE COMMAND FOR VALIDATION AND EXECUTION
-  #
-  
-  def prepare_command_update(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
-    global WRECON_BOT_ID, BUFFER_CMD_UPD_EXE
-    
-    COMMAND = 'UPDATE'
-    
-    if not COMMAND_ARGUMENTS_LIST:
-      TARGET_BOT_ID = WRECON_BOT_ID
-    else:
-      TARGET_BOT_ID = COMMAND_ARGUMENTS_LIST[0]
-    
-    UNIQ_COMMAND_ID = WRECON_BOT_ID + COMMAND_ID
-    
-    # ~ display_data('prepare_command_update', WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST)
-    
-    return [COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST, UNIQ_COMMAND_ID]
-  
-  #
-  # UPDATE
-  #
-  
-  def user_command_update(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
-    global WRECON_BOT_ID, BUFFER_CMD_UPD_EXE
-    
-    # ~ display_data('user_command_update', WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST)
-    
-    if not TARGET_BOT_ID == WRECON_BOT_ID:
-      display_message(BUFFER, '[%s] %s < UPDATE REQUESTED' % (COMMAND_ID, TARGET_BOT_ID))
-      weechat.command(WRECON_BUFFER_CHANNEL, '%s %s %s %s' % (BUFFER_CMD_UPD_EXE, TARGET_BOT_ID, WRECON_BOT_ID, COMMAND_ID))
-    else:
-      OUTPUT_MESSAGE = ['']
-      OUTPUT_MESSAGE.append('--- WRECON UPDATE CHECK AND INSTALL ---')
-      
-      # CALL CHECK FOR NEW UPDATE
-      UPDATE_CONTINUE, UPDATE_NEXT_FUNCTION, OUTPUT_MESSAGE, LATEST_RELEASE, ARCHIVE_FILE, DOWNLOAD_URL, EXTRACT_SUBDIRECTORY = function_update_1_check(OUTPUT_MESSAGE)
-      
-      # CALL PREPARE DIR
-      if UPDATE_CONTINUE == True:
-        UPDATE_CONTINUE, UPDATE_NEXT_FUNCTION, OUTPUT_MESSAGE, DOWNLOAD_DIRECTORY = UPDATE_NEXT_FUNCTION(OUTPUT_MESSAGE)
-      
-      # CALL DOWNLOAD FILE
-      if UPDATE_CONTINUE == True:
-        UPDATE_CONTINUE, UPDATE_NEXT_FUNCTION, OUTPUT_MESSAGE = UPDATE_NEXT_FUNCTION(OUTPUT_MESSAGE, DOWNLOAD_DIRECTORY, ARCHIVE_FILE, DOWNLOAD_URL)
-      
-      # CALL EXTRACT ARCHIVE
-      if UPDATE_CONTINUE == True:
-        UPDATE_CONTINUE, UPDATE_NEXT_FUNCTION, OUTPUT_MESSAGE = UPDATE_NEXT_FUNCTION(OUTPUT_MESSAGE, DOWNLOAD_DIRECTORY, ARCHIVE_FILE)
-      
-      # CALL VERIFY EXTRACTED FILE
-      if UPDATE_CONTINUE == True:
-        UPDATE_CONTINUE, UPDATE_NEXT_FUNCTION, OUTPUT_MESSAGE, INSTALL_FILE = UPDATE_NEXT_FUNCTION(OUTPUT_MESSAGE, EXTRACT_SUBDIRECTORY)
-      
-      # CALL INSTALL NEW FILE
-      if UPDATE_CONTINUE == True:
-        UPDATE_CONTINUE, UPDATE_NEXT_FUNCTION, OUTPUT_MESSAGE = UPDATE_NEXT_FUNCTION(OUTPUT_MESSAGE, INSTALL_FILE)
-      
-      display_message(BUFFER, OUTPUT_MESSAGE)
-      
-      # AFTER SUCCESSFUL INSTALLATION WE CAN RESTART
-      if UPDATE_CONTINUE == True:
-        global SCRIPT_FILE
-        display_message(BUFFER, 'RESTARTING WRECON...')
-        weechat.command(BUFFER, '/wait 3s /script reload %s' % SCRIPT_FILE)
-    
-    return weechat.WEECHAT_RC_OK
-    
-  #
-  # UPDATE - CHECK (new version in URL)
-  #
-  
-  def function_update_1_check(OUTPUT_MESSAGE):
-    import urllib.request
-    global SCRIPT_VERSION, SCRIPT_BASE_NAME
-    
-    UPDATE_EXIST   = False
-    NEXT_FUNCTION  = ''
-    
-    LATEST_RELEASE, ARCHIVE_FILE, DOWNLOAD_URL, EXTRACT_SUBDIRECTORY  = ['', '', '', '']
-
-    ACTUAL_VERSION = SCRIPT_VERSION.split(' ')[0]
-    BASE_URL       = 'https://github.com/%s/archive' % SCRIPT_BASE_NAME
-    BASE_API_URL   = 'https://api.github.com/repos/%s/releases/latest' % SCRIPT_BASE_NAME
-    
-    OUTPUT_MESSAGE.append('ACTUAL VERSION  : %s' % ACTUAL_VERSION)
-    OUTPUT_MESSAGE.append('REQUESTING URL  : %s' % BASE_API_URL)
-    
-    ERROR_GET = False
-    try:
-      URL_DATA = urllib.request.urlopen(BASE_API_URL)
-    except (urllib.error.HTTPError, urllib.error.ContentTooShortError, OSError) as ERROR:
-      ERROR_GET  = True
-      ERROR_DATA = ERROR.__dict__
-    
-    if ERROR_GET == True:
-      OUTPUT_MESSAGE.append('AN ERROR OCCURED DURING CHECK OF LATEST VERSION FROM GITHUB')
-      if 'code' in ERROR_DATA and 'msg' in ERROR_DATA:
-        OUTPUT_MESSAGE.append('ERROR CODE    : %s' % ERROR_DATA['code'])
-        OUTPUT_MESSAGE.append('ERROR MESSAGE : %s' % ERROR_DATA['msg'])
-      # ~ for KEY in ERROR_DATA:
-        # ~ OUTPUT_MESSAGE.append('ERROR DATA    : %10s : %s' % (KEY, ERROR_DATA[KEY]))
-    else:
-      GET_DATA       = json.loads(URL_DATA.read().decode('utf8'))
-      LATEST_RELEASE = GET_DATA['tag_name'].split('v')[1]
-      
-      OUTPUT_MESSAGE.append('LATEST RELEASE  : %s' % LATEST_RELEASE)
-      
-      ACTUAL_VER = SCRIPT_VERSION.split('.')
-      LATEST_VER = LATEST_RELEASE.split('.')
-      
-      ACTUAL_VERSION = list(map(int, ACTUAL_VER))
-      LATEST_RELEASE = list(map(int, LATEST_VER))
-      
-      if ACTUAL_VERSION >= LATEST_RELEASE:
-        OUTPUT_MESSAGE.append('WRECON IS UP TO DATE')
-      else:
-        global SCRIPT_FILE
-        UPDATE_EXIST         = True
-        NEXT_FUNCTION        = function_update_2_prepare_dir
-        ARCHIVE_FILE         = '%s.tar.gz' % LATEST_RELEASE
-        DOWNLOAD_URL         = '%s/%s' % (BASE_URL, ARCHIVE_FILE)
-        EXTRACT_SUBDIRECTORY = '%s-%s' % (SCRIPT_FILE.split('.')[0], LATEST_RELEASE)
-        
-        OUTPUT_MESSAGE.append('FOUND NEW RELEASE')        
-        OUTPUT_MESSAGE.append('DOWNLOAD URL    : %s' % DOWNLOAD_URL)
-
-    return [UPDATE_EXIST, NEXT_FUNCTION, OUTPUT_MESSAGE, LATEST_RELEASE, ARCHIVE_FILE, DOWNLOAD_URL, EXTRACT_SUBDIRECTORY]
-  
-  #
-  # UPDATE - PREPARE DOWNLOAD DIR
-  #
-  
-  def function_update_2_prepare_dir(OUTPUT_MESSAGE):
-    ENVIRONMENT_VARIABLES = os.environ
-    DOWNLOAD_DIRECTORY    = '%s/%s' % (ENVIRONMENT_VARIABLES['HOME'], '.wrecon-user_command_update')
-    
-    DIRECTORY_PREPARED    = False
-    NEXT_FUNCTION         = ''
-    
-    OUTPUT_MESSAGE.append('DOWNLOAD DIR    : %s' % DOWNLOAD_DIRECTORY)
-    
-    if not os.path.exists(os.path.join(DOWNLOAD_DIRECTORY)):
-      try:
-        os.mkdir(os.path.join(DOWNLOAD_DIRECTORY))
-        DIRECTORY_PREPARED = True
-      except OSError as ERROR:
-        OUTPUT_MESSAGE.append('ERROR, DOWNLOAD DIRECTORY CAN NOT BE CREATED')
-        OUTPUT_MESSAGE.append('ERROR : %s' % ERROR.__dict__)
-    else:
-      if not os.path_isdir(s.path.join(DOWNLOAD_DIRECTORY)):
-        OUTPUT_MESSAGE.append('ERROR, OBJECT EXIST, BUT IS NOT DIRECTORY')
-      else:
-        DIRECTORY_PREPARED == True
-    
-    if DIRECTORY_PREPARED == True:
-      NEXT_FUNCTION = function_update_3_download
-    
-    return [DIRECTORY_PREPARED, NEXT_FUNCTION, OUTPUT_MESSAGE, DOWNLOAD_DIRECTORY]
-  
-  #
-  # UPDATE - DOWNLOAD (new file from URL)
-  # 
-  
-  def function_update_3_download(OUTPUT_MESSAGE, DOWNLOAD_DIRECTORY, ARCHIVE_FILE, DOWNLOAD_URL):
-    import urllib.request
-    
-    DOWNLOAD_PREPARED = False
-    NEXT_FUNCTION     = ''
-    
-    DOWNLOAD_FILE     = os.path.join(DOWNLOAD_DIRECTORY, ARCHIVE_FILE)
-    
-    try:
-      with urllib.request.urlopen(DOWNLOAD_URL) as response, open(DOWNLOAD_FILE, 'wb') as OUT_FILE:
-        shutil.copyfileobj(response, OUT_FILE)
-      OUT_FILE.close()
-      DOWNLOAD_PREPARED = True
-      DOWNLOAD_RESULT   = 'SUCCESSFUL'
-    except (urllib.error.URLerror, urllib.error.ContentTooShortError()) as ERROR:
-      DOWNLOAD_RESULT = 'FAILED'
-    
-    DOWNLOAD_RESULT = 'DOWNLOAD STATUS : %' % DOWNLOAD_RESULT
-    OUTPUT_MESSAGE.append(DOWNLOAD_RESULT)
-    
-    if DOWNLOAD_PREPARED == False:
-      OUTPUT_MESSAGE.append('ERROR : %s' % ERROR.__dict__)
-    else:
-      NEXT_FUNCTION = function_update_4_extract_archive
-    
-    return [DOWNLOAD_PREPARED, NEXT_FUNCTION, OUTPUT_MESSAGE]
-  
-  #
-  # UPDATE - EXTRACT ARCHIVE (from downloaded file)
-  #
-  
-  def function_update_4_extract_archive(OUTPUT_MESSAGE, DOWNLOAD_DIRECTORY, ARCHIVE_FILE):
-    EXTRACT_PREPARED = False
-    NEXT_FUNCTION    = ''
-    
-    os.chdir(DOWNLOAD_DIRECTORY)
-    
-    try:
-      OUTPUT_MESSAGE.append('EXTRACT FILE    : %' % ARCHIVE_FILE)
-      EXTRACT_FILE = tarfile.open(ARCHIVE_FILE)
-      for EXTRACT_OUTPUT in extract_me.extractall():
-        OUTPUT_MESSAGE.append('EXTRACTING .... : %s' % EXTRACT_OUTPUT)
-      EXTRACT_PREPARED = True
-      EXTRACT_RESULT   = 'SUCCESSFUL'
-    except (TarError, ReadError, CompressionError, StreamError, ExtractError, HeaderError) as ERROR:
-      EXTRACT_RESULT = 'FAILED'
-    
-    OUTPUT_MESSAGE.append('EXTRACT RESULT  : %' % EXTRACT_RESULT)
-    
-    if EXTRACT_PREPARED == False:
-      OUTPUT_MESSAGE.append('ERROR : %s' % ERROR.__dict__)
-    else:
-      NEXT_FUNCTION = function_update_5_verify_signature
-    
-    return [EXTRACT_PREPARED, NEXT_FUNCTION, OUTPUT_MESSAGE]
-  
-  #
-  # UPDATE - VERIFY FILE (SIGNATURE)
-  #
-  
-  def function_update_5_verify_signature(OUTPUT_MESSAGE, DOWNLOAD_DIRECTORY, EXTRACT_SUBDIRECTORY):
-    global SCRIPT_FILE, SCRIPT_FILE_SIG, PUBLIC_KEY
-    
-    VERIFY_SUCCESSFUL   = False
-    NEXT_FUNCTION       = ''
-    
-    NEW_FILE            = os.path.join(DOWNLOAD_DIRECTORY, EXTRACT_SUBDIRECTORY, SCRIPT_FILE)
-    NEW_FILE_SIGNATURE  = os.path.join(DOWNLOAD_DIRECTORY, EXTRACT_SUBDIRECTORY, SCRIPT_FILE_SIG)
-    
-    GPG                 = gnupg.GPG()
-    PUBLIC_KEY_INTERNAL = GPG.import_keys(PUBLIC_KEY)
-    
-    VERIFICATION_RESULT = 'FAILED'
-    
-    try:
-      with open(NEW_FILE_SIGNATURE, 'rb') as SIGNATURE_FILE:
-        VERIFY_RESULT = GPG.verify_file(SIGNATURE_FILE, '%s' % NEW_FILE)
-      SIGNATURE_FILE.close()
-    finally:
-      if VERIFY_RESULT:
-        CONTENT_PUBLIC_KEY        = PUBLIC_KEY_INTERNAL.__dict__
-        CONTENT_NEW_FILE          = VERIFY_RESULT.__dict__
-        FINGERPRINT_PUBLIC_KEY    = str(CONTENT_PUBLIC_KEY['results'][0]['fingerprint'])
-        FINGERPRINT_VERIFIED_FILE = str(CONTENT_NEW_FILE['fingerprint'])
-        if FINGERPRINT_PUBLIC_KEY == FINGERPRINT_VERIFIED_FILE:
-          VERIFICATION_RESULT  = 'SUCCESSFUL'
-          VERIFY_SUCCESSFUL    = True
-          NEXT_FUNCTION        = function_update_6_install
-        else:
-          OUTPUT_MESSAGE.append('VERIFICATION    : Signature does not match')
-    
-    OUTPUT_MESSAGE.append('VERIFICATION    : %s' % VERIFICATION_RESULT)
-    
-    del GPG
-    del PUBLIC_KEY_INTERNAL
-    del CONTENT_PUBLIC_KEY
-    del CONTENT_NEW_FILE
-
-    return [VERIFY_SUCCESSFUL, NEXT_FUNCTION, OUTPUT_MESSAGE, NEW_FILE]
-  
-  #
-  # UPDATE - INSTALL NEW FILE
-  #
-  
-  def function_update_6_install(OUTPUT_MESSAGE, INSTALL_FILE):
-    global SCRIPT_FILE
-    
-    INSTALLATION_SUCCESSFUL = False
-    INSTALLATION_RESULT     = 'FAILED'
-    
-    DESTINATION_DIRECTORY  = weechat.string_eval_path_home('%h', {}, {}, {})
-    DESTINATION_DIRECTORY  = str(os.path.join(DESTINATION_DIRECTORY, 'python'))
-    DESTINATION_FILE       = str(os.path.join(DESTINATION_DIRECTORY, SCRIPT_FILE))
-    SOURCE_FILE            = str(os.path.join(INSTALL_FILE))
-    
-    try:
-      COPY_RESULT = shutil.copyfile(SOURCE_FILE, DESTINATION_FILE, follow_symlinks=True)
-      INSTALLATION_SUCCESSFUL = True
-      INSTALLATION_RESULT     = 'SUCCESSFUL'
-    except (OSError, shutil.SameFileError) as ERROR:
-      pass
-    
-    OUTPUT_MESSAGE.append('INSTALLATION    : %s' % INSTALLATION_RESULT)
-    
-    if INSTALLATION_SUCCESSFUL == False:
-      OUTPUT_MESSAGE.append('ERROR : %s' % ERROR.__dict__)
-    
-    return [INSTALLATION_SUCCESSFUL, NEXT_FUNCTION, OUTPUT_MESSAGE]
-  
-  #
-  # UPDATE - REQUEST, here we decide to sent command to buffer for remote bot, or we will update itself
-  #
-  
-  def buffer_command_update_received(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
-    
-    display_message(BUFFER, '[%s] %s < UPDATE RECEIVED' % (COMMAND_ID, SOURCE_BOT_ID))
-    user_command_update(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST)
-    
-    return weechat.WEECHAT_RC_OK
-  
-  #
-  # UPDATE - SETUP VARIABLES
-  #
-  
-  def setup_command_variables_update():
-    global BUFFER_CMD_UPD_EXE
-    BUFFER_CMD_UPD_EXE = '%sE-UPD' % (COMMAND_IN_BUFFER)
-    
-    global SCRIPT_ARGS, SCRIPT_ARGS_DESCRIPTION, COLOR_TEXT
-    
-    global HELP_COMMAND
-    
-    HELP_COMMAND['UP'] = '''
-    %(bold)s%(italic)s--- UP[DATE] [botid]%(nitalic)s%(nbold)s''' % COLOR_TEXT + '''
-    Update script from github. This will check new released version, and in case newest version is found, it will trigger update.
-    You can also update remote BOT if you are GRANTED to do. With no argument it will trigger update of local BOT, else update for remote BOT will be called.
-        /wrecon UP
-        /wrecon UPDATE %s
-    ''' % (get_random_string(16))
-    
-    HELP_COMMAND['UPDATE'] = HELP_COMMAND['UP']
-    
-    SCRIPT_ARGS                       = SCRIPT_ARGS + ' | [UP[DATE] [botid]]'
-    SCRIPT_ARGS_DESCRIPTION           = SCRIPT_ARGS_DESCRIPTION + HELP_COMMAND['UPDATE']
-    
-    global SHORT_HELP
-    
-    SHORT_HELP                       = SHORT_HELP + '''
-UPDATE             UP[DATE] [botid]'''
-    
-    global ARGUMENTS_OPTIONAL
-    ARGUMENTS_OPTIONAL['UPDATE'] = 1
-    
-    global SCRIPT_COMPLETION, SCRIPT_COMMAND_CALL, PREPARE_USER_CALL, SCRIPT_BUFFER_CALL, COMMAND_VERSION
-    SCRIPT_COMPLETION             = SCRIPT_COMPLETION + ' || UP || UPDATE'
-    SCRIPT_COMMAND_CALL['UPDATE'] = user_command_update
-    
-    PREPARE_USER_CALL['UP']       = prepare_command_update
-    PREPARE_USER_CALL['UPDATE']   = PREPARE_USER_CALL['UP']
-    
-    SCRIPT_BUFFER_CALL[BUFFER_CMD_UPD_EXE] = buffer_command_update_received
-    
-    COMMAND_VERSION['UP']         = '1.10'
-    COMMAND_VERSION['UPDATE']     = COMMAND_VERSION['UP']
-    
-    global COMMAND_REQUIREMENTS
-    COMMAND_REQUIREMENTS['UPDATE']            = verify_remote_bot_advertised
-    # ~ COMMAND_REQUIREMENTS[[BUFFER_CMD_UPD_EXE] = verify_remote_bot_granted
-    
-    return
-    
-  #
-  ##### END COMMAND AND FUNCTION CHECK AND UPDATE
-  
-  #####
-  #
-  # COMMAND HELP
-  
-  #
-  # HELP - PREPARE COMMAND FOR VALIDATION AND EXECUTION
-  #
-  
-  def prepare_command_help(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
-    global WRECON_BOT_ID
-    
-    UNIQ_COMMAND_ID = WRECON_BOT_ID + COMMAND_ID
-    COMMAND         = 'HELP'
-    
-    return [COMMAND, WRECON_BOT_ID, WRECON_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST, UNIQ_COMMAND_ID]
-  
-  #
-  # HELP
-  #
-  
-  def user_command_help(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
-    global SHORT_HELP, ID_CALL_LOCAL, SCRIPT_NAME, SCRIPT_VERSION, SCRIPT_TIMESTAMP
-    
-    UNIQ_COMMAND_ID = TARGET_BOT_ID + COMMAND_ID
-    
-    if SCRIPT_TIMESTAMP:
-      SHOW_TIMESTAMP = ' [%s]' % SCRIPT_TIMESTAMP
-    else:
-      SHOW_TIMESTAMP = ''
-    
-    OUT_MESSAGE     = ['']
-      
-    # Display help, if argument (command) was not provided
-    if not COMMAND_ARGUMENTS_LIST:
-      OUT_MESSAGE.append('SHORT HELP %s %s%s' % (SCRIPT_NAME, SCRIPT_VERSION, SHOW_TIMESTAMP))
-      OUT_MESSAGE.append('')
-      OUT_MESSAGE.append('For detailed help of all commands type command /weechat help %s' % SCRIPT_NAME)
-      OUT_MESSAGE.append('For detailed help of a command type command /%s help COMMAND' % SCRIPT_NAME)
-      
-      display_message(BUFFER, OUT_MESSAGE)
-      display_message(BUFFER, SHORT_HELP)
-    # Or display help for given command (if exist)
-    else:
-      COMMAND_HELP = COMMAND_ARGUMENTS_LIST[0].upper()
-      OUT_MESSAGE.append('')
-      if COMMAND_HELP in HELP_COMMAND:
-        display_message(BUFFER, HELP_COMMAND[COMMAND_HELP])
-      else:
-        display_message(BUFFER, 'ERROR: HELP OF UNKNOWN COMMAND -> %s' % COMMAND_HELP)
-    
-    cleanup_unique_command_id(SOURCE, UNIQ_COMMAND_ID)
-    
-    return weechat.WEECHAT_RC_OK
-  
-  #
-  # HELP - SETUP VARIABLES
-  #
-  
-  def setup_command_variables_help():
-    global SCRIPT_ARGS, SCRIPT_ARGS_DESCRIPTION, SCRIPT_COMPLETION, SCRIPT_COMMAND_CALL, PREPARE_USER_CALL, COLOR_TEXT
-    
-    global HELP_COMMAND
-    
-    HELP_COMMAND['H'] = '''
-    %(bold)s%(italic)s--- H[ELP]%(nitalic)s%(nbold)s''' % COLOR_TEXT + '''
-    Without argument will show short help of commands (overview). For detailed help of all commands use /help wrecon.
-    With argument (command) will show help of given command (argument).
-      /wrecon h
-      /wrecon help
-      /wrecon h adv
-      '''
-    
-    HELP_COMMAND['HELP'] = HELP_COMMAND['H']
-    
-    SCRIPT_ARGS                 = SCRIPT_ARGS + ' | [H[ELP] [COMMAND]'
-    SCRIPT_ARGS_DESCRIPTION     = SCRIPT_ARGS_DESCRIPTION + HELP_COMMAND['HELP']
-    SCRIPT_COMPLETION           = SCRIPT_COMPLETION + ' || H || HELP'
-    SCRIPT_COMMAND_CALL['HELP'] = user_command_help
-    
-    global SHORT_HELP
-    
-    SHORT_HELP                  = SHORT_HELP + '''
-HELP               H[ELP] [COMMAND]'''
-    
-    global ARGUMENTS_OPTIONAL
-    
-    ARGUMENTS_OPTIONAL['HELP'] = 1
-    
-    PREPARE_USER_CALL['H']      = prepare_command_help
-    PREPARE_USER_CALL['HELP']   = PREPARE_USER_CALL['H']
-    
-    return
-  
-  #
-  ##### END COMMAND HELP
   
   #####
   #
@@ -1386,7 +936,7 @@ HELP               H[ELP] [COMMAND]'''
     if SOURCE == 'LOCAL':
       COMMAND_ID  = get_command_uniq_id()
     
-    display_message(BUFFER, 'CMDPREVALID : %s' % DATA)
+    # ~ display_message(BUFFER, 'CMDPREVALID : %s' % DATA)
     
     if not DATA:
       if not COMMAND_ID:
@@ -1441,10 +991,10 @@ HELP               H[ELP] [COMMAND]'''
         PREFIX    = ''
         
         # DEBUG ONLY
-        if SOURCE == 'PRE-LOCAL':
-          display_data('command_pre_validation', WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, WRECON_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST)
-        else:
-          display_data('command_pre_validation', WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, WRECON_BOT_ID, WRECON_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST)
+        # ~ if SOURCE == 'PRE-LOCAL':
+          # ~ display_data('command_pre_validation', WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, WRECON_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST)
+        # ~ else:
+          # ~ display_data('command_pre_validation', WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, WRECON_BOT_ID, WRECON_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST)
         
         # First we check command exist
         
@@ -1864,7 +1414,7 @@ HELP               H[ELP] [COMMAND]'''
     # FIRST WE CHECK COMMAND BELONG TO US OR ADVERTISEMENT WAS REQUESTED
     COMMAND_CAN_BE_EXECUTED = function_validate_1_check_target_bot(SOURCE, COMMAND, TARGET_BOT_ID)
     
-    # ~ display_data('validate_command', WEECHAT_DATA, BUFFER, SOURCE, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS, UNIQ_COMMAND_ID)
+    # ~ display_data('validate_command', WEECHAT_DATA, BUFFER, SOURCE, '', '', '', '', '', COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS)
     # ~ display_message(BUFFER, 'COMMAND CAN BE EXECUTED : %s' % COMMAND_CAN_BE_EXECUTED)
     
     # WE SIMPLY IGNORE COMMANDS NOT BELOG TO US
@@ -1906,7 +1456,7 @@ HELP               H[ELP] [COMMAND]'''
         COMMAND_CAN_BE_EXECUTED = function_validate_4_requirements(SOURCE, BUFFER, COMMAND, VERIFY_BOT, COMMAND_ID)
         # Command can be executed only when each requirement has been verified and fulfilled
         if COMMAND_CAN_BE_EXECUTED == False:
-        # Verify we executed additional verification, then we setup necessary variable
+        # Verify we executed additional verification, then we setup necessary variable, and then wait for result
           if UNIQ_COMMAND_ID in WAIT_FOR_VERIFICATION:
             COMMAND_CAN_BE_EXECUTED = False
             WAIT_FOR_VERIFICATION[UNIQ_COMMAND_ID] = [WEECHAT_DATA, BUFFER, SOURCE, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS, UNIQ_COMMAND_ID]
@@ -1915,7 +1465,8 @@ HELP               H[ELP] [COMMAND]'''
             display_message(BUFFER, '[%s] %s < REQUIREMENT RESULT UNSUCCESSFUL' % (COMMAND_ID, VERIFY_BOT))
       
       # CHECK VERSION FOR EXECUTION, only for LOCAL command is checked
-      if COMMAND_CAN_BE_EXECUTED == True and SOURCE == 'LOCAL':
+      # we need to be sure, that remote bot have required version for execution
+      if COMMAND_CAN_BE_EXECUTED == True:
         COMMAND_CAN_BE_EXECUTED = verify_remote_bot_version(BUFFER, COMMAND, VERIFY_BOT, COMMAND_ID)
         
       if COMMAND_CAN_BE_EXECUTED == True:
@@ -1982,7 +1533,7 @@ HELP               H[ELP] [COMMAND]'''
   def function_validate_3_number_of_arguments(COMMAND, COMMAND_ARGUMENTS):
     global ARGUMENTS_REQUIRED, ARGUMENTS_OPTIONAL, ARGUMENTS_REQUIRED_MINIMAL
     
-    VERIFY_RESULT       = False
+    VERIFY_RESULT       = True
     OUT_MESSAGE         = 'CORRECT NUMBER OF ARGUMENTS'
     
     if COMMAND_ARGUMENTS == '':
@@ -1995,29 +1546,24 @@ HELP               H[ELP] [COMMAND]'''
     # ~ global WRECON_BUFFER_CHANNEL
     # ~ display_message(WRECON_BUFFER_CHANNEL, 'COMMAND : %s  : %s : ARGUMENTS : %s' % (COMMAND, NUMBER_OF_ARGUMENTS, ARGUMENTS_LIST))
     
-    if not COMMAND in ARGUMENTS_REQUIRED and not COMMAND in ARGUMENTS_OPTIONAL and not COMMAND in ARGUMENTS_REQUIRED_MINIMAL:
-      if NUMBER_OF_ARGUMENTS == 0:
-        VERIFY_RESULT = True
-      else:
-        OUT_MESSAGE = 'NO ARGUMENTS REQUIRED, %s HAS BEEN PROVIDED' % NUMBER_OF_ARGUMENTS
+    # ~ if not COMMAND in ARGUMENTS_REQUIRED and not COMMAND in ARGUMENTS_OPTIONAL and not COMMAND in ARGUMENTS_REQUIRED_MINIMAL:
+      # ~ if NUMBER_OF_ARGUMENTS > 0:
+        # ~ OUT_MESSAGE = 'COMMAND %s REQUIRE NO ARGUMENTS, BUT %s HAS BEEN PROVIDED' % (COMMAND, NUMBER_OF_ARGUMENTS)
     
     if COMMAND in ARGUMENTS_REQUIRED:
-      if NUMBER_OF_ARGUMENTS == ARGUMENTS_REQUIRED[COMMAND]:
-        VERIFY_RESULT = True
-      else:
-        OUT_MESSAGE = '%s ARGUMENT(S) REQUIRED, %s HAS BEEN PROVIDED' % (ARGUMENTS_REQUIRED[COMMAND], NUMBER_OF_ARGUMENTS)
+      if NUMBER_OF_ARGUMENTS != ARGUMENTS_REQUIRED[COMMAND]:
+        VERIFY_RESULT = False
+        OUT_MESSAGE = 'COMMAND %s REQUIRE %s ARGUMENT(S), BUT %s HAS BEEN PROVIDED' % (COMMAND, ARGUMENTS_REQUIRED[COMMAND], NUMBER_OF_ARGUMENTS)
     
     if COMMAND in ARGUMENTS_OPTIONAL:
-      if NUMBER_OF_ARGUMENTS <= ARGUMENTS_OPTIONAL[COMMAND]:
-        VERIFY_RESULT = True
-      else:
-        OUT_MESSAGE = '%s AGRUMENT(S) PROVIDED, %s EXPECTED' % (NUMBER_OF_ARGUMENTS, ARGUMENTS_OPTIONAL[COMMAND])
+      if NUMBER_OF_ARGUMENTS > ARGUMENTS_OPTIONAL[COMMAND]:
+        VERIFY_RESULT = False
+        OUT_MESSAGE = 'COMMAND %s REQUIRE MAXIMUM %s AGRUMENT(S), BUT %s HAS BEEN PROVIDED' % (COMMAND, ARGUMENTS_OPTIONAL[COMMAND], NUMBER_OF_ARGUMENTS)
     
     if COMMAND in ARGUMENTS_REQUIRED_MINIMAL:
-      if NUMBER_OF_ARGUMENTS >= ARGUMENTS_REQUIRED_MINIMAL[COMMAND]:
-        VERIFY_RESULT = True
-      else:
-        OUT_MESSAGE = '%s ARGUMENT(S) PROVIDED, MINIMUM %s EXPECTED' % (NUMBER_OF_ARGUMENTS, ARGUMENTS_OPTIONAL[COMMAND])
+      if NUMBER_OF_ARGUMENTS < ARGUMENTS_REQUIRED_MINIMAL[COMMAND]:
+        VERIFY_RESULT = False
+        OUT_MESSAGE = 'COMMAND %s REQUIRE MINIMUM %s ARGUMENT(S), BUT %s HAS BEEN PROVIDED' % (COMMAND, ARGUMENTS_OPTIONAL[COMMAND], NUMBER_OF_ARGUMENTS)
     
     # True  = return command contain correct number of argumens
     # False = return command contain incorrect number of arguments
@@ -2034,27 +1580,22 @@ HELP               H[ELP] [COMMAND]'''
     if VERIFY_BOT == WRECON_BOT_ID or (VERIFY_BOT == COMMAND_ID and SOURCE == 'LOCAL'):
       return COMMAND_CAN_BE_EXECUTED
     
-    global COMMAND_REQUIREMENTS
+    if SOURCE == 'LOCAL':
+      global COMMAND_REQUIREMENTS_LOCAL
+      COMMAND_REQUIREMENTS = COMMAND_REQUIREMENTS_LOCAL
+    else:
+      global COMMAND_REQUIREMENTS_REMOTE
+      COMMAND_REQUIREMENTS = COMMAND_REQUIREMENTS_REMOTE
     
     if COMMAND in COMMAND_REQUIREMENTS:
-      global WAIT_FOR_VERIFICATION
-      
       UNIQ_COMMAND_ID = VERIFY_BOT + COMMAND_ID
-      
       COMMAND_CAN_BE_EXECUTED = COMMAND_REQUIREMENTS[COMMAND](BUFFER, VERIFY_BOT, COMMAND_ID)
-      
-      # Here we ensure wait for result of additional verification, when needed
-      if COMMAND_CAN_BE_EXECUTED == False and not UNIQ_COMMAND_ID in WAIT_FOR_VERIFICATION:
-        WAIT_FOR_VERIFICATION[UNIQ_COMMAND_ID] = ''
-      else:
-      # and in case we did verification, then we return with result of additional verification
-        del WAIT_FOR_VERIFICATION[UNIQ_COMMAND_ID]
       
     return COMMAND_CAN_BE_EXECUTED
   
   #
   # VALIDATE COMMAND VERSION (some commands are not in previous version)
-  #
+  # this command require remote bot is advertised
   
   def verify_remote_bot_version(BUFFER, COMMAND, VERIFY_BOT, COMMAND_ID):
     global WRECON_BOT_ID
@@ -2067,14 +1608,18 @@ HELP               H[ELP] [COMMAND]'''
     global COMMAND_VERSION, WRECON_REMOTE_BOTS_ADVERTISED
     
     if COMMAND in COMMAND_VERSION:
-      REMOTE_BOT_NAME         = WRECON_REMOTE_BOTS_ADVERTISED[VERIFY_BOT].split('|')[0]
-      TARGET_VERSION          = WRECON_REMOTE_BOTS_ADVERTISED[VERIFY_BOT].split('|')[1]
-      SOURCE_VERSION          = COMMAND_VERSION[COMMAND]
+      # Check remote bot was advertised
+      VERIFY_BOT = verify_remote_bot_advertised(BUFFER, VERIFY_BOT, COMMAND_ID)
       
-      COMMAND_CAN_BE_EXECUTED = compare_version_of_command(SOURCE_VERSION, TARGET_VERSION)
-      
-      if COMMAND_CAN_BE_EXECUTED == False:
-        display_message(BUFFER, '[%s] %s < VERSION %s REQUIRED ON %s (%s)' % (COMMAND_ID, COMMAND, SOURCE_VERSION, VERIFY_BOT, REMOTE_BOT_NAME))
+      if VERIFY_BOT == True:
+        REMOTE_BOT_NAME         = WRECON_REMOTE_BOTS_ADVERTISED[VERIFY_BOT].split('|')[0]
+        TARGET_VERSION          = WRECON_REMOTE_BOTS_ADVERTISED[VERIFY_BOT].split('|')[1]
+        SOURCE_VERSION          = COMMAND_VERSION[COMMAND]
+        
+        COMMAND_CAN_BE_EXECUTED = compare_version_of_command(SOURCE_VERSION, TARGET_VERSION)
+        
+        if COMMAND_CAN_BE_EXECUTED == False:
+          display_message(BUFFER, '[%s] %s < VERSION %s REQUIRED ON %s (%s)' % (COMMAND_ID, COMMAND, SOURCE_VERSION, VERIFY_BOT, REMOTE_BOT_NAME))
     
     return COMMAND_CAN_BE_EXECUTED
   
@@ -2112,6 +1657,8 @@ HELP               H[ELP] [COMMAND]'''
     if not TARGET_BOT_ID in WRECON_REMOTE_BOTS_CONTROL:
       VERIFY_RESULT = False
       display_message(BUFFER, '[%s] %s < REMOTE BOT IS NOT ADDED/REGISTERED' % (COMMAND_ID, TARGET_BOT_ID))
+    else:
+      VERIFY_RESULT = verify_remote_bot_verified(BUFFER, TARGET_BOT_ID, COMMAND_ID)
     
     return VERIFY_RESULT
   
@@ -2127,24 +1674,21 @@ HELP               H[ELP] [COMMAND]'''
     if TARGET_BOT_ID == WRECON_BOT_ID:
       return VERIFY_RESULT
     
-    VERIFY_RESULT = verify_remote_bot_control(BUFFER, TARGET_BOT_ID, COMMAND_ID)
+    global WAIT_FOR_VERIFICATION, WRECON_REMOTE_BOTS_ADVERTISED
     
-    if VERIFY_RESULT = True:
-      global WAIT_FOR_VERIFICATION, WRECON_REMOTE_BOTS_ADVERTISED
+    UNIQ_COMMAND_ID = TARGET_BOT_ID + COMMAND_ID
     
-      UNIQ_COMMAND_ID = TARGET_BOT_ID + COMMAND_ID
+    # IF WE ARE MISSING DATA OF REMOTE BOT, THEN WE REQUEST IT
+    if not TARGET_BOT_ID in WRECON_REMOTE_BOTS_ADVERTISED:
+      global ID_CALL_LOCAL
       
-      # IF WE ARE MISSING DATA OF REMOTE BOT, THEN WE REQUEST IT
-      if not TARGET_BOT_ID in WRECON_REMOTE_BOTS_ADVERTISED:
-        global ID_CALL_LOCAL
-        
-        VERIFY_RESULT                  = False
-        ID_CALL_LOCAL[UNIQ_COMMAND_ID] = 'ADDITIONAL ADVERTISE REQUEST'
-        
-        # WE NEED GET ADVERTISEMENET DATA OF REMOTE BOT ADDITIONALLY, IF IT WAS NOT REQUESTED
-        if not UNIQ_COMMAND_ID in WAIT_FOR_VERIFICATION:
-          WAIT_FOR_VERIFICATION[UNIQ_COMMAND_ID] = ''
-          command_pre_validation('', BUFFER, 'PRE-LOCAL', '', '', '', '', '', 'ADA %s %s %s' % (TARGET_BOT_ID, COMMAND_ID, UNIQ_COMMAND_ID))
+      VERIFY_RESULT                  = False
+      ID_CALL_LOCAL[UNIQ_COMMAND_ID] = 'ADDITIONAL ADVERTISE REQUEST'
+      
+      # WE NEED GET ADVERTISEMENET DATA OF REMOTE BOT ADDITIONALLY, IF IT WAS NOT REQUESTED
+      if not UNIQ_COMMAND_ID in WAIT_FOR_VERIFICATION:
+        WAIT_FOR_VERIFICATION[UNIQ_COMMAND_ID] = ''
+        command_pre_validation('', BUFFER, 'PRE-LOCAL', '', '', '', '', '', 'ADA %s %s %s' % (TARGET_BOT_ID, COMMAND_ID, UNIQ_COMMAND_ID))
     
     return VERIFY_RESULT
   
@@ -2165,12 +1709,12 @@ HELP               H[ELP] [COMMAND]'''
     
     # When remote BOT was advertised, we need trigger verification
     if VERIFY_RESULT == True:
-      global WRECON_REMOTE_BOTS_VERIFIED, WRECON_REMOTE_BOTS_ADVERTISED
+      global WRECON_REMOTE_BOTS_VERIFIED
     # Then we need check data of advertised BOT are same as of validated
     # If not, trigger revalidation
-      if not WRECON_REMOTE_BOTS_VERIFIED[TARGET_BOT_ID] == WRECON_REMOTE_BOTS_ADVERTISED[TARGET_BOT_ID]:
+      if not TARGET_BOT_ID in WRECON_REMOTE_BOTS_VERIFIED:
         # TODO
-        VERIFY_RESULT = verify_remote_bot(BUFFER, TARGET_BOT_ID, COMMAND_ID)
+        VERIFY_RESULT = buffer_command_verify_remote_bot(BUFFER, TARGET_BOT_ID, COMMAND_ID)
     
     return VERIFY_RESULT
 
@@ -2201,6 +1745,467 @@ HELP               H[ELP] [COMMAND]'''
   ######
   #
   # ALL COMMANDS
+
+  #####
+  #
+  # COMMAND AND FUNCTIONS CHECK AND UPDATE
+  
+  #
+  # UPDATE - PREPARE COMMAND FOR VALIDATION AND EXECUTION
+  #
+  
+  def prepare_command_update(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
+    global WRECON_BOT_ID, BUFFER_CMD_UPD_EXE
+    
+    COMMAND = 'UPDATE'
+    
+    if not COMMAND_ARGUMENTS_LIST:
+      TARGET_BOT_ID = WRECON_BOT_ID
+    else:
+      TARGET_BOT_ID = COMMAND_ARGUMENTS_LIST[0]
+    
+    UNIQ_COMMAND_ID = WRECON_BOT_ID + COMMAND_ID
+    
+    # ~ display_data('prepare_command_update', WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST)
+    
+    return [COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST, UNIQ_COMMAND_ID]
+  
+  #
+  # UPDATE
+  #
+  
+  def user_command_update(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
+    global WRECON_BOT_ID, BUFFER_CMD_UPD_EXE
+    
+    # ~ display_data('user_command_update', WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST)
+    
+    if not TARGET_BOT_ID == WRECON_BOT_ID:
+      display_message(BUFFER, '[%s] %s < UPDATE REQUESTED' % (COMMAND_ID, TARGET_BOT_ID))
+      weechat.command(WRECON_BUFFER_CHANNEL, '%s %s %s %s' % (BUFFER_CMD_UPD_EXE, TARGET_BOT_ID, WRECON_BOT_ID, COMMAND_ID))
+    else:
+      OUTPUT_MESSAGE = ['']
+      OUTPUT_MESSAGE.append('--- WRECON UPDATE CHECK AND INSTALL ---')
+      
+      # CALL CHECK FOR NEW UPDATE
+      UPDATE_CONTINUE, UPDATE_NEXT_FUNCTION, OUTPUT_MESSAGE, LATEST_RELEASE, ARCHIVE_FILE, DOWNLOAD_URL, EXTRACT_SUBDIRECTORY = function_update_1_check(OUTPUT_MESSAGE)
+      
+      # CALL PREPARE DIR
+      if UPDATE_CONTINUE == True:
+        UPDATE_CONTINUE, UPDATE_NEXT_FUNCTION, OUTPUT_MESSAGE, DOWNLOAD_DIRECTORY = UPDATE_NEXT_FUNCTION(OUTPUT_MESSAGE)
+      
+      # CALL DOWNLOAD FILE
+      if UPDATE_CONTINUE == True:
+        UPDATE_CONTINUE, UPDATE_NEXT_FUNCTION, OUTPUT_MESSAGE = UPDATE_NEXT_FUNCTION(OUTPUT_MESSAGE, DOWNLOAD_DIRECTORY, ARCHIVE_FILE, DOWNLOAD_URL)
+      
+      # CALL EXTRACT ARCHIVE
+      if UPDATE_CONTINUE == True:
+        UPDATE_CONTINUE, UPDATE_NEXT_FUNCTION, OUTPUT_MESSAGE = UPDATE_NEXT_FUNCTION(OUTPUT_MESSAGE, DOWNLOAD_DIRECTORY, ARCHIVE_FILE)
+      
+      # CALL VERIFY EXTRACTED FILE
+      if UPDATE_CONTINUE == True:
+        UPDATE_CONTINUE, UPDATE_NEXT_FUNCTION, OUTPUT_MESSAGE, INSTALL_FILE = UPDATE_NEXT_FUNCTION(OUTPUT_MESSAGE, EXTRACT_SUBDIRECTORY)
+      
+      # CALL INSTALL NEW FILE
+      if UPDATE_CONTINUE == True:
+        UPDATE_CONTINUE, UPDATE_NEXT_FUNCTION, OUTPUT_MESSAGE = UPDATE_NEXT_FUNCTION(OUTPUT_MESSAGE, INSTALL_FILE)
+      
+      display_message(BUFFER, OUTPUT_MESSAGE)
+      
+      # AFTER SUCCESSFUL INSTALLATION WE CAN RESTART
+      if UPDATE_CONTINUE == True:
+        global SCRIPT_FILE
+        display_message(BUFFER, 'RESTARTING WRECON...')
+        weechat.command(BUFFER, '/wait 3s /script reload %s' % SCRIPT_FILE)
+    
+    return weechat.WEECHAT_RC_OK
+    
+  #
+  # UPDATE - CHECK (new version in URL)
+  #
+  
+  def function_update_1_check(OUTPUT_MESSAGE):
+    import urllib.request
+    global SCRIPT_VERSION, SCRIPT_BASE_NAME
+    
+    UPDATE_EXIST   = False
+    NEXT_FUNCTION  = ''
+    
+    LATEST_RELEASE, ARCHIVE_FILE, DOWNLOAD_URL, EXTRACT_SUBDIRECTORY  = ['', '', '', '']
+
+    ACTUAL_VERSION = SCRIPT_VERSION.split(' ')[0]
+    BASE_URL       = 'https://github.com/%s/archive' % SCRIPT_BASE_NAME
+    BASE_API_URL   = 'https://api.github.com/repos/%s/releases/latest' % SCRIPT_BASE_NAME
+    
+    OUTPUT_MESSAGE.append('ACTUAL VERSION  : %s' % ACTUAL_VERSION)
+    OUTPUT_MESSAGE.append('REQUESTING URL  : %s' % BASE_API_URL)
+    
+    ERROR_GET = False
+    try:
+      URL_DATA = urllib.request.urlopen(BASE_API_URL)
+    except (urllib.error.HTTPError, urllib.error.ContentTooShortError, OSError) as ERROR:
+      ERROR_GET  = True
+      ERROR_DATA = ERROR.__dict__
+    
+    if ERROR_GET == True:
+      OUTPUT_MESSAGE.append('AN ERROR OCCURED DURING CHECK OF LATEST VERSION FROM GITHUB')
+      if 'code' in ERROR_DATA and 'msg' in ERROR_DATA:
+        OUTPUT_MESSAGE.append('ERROR CODE    : %s' % ERROR_DATA['code'])
+        OUTPUT_MESSAGE.append('ERROR MESSAGE : %s' % ERROR_DATA['msg'])
+      # ~ for KEY in ERROR_DATA:
+        # ~ OUTPUT_MESSAGE.append('ERROR DATA    : %10s : %s' % (KEY, ERROR_DATA[KEY]))
+    else:
+      GET_DATA       = json.loads(URL_DATA.read().decode('utf8'))
+      LATEST_RELEASE = GET_DATA['tag_name'].split('v')[1]
+      
+      OUTPUT_MESSAGE.append('LATEST RELEASE  : %s' % LATEST_RELEASE)
+      
+      ACTUAL_VER = SCRIPT_VERSION.split('.')
+      LATEST_VER = LATEST_RELEASE.split('.')
+      
+      ACTUAL_VERSION = list(map(int, ACTUAL_VER))
+      LATEST_RELEASE = list(map(int, LATEST_VER))
+      
+      if ACTUAL_VERSION >= LATEST_RELEASE:
+        OUTPUT_MESSAGE.append('WRECON IS UP TO DATE')
+      else:
+        global SCRIPT_FILE
+        UPDATE_EXIST         = True
+        NEXT_FUNCTION        = function_update_2_prepare_dir
+        ARCHIVE_FILE         = '%s.tar.gz' % LATEST_RELEASE
+        DOWNLOAD_URL         = '%s/%s' % (BASE_URL, ARCHIVE_FILE)
+        EXTRACT_SUBDIRECTORY = '%s-%s' % (SCRIPT_FILE.split('.')[0], LATEST_RELEASE)
+        
+        OUTPUT_MESSAGE.append('FOUND NEW RELEASE')        
+        OUTPUT_MESSAGE.append('DOWNLOAD URL    : %s' % DOWNLOAD_URL)
+
+    return [UPDATE_EXIST, NEXT_FUNCTION, OUTPUT_MESSAGE, LATEST_RELEASE, ARCHIVE_FILE, DOWNLOAD_URL, EXTRACT_SUBDIRECTORY]
+  
+  #
+  # UPDATE - PREPARE DOWNLOAD DIR
+  #
+  
+  def function_update_2_prepare_dir(OUTPUT_MESSAGE):
+    ENVIRONMENT_VARIABLES = os.environ
+    DOWNLOAD_DIRECTORY    = '%s/%s' % (ENVIRONMENT_VARIABLES['HOME'], '.wrecon-user_command_update')
+    
+    DIRECTORY_PREPARED    = False
+    NEXT_FUNCTION         = ''
+    
+    OUTPUT_MESSAGE.append('DOWNLOAD DIR    : %s' % DOWNLOAD_DIRECTORY)
+    
+    if not os.path.exists(os.path.join(DOWNLOAD_DIRECTORY)):
+      try:
+        os.mkdir(os.path.join(DOWNLOAD_DIRECTORY))
+        DIRECTORY_PREPARED = True
+      except OSError as ERROR:
+        OUTPUT_MESSAGE.append('ERROR, DOWNLOAD DIRECTORY CAN NOT BE CREATED')
+        OUTPUT_MESSAGE.append('ERROR : %s' % ERROR.__dict__)
+    else:
+      if not os.path_isdir(s.path.join(DOWNLOAD_DIRECTORY)):
+        OUTPUT_MESSAGE.append('ERROR, OBJECT EXIST, BUT IS NOT DIRECTORY')
+      else:
+        DIRECTORY_PREPARED == True
+    
+    if DIRECTORY_PREPARED == True:
+      NEXT_FUNCTION = function_update_3_download
+    
+    return [DIRECTORY_PREPARED, NEXT_FUNCTION, OUTPUT_MESSAGE, DOWNLOAD_DIRECTORY]
+  
+  #
+  # UPDATE - DOWNLOAD (new file from URL)
+  # 
+  
+  def function_update_3_download(OUTPUT_MESSAGE, DOWNLOAD_DIRECTORY, ARCHIVE_FILE, DOWNLOAD_URL):
+    import urllib.request
+    
+    DOWNLOAD_PREPARED = False
+    NEXT_FUNCTION     = ''
+    
+    DOWNLOAD_FILE     = os.path.join(DOWNLOAD_DIRECTORY, ARCHIVE_FILE)
+    
+    try:
+      with urllib.request.urlopen(DOWNLOAD_URL) as response, open(DOWNLOAD_FILE, 'wb') as OUT_FILE:
+        shutil.copyfileobj(response, OUT_FILE)
+      OUT_FILE.close()
+      DOWNLOAD_PREPARED = True
+      DOWNLOAD_RESULT   = 'SUCCESSFUL'
+    except (urllib.error.URLerror, urllib.error.ContentTooShortError()) as ERROR:
+      DOWNLOAD_RESULT = 'FAILED'
+    
+    DOWNLOAD_RESULT = 'DOWNLOAD STATUS : %' % DOWNLOAD_RESULT
+    OUTPUT_MESSAGE.append(DOWNLOAD_RESULT)
+    
+    if DOWNLOAD_PREPARED == False:
+      OUTPUT_MESSAGE.append('ERROR : %s' % ERROR.__dict__)
+    else:
+      NEXT_FUNCTION = function_update_4_extract_archive
+    
+    return [DOWNLOAD_PREPARED, NEXT_FUNCTION, OUTPUT_MESSAGE]
+  
+  #
+  # UPDATE - EXTRACT ARCHIVE (from downloaded file)
+  #
+  
+  def function_update_4_extract_archive(OUTPUT_MESSAGE, DOWNLOAD_DIRECTORY, ARCHIVE_FILE):
+    EXTRACT_PREPARED = False
+    NEXT_FUNCTION    = ''
+    
+    os.chdir(DOWNLOAD_DIRECTORY)
+    
+    try:
+      OUTPUT_MESSAGE.append('EXTRACT FILE    : %' % ARCHIVE_FILE)
+      EXTRACT_FILE = tarfile.open(ARCHIVE_FILE)
+      for EXTRACT_OUTPUT in extract_me.extractall():
+        OUTPUT_MESSAGE.append('EXTRACTING .... : %s' % EXTRACT_OUTPUT)
+      EXTRACT_PREPARED = True
+      EXTRACT_RESULT   = 'SUCCESSFUL'
+    except (TarError, ReadError, CompressionError, StreamError, ExtractError, HeaderError) as ERROR:
+      EXTRACT_RESULT = 'FAILED'
+    
+    OUTPUT_MESSAGE.append('EXTRACT RESULT  : %' % EXTRACT_RESULT)
+    
+    if EXTRACT_PREPARED == False:
+      OUTPUT_MESSAGE.append('ERROR : %s' % ERROR.__dict__)
+    else:
+      NEXT_FUNCTION = function_update_5_verify_signature
+    
+    return [EXTRACT_PREPARED, NEXT_FUNCTION, OUTPUT_MESSAGE]
+  
+  #
+  # UPDATE - VERIFY FILE (SIGNATURE)
+  #
+  
+  def function_update_5_verify_signature(OUTPUT_MESSAGE, DOWNLOAD_DIRECTORY, EXTRACT_SUBDIRECTORY):
+    global SCRIPT_FILE, SCRIPT_FILE_SIG, PUBLIC_KEY
+    
+    VERIFY_SUCCESSFUL   = False
+    NEXT_FUNCTION       = ''
+    
+    NEW_FILE            = os.path.join(DOWNLOAD_DIRECTORY, EXTRACT_SUBDIRECTORY, SCRIPT_FILE)
+    NEW_FILE_SIGNATURE  = os.path.join(DOWNLOAD_DIRECTORY, EXTRACT_SUBDIRECTORY, SCRIPT_FILE_SIG)
+    
+    GPG                 = gnupg.GPG()
+    PUBLIC_KEY_INTERNAL = GPG.import_keys(PUBLIC_KEY)
+    
+    VERIFICATION_RESULT = 'FAILED'
+    
+    try:
+      with open(NEW_FILE_SIGNATURE, 'rb') as SIGNATURE_FILE:
+        VERIFY_RESULT = GPG.verify_file(SIGNATURE_FILE, '%s' % NEW_FILE)
+      SIGNATURE_FILE.close()
+    finally:
+      if VERIFY_RESULT:
+        CONTENT_PUBLIC_KEY        = PUBLIC_KEY_INTERNAL.__dict__
+        CONTENT_NEW_FILE          = VERIFY_RESULT.__dict__
+        FINGERPRINT_PUBLIC_KEY    = str(CONTENT_PUBLIC_KEY['results'][0]['fingerprint'])
+        FINGERPRINT_VERIFIED_FILE = str(CONTENT_NEW_FILE['fingerprint'])
+        if FINGERPRINT_PUBLIC_KEY == FINGERPRINT_VERIFIED_FILE:
+          VERIFICATION_RESULT  = 'SUCCESSFUL'
+          VERIFY_SUCCESSFUL    = True
+          NEXT_FUNCTION        = function_update_6_install
+        else:
+          OUTPUT_MESSAGE.append('VERIFICATION    : Signature does not match')
+    
+    OUTPUT_MESSAGE.append('VERIFICATION    : %s' % VERIFICATION_RESULT)
+    
+    del GPG
+    del PUBLIC_KEY_INTERNAL
+    del CONTENT_PUBLIC_KEY
+    del CONTENT_NEW_FILE
+
+    return [VERIFY_SUCCESSFUL, NEXT_FUNCTION, OUTPUT_MESSAGE, NEW_FILE]
+  
+  #
+  # UPDATE - INSTALL NEW FILE
+  #
+  
+  def function_update_6_install(OUTPUT_MESSAGE, INSTALL_FILE):
+    global SCRIPT_FILE
+    
+    INSTALLATION_SUCCESSFUL = False
+    INSTALLATION_RESULT     = 'FAILED'
+    
+    DESTINATION_DIRECTORY  = weechat.string_eval_path_home('%h', {}, {}, {})
+    DESTINATION_DIRECTORY  = str(os.path.join(DESTINATION_DIRECTORY, 'python'))
+    DESTINATION_FILE       = str(os.path.join(DESTINATION_DIRECTORY, SCRIPT_FILE))
+    SOURCE_FILE            = str(os.path.join(INSTALL_FILE))
+    
+    try:
+      COPY_RESULT = shutil.copyfile(SOURCE_FILE, DESTINATION_FILE, follow_symlinks=True)
+      INSTALLATION_SUCCESSFUL = True
+      INSTALLATION_RESULT     = 'SUCCESSFUL'
+    except (OSError, shutil.SameFileError) as ERROR:
+      pass
+    
+    OUTPUT_MESSAGE.append('INSTALLATION    : %s' % INSTALLATION_RESULT)
+    
+    if INSTALLATION_SUCCESSFUL == False:
+      OUTPUT_MESSAGE.append('ERROR : %s' % ERROR.__dict__)
+    
+    return [INSTALLATION_SUCCESSFUL, NEXT_FUNCTION, OUTPUT_MESSAGE]
+  
+  #
+  # UPDATE - REQUEST, here we decide to sent command to buffer for remote bot, or we will update itself
+  #
+  
+  def buffer_command_update_received(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
+    
+    display_message(BUFFER, '[%s] %s < UPDATE RECEIVED' % (COMMAND_ID, SOURCE_BOT_ID))
+    user_command_update(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST)
+    
+    return weechat.WEECHAT_RC_OK
+  
+  #
+  # UPDATE - SETUP VARIABLES
+  #
+  
+  def setup_command_variables_update():
+    global BUFFER_CMD_UPD_EXE
+    BUFFER_CMD_UPD_EXE = '%sE-UPD' % (COMMAND_IN_BUFFER)
+    
+    global SCRIPT_ARGS, SCRIPT_ARGS_DESCRIPTION, COLOR_TEXT
+    
+    global HELP_COMMAND
+    
+    HELP_COMMAND['UP'] = '''
+%(bold)s%(italic)s--- UP[DATE] [BotID]%(nitalic)s%(nbold)s''' % COLOR_TEXT + '''
+ Update script from github. This will check new released version, and in case newest version is found, it will trigger update.
+ You can also update remote BOT if you are GRANTED to do. With no argument it will trigger update of local BOT, else update for remote BOT will be called.
+   /wrecon UP
+   /wrecon UPDATE %s
+''' % (get_random_string(16))
+    
+    HELP_COMMAND['UPDATE'] = HELP_COMMAND['UP']
+    
+    SCRIPT_ARGS                       = SCRIPT_ARGS + ' | [UP[DATE] [BotID]]'
+    SCRIPT_ARGS_DESCRIPTION           = SCRIPT_ARGS_DESCRIPTION + HELP_COMMAND['UPDATE']
+    
+    global SHORT_HELP
+    
+    SHORT_HELP                       = SHORT_HELP + '''
+UPDATE             UP[DATE] [BotID]'''
+    
+    global ARGUMENTS_OPTIONAL
+    ARGUMENTS_OPTIONAL['UPDATE'] = 1
+    
+    global SCRIPT_COMPLETION, SCRIPT_COMMAND_CALL, PREPARE_USER_CALL, SCRIPT_BUFFER_CALL, COMMAND_VERSION
+    SCRIPT_COMPLETION             = SCRIPT_COMPLETION + ' || UP || UPDATE'
+    SCRIPT_COMMAND_CALL['UPDATE'] = user_command_update
+    
+    PREPARE_USER_CALL['UP']       = prepare_command_update
+    PREPARE_USER_CALL['UPDATE']   = PREPARE_USER_CALL['UP']
+    
+    SCRIPT_BUFFER_CALL[BUFFER_CMD_UPD_EXE] = buffer_command_update_received
+    
+    COMMAND_VERSION['UP']         = '1.10'
+    COMMAND_VERSION['UPDATE']     = COMMAND_VERSION['UP']
+    
+    global COMMAND_REQUIREMENTS_LOCAL, COMMAND_REQUIREMENTS_REMOTE
+    COMMAND_REQUIREMENTS_LOCAL['UPDATE']            = verify_remote_bot_control
+    COMMAND_REQUIREMENTS_REMOTE[BUFFER_CMD_UPD_EXE] = verify_remote_bot_granted
+    
+    # ~ COMMAND_REQUIREMENTS[[BUFFER_CMD_UPD_EXE] = verify_remote_bot_granted
+    
+    return
+    
+  #
+  ##### END COMMAND AND FUNCTION CHECK AND UPDATE
+  
+  #####
+  #
+  # COMMAND HELP
+  
+  #
+  # HELP - PREPARE COMMAND FOR VALIDATION AND EXECUTION
+  #
+  
+  def prepare_command_help(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
+    global WRECON_BOT_ID
+    
+    UNIQ_COMMAND_ID = WRECON_BOT_ID + COMMAND_ID
+    COMMAND         = 'HELP'
+    
+    return [COMMAND, WRECON_BOT_ID, WRECON_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST, UNIQ_COMMAND_ID]
+  
+  #
+  # HELP
+  #
+  
+  def user_command_help(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
+    global SHORT_HELP, ID_CALL_LOCAL, SCRIPT_NAME, SCRIPT_VERSION, SCRIPT_TIMESTAMP
+    
+    UNIQ_COMMAND_ID = TARGET_BOT_ID + COMMAND_ID
+    
+    if SCRIPT_TIMESTAMP:
+      SHOW_TIMESTAMP = ' [%s]' % SCRIPT_TIMESTAMP
+    else:
+      SHOW_TIMESTAMP = ''
+    
+    OUT_MESSAGE     = ['']
+      
+    # Display help, if argument (command) was not provided
+    if not COMMAND_ARGUMENTS_LIST:
+      OUT_MESSAGE.append('SHORT HELP %s %s%s' % (SCRIPT_NAME, SCRIPT_VERSION, SHOW_TIMESTAMP))
+      OUT_MESSAGE.append('')
+      OUT_MESSAGE.append('For detailed help of all commands type command /weechat help %s' % SCRIPT_NAME)
+      OUT_MESSAGE.append('For detailed help of a command type command /%s help COMMAND' % SCRIPT_NAME)
+      
+      display_message(BUFFER, OUT_MESSAGE)
+      display_message(BUFFER, SHORT_HELP)
+    # Or display help for given command (if exist)
+    else:
+      COMMAND_HELP = COMMAND_ARGUMENTS_LIST[0].upper()
+      OUT_MESSAGE.append('')
+      if COMMAND_HELP in HELP_COMMAND:
+        display_message(BUFFER, HELP_COMMAND[COMMAND_HELP])
+      else:
+        display_message(BUFFER, 'ERROR: HELP OF UNKNOWN COMMAND -> %s' % COMMAND_HELP)
+    
+    cleanup_unique_command_id(SOURCE, UNIQ_COMMAND_ID)
+    
+    return weechat.WEECHAT_RC_OK
+  
+  #
+  # HELP - SETUP VARIABLES
+  #
+  
+  def setup_command_variables_help():
+    global SCRIPT_ARGS, SCRIPT_ARGS_DESCRIPTION, SCRIPT_COMPLETION, SCRIPT_COMMAND_CALL, PREPARE_USER_CALL, COLOR_TEXT
+    
+    global HELP_COMMAND
+    
+    HELP_COMMAND['H'] = '''
+%(bold)s%(italic)s--- H[ELP] [COMMAND]%(nitalic)s%(nbold)s''' % COLOR_TEXT + '''
+ Without argument will show short help of commands (overview). For detailed help of all commands use /help wrecon.
+ With argument (command) will show help of given command (argument).
+   /wrecon h
+   /wrecon help
+   /wrecon h adv
+'''
+    
+    HELP_COMMAND['HELP'] = HELP_COMMAND['H']
+    
+    SCRIPT_ARGS                 = SCRIPT_ARGS + ' | [H[ELP] [COMMAND]'
+    SCRIPT_ARGS_DESCRIPTION     = SCRIPT_ARGS_DESCRIPTION + HELP_COMMAND['HELP']
+    SCRIPT_COMPLETION           = SCRIPT_COMPLETION + ' || H || HELP'
+    SCRIPT_COMMAND_CALL['HELP'] = user_command_help
+    
+    global SHORT_HELP
+    
+    SHORT_HELP                  = SHORT_HELP + '''
+HELP               H[ELP] [COMMAND]'''
+    
+    global ARGUMENTS_OPTIONAL
+    
+    ARGUMENTS_OPTIONAL['HELP'] = 1
+    
+    PREPARE_USER_CALL['H']      = prepare_command_help
+    PREPARE_USER_CALL['HELP']   = PREPARE_USER_CALL['H']
+    
+    return
+  
+  #
+  ##### END COMMAND HELP
   
   ######
   #
@@ -2222,7 +2227,7 @@ HELP               H[ELP] [COMMAND]'''
       UNIQ_COMMAND_ID = WRECON_BOT_ID + COMMAND_ID
       COMMAND         = 'ADVERTISE'
     
-    display_data('prepare_command_advertise', WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST)
+    # ~ display_data('prepare_command_advertise', WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST)
     
     return [COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST, UNIQ_COMMAND_ID]
   
@@ -2393,11 +2398,11 @@ HELP               H[ELP] [COMMAND]'''
     global HELP_COMMAND
     
     HELP_COMMAND['ADV'] = '''
-    %(bold)s%(italic)s--- ADV[ERTISE]%(nitalic)s%(nbold)s''' % COLOR_TEXT + '''
-    Show your BOT ID in Channel and also other bots will show their IDs
-      /wrecon ADV
-      /wrecon ADVERTISE
-    '''
+%(bold)s%(italic)s--- ADV[ERTISE]%(nitalic)s%(nbold)s''' % COLOR_TEXT + '''
+ Show your BOT ID in Channel and also other bots will show their IDs
+   /wrecon ADV
+   /wrecon ADVERTISE
+'''
     
     HELP_COMMAND['ADVERTISE'] = HELP_COMMAND['ADV']
     
@@ -2494,12 +2499,12 @@ ADVERTISE          ADV[ERTISE]'''
     global HELP_COMMAND
     
     HELP_COMMAND['M'] = '''
-    %(bold)s%(italic)s--- M[E]%(nitalic)s%(nbold)s''' % COLOR_TEXT + '''
-    Show information about your bot Name, ID and KEY. In case you have registered Server and Channel, these informations will be shown as well.
-    Information is displayed only to your buffer and not send to the Channel.
-      /wrecon M
-      /wrecon ME
-    '''
+%(bold)s%(italic)s--- M[E]%(nitalic)s%(nbold)s''' % COLOR_TEXT + '''
+ Show information about your bot Name, ID and KEY. In case you have registered Server and Channel, these informations will be shown as well.
+ Information is displayed only to your buffer and not send to the Channel.
+   /wrecon M
+   /wrecon ME
+'''
     
     HELP_COMMAND['ME'] = HELP_COMMAND['M']
     
@@ -2625,29 +2630,30 @@ ME                 M[E]'''
     global HELP_COMMAND
     
     HELP_COMMAND['REG'] = '''
-    %(bold)s%(italic)s--- REG[ISTER] <channel_key> <encrypt_key>%(nitalic)s%(nbold)s''' % COLOR_TEXT + '''
-    Register current channel for controling remote bot's. You have to be actively connected to server and joined in channel you need register.
-    Opposite of command REGISTER is command UNREGISTER.
-      /wrecon REG %s %s
-      /wrecon REGISTER %s %s
-    ''' % (get_random_string(8), get_random_string(16), get_random_string(8), get_random_string(16))
+%(bold)s%(italic)s--- REG[ISTER] <ChannelKEY> <ChannelEncryptKEY>%(nitalic)s%(nbold)s''' % COLOR_TEXT + '''
+ Register current channel for controling remote bot's. You have to be actively connected to server and joined in channel you need register.
+ Opposite of command REGISTER is command UNREGISTER.
+   /wrecon REG %s %s
+   /wrecon REGISTER %s %s
+''' % (get_random_string(8), get_random_string(16), get_random_string(8), get_random_string(16))
     
     HELP_COMMAND['REGISTER'] = HELP_COMMAND['REG']
     
-    SCRIPT_ARGS                     = SCRIPT_ARGS + ' | [REG[ISTER] <CHANNEL_KEY> <ENCRYPT_KEY>]'
+    SCRIPT_ARGS                     = SCRIPT_ARGS + ' | [REG[ISTER] <ChannelKEY> <ChannelEncryptKEY>]'
     SCRIPT_ARGS_DESCRIPTION         = SCRIPT_ARGS_DESCRIPTION + HELP_COMMAND['REGISTER']
     SCRIPT_COMPLETION               = SCRIPT_COMPLETION + ' || REG || REGISTER'
     SCRIPT_COMMAND_CALL['REGISTER'] = user_command_register
     
     global SHORT_HELP
     SHORT_HELP                       = SHORT_HELP + '''
-REGISTER           REG[ISTER] Channel_Key Channel_Encrypt_Key'''
+REGISTER           REG[ISTER] <ChannelKEY> <ChannelEncryptKEY>'''
     
     PREPARE_USER_CALL['REG']      = prepare_command_register
     PREPARE_USER_CALL['REGISTER'] = prepare_command_register
     
     global ARGUMENTS_REQUIRED
     ARGUMENTS_REQUIRED['REGISTER'] = 2
+    
     return
   
   #
@@ -2737,11 +2743,11 @@ REGISTER           REG[ISTER] Channel_Key Channel_Encrypt_Key'''
     global HELP_COMMAND
     
     HELP_COMMAND['UN'] = '''
-    %(bold)s%(italic)s--- UN[REGIISTER]%(nitalic)s%(nbold)s''' % COLOR_TEXT + '''
-    Unregister channel of controling remote bot's.
-        /wrecon UN
-        /wrecon UNREGISTER
-    '''
+%(bold)s%(italic)s--- UN[REGIISTER]%(nitalic)s%(nbold)s''' % COLOR_TEXT + '''
+ Unregister channel of controling remote bot's.
+   /wrecon UN
+   /wrecon UNREGISTER
+'''
     
     HELP_COMMAND['UNREGISTER'] = HELP_COMMAND['UN']
     
@@ -2762,6 +2768,107 @@ UNREGISTER         UN[REGISTER]'''
     
   #
   ###### END COMMAND UNREGISTER
+  
+  ######
+  #
+  # COMMAND ADD - ADD REMOTE BOT YOU WANT CONTROL
+  
+  #
+  # ADD - PREPARE
+  #
+  
+  def prepare_command_add(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
+    global WRECON_REMOTE_BOTS_CONTROL, WRECON_BOT_ID
+    
+    COMMAND = 'ADD'
+    
+    UNIQ_COMMAND_ID = WRECON_BOT_ID + COMMAND_ID
+    
+    return [COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST, UNIQ_COMMAND_ID]
+  
+  #
+  # ADD - COMMAND
+  #
+  
+  def user_command_add(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
+    global ID_CALL_LOCAL, WRECON_REMOTE_BOTS_CONTROL
+    
+    OUT_MESSAGE = ['']
+    
+    UNIQ_COMMAND_ID = TARGET_BOT_ID + COMMAND_ID
+    
+    NEW_BOT_ID  = COMMAND_ARGUMENTS_LIST[0]
+    NEW_BOT_KEY = COMMAND_ARGUMENTS_LIST[1]
+    
+    COMMAND_ARGUMENTS_LIST.pop(0)
+    COMMAND_ARGUMENTS_LIST.pop(0)
+    
+    if len(COMMAND_ARGUMENTS_LIST) > 0:
+      NEW_BOT_INFO = ' '.join(COMMAND_ARGUMENTS_LIST)
+    else:
+      NEW_BOT_INFO = ''
+    
+    if NEW_BOT_ID in WRECON_REMOTE_BOTS_CONTROL:
+      OUT_MESSAGE_TAG = 'ADD ERROR'
+      OUT_MESSAGE.append('BOT ID %s ALREADY EXIST IN YOUR LIST.' % NEW_BOT_ID)
+    else:
+      OUT_MESSAGE_TAG = 'ADD INFO'
+      OUT_MESSAGE.append('NEW BOT HAS BEEN SUCCESSFULLY ADDED.')
+      WRECON_REMOTE_BOTS_CONTROL[NEW_BOT_ID] = [NEW_BOT_KEY, NEW_BOT_INFO]
+    
+    OUT_MESSAGE.append('%s (%s)' % (NEW_BOT_ID, WRECON_REMOTE_BOTS_CONTROL[NEW_BOT_ID][1]))
+    OUT_MESSAGE.append('')
+    
+    display_message_info(BUFFER, OUT_MESSAGE_TAG, OUT_MESSAGE)
+    
+    if UNIQ_COMMAND_ID in ID_CALL_LOCAL:
+      del ID_CALL_LOCAL[UNIQ_COMMAND_ID]
+    
+    return weechat.WEECHAT_RC_OK
+  
+  #
+  # ADD - SETUP VARIABLES
+  #
+  
+  def setup_command_variables_add():
+    global SCRIPT_ARGS, SCRIPT_ARGS_DESCRIPTION, SCRIPT_COMPLETION, SCRIPT_COMMAND_CALL, COLOR_TEXT, WRECON_DEFAULT_BOTNAMES, PREPARE_USER_CALL
+    
+    global HELP_COMMAND
+    
+    HELP_COMMAND['ADD'] = '''
+%(bold)s%(italic)s--- ADD <BotID> <BotKEY> [a note]%(nitalic)s%(nbold)s
+ Add remote bot for your control. By command ADVERTISE you will know %(italic)sbotid%(nitalic)s, but the %(italic)sbotkey%(nitalic)s you need receive by safe way.''' % COLOR_TEXT + '''
+ Opposite of command ADD is command DEL.
+   /wrecon ADD %s %s
+   /wrecon ADD %s %s %s
+''' % (get_random_string(16), get_random_string(64), get_random_string(16), get_random_string(64), random.choice(WRECON_DEFAULT_BOTNAMES))
+    
+    SCRIPT_ARGS                = SCRIPT_ARGS + ' | [ADD <BotID> <BotKEY> [a note]]'
+    SCRIPT_ARGS_DESCRIPTION    = SCRIPT_ARGS_DESCRIPTION + HELP_COMMAND['ADD']
+    SCRIPT_COMPLETION          = SCRIPT_COMPLETION + ' || ADD'
+    SCRIPT_COMMAND_CALL['ADD'] = user_command_add
+    
+    PREPARE_USER_CALL['ADD']   = prepare_command_add
+    
+    global SHORT_HELP
+    
+    SHORT_HELP                        = SHORT_HELP + '''
+ADD                ADD <BotID> <BotKEY> [a note]'''
+    
+    global ARGUMENTS_REQUIRED_MINIMAL
+    ARGUMENTS_REQUIRED_MINIMAL['REGISTER'] = 2
+    
+    return
+  
+  #
+  ###### END COMMAND ADD
+  
+  ######
+  #
+  # COMMAND DEL
+  
+  #
+  ###### END COMMAND DEL
   
   #
   ###### END ALL COMMANDS
@@ -2786,6 +2893,7 @@ UNREGISTER         UN[REGISTER]'''
     setup_wrecon_variables_of_remote_bots()
     
     # SETUP VARIABLES OF COMMANDS
+    setup_command_variables_add()
     setup_command_variables_advertise()
     setup_command_variables_help()
     setup_command_variables_me()
