@@ -999,16 +999,22 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
         
         # First we check command exist
         
-        COMMAND_EXIST, PREPARE_COMMAND = validate_command(WEECHAT_DATA, BUFFER, 'PRE-LOCAL', COMMAND, WRECON_BOT_ID, WRECON_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS, UNIQ_COMMAND_ID)
+        if SOURCE == 'LOCAL' or SOURCE == 'PRE-LOAL':
+          PRE_SOURCE = 'PRE-LOCAL'
+        else:
+          PRE_SOURCE = 'INTERNAL'
+        
+        COMMAND_EXIST, PREPARE_COMMAND = validate_command(WEECHAT_DATA, BUFFER, PRE_SOURCE, COMMAND, WRECON_BOT_ID, WRECON_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS, UNIQ_COMMAND_ID)
         
         # Then we prepare final data before execution of local command
         if COMMAND_EXIST == True:
           
-          if SOURCE == 'PRE-LOCAL':
-            SOURCE = 'LOCAL'
+          SOURCE = 'LOCAL'
+          
           # Prepare correct ARGUMENTS (list) for command
           COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST, UNIQ_COMMAND_ID = PREPARE_COMMAND(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, WRECON_BOT_ID, WRECON_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST)
           # Then validate command for if we can execute
+          
           EXECUTION_ALLOWED, EXECUTE_COMMAND = validate_command(WEECHAT_DATA, BUFFER, SOURCE, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS, UNIQ_COMMAND_ID)
           
           # ~ display_message(BUFFER, 'COMMAND   : %s' % [WEECHAT_DATA, BUFFER, SOURCE, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS, UNIQ_COMMAND_ID])
@@ -2895,6 +2901,88 @@ ADD                ADD <BotID> <BotKEY> [a note]'''
   # COMMAND DEL
   
   #
+  # DEL - PREPARE
+  #
+  
+  def prepare_command_del(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
+    global WRECON_REMOTE_BOTS_CONTROL, WRECON_BOT_ID
+    
+    COMMAND = 'DELETE'
+    
+    UNIQ_COMMAND_ID = WRECON_BOT_ID + COMMAND_ID
+    
+    return [COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST, UNIQ_COMMAND_ID]
+  
+  #
+  # DEL -COMMAND
+  #
+  
+  def user_command_del(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
+    global ID_CALL_LOCAL, WRECON_REMOTE_BOTS_CONTROL
+    
+    OUT_MESSAGE = ['']
+    
+    UNIQ_COMMAND_ID = TARGET_BOT_ID + COMMAND_ID
+    
+    DEL_BOT_ID  = COMMAND_ARGUMENTS_LIST[0]
+    
+    COMMAND_ARGUMENTS_LIST.pop(0)
+    COMMAND_ARGUMENTS_LIST.pop(0)
+    
+    if len(COMMAND_ARGUMENTS_LIST) > 0:
+      NEW_BOT_INFO = ' '.join(COMMAND_ARGUMENTS_LIST)
+    else:
+      NEW_BOT_INFO = ''
+    
+    if not DEL_BOT_ID in WRECON_REMOTE_BOTS_CONTROL:
+      OUT_MESSAGE_TAG = 'DEL ERROR'
+      OUT_MESSAGE.append('BOT ID %s DOES NOT EXISTS IN YOUR LIST.' % DEL_BOT_ID)
+    else:
+      OUT_MESSAGE_TAG = 'ADD INFO'
+      OUT_MESSAGE.append('BOT ID %s HAS BEEN SUCCESSFULLY DELETED.' % DEL_BOT_ID)
+      del WRECON_REMOTE_BOTS_CONTROL[DEL_BOT_ID]
+    
+    OUT_MESSAGE.append('%s (%s)' % (DEL_BOT_ID, WRECON_REMOTE_BOTS_CONTROL[DEL_BOT_ID][1]))
+    OUT_MESSAGE.append('')
+    
+    display_message_info(BUFFER, OUT_MESSAGE_TAG, OUT_MESSAGE)
+    
+    if UNIQ_COMMAND_ID in ID_CALL_LOCAL:
+      del ID_CALL_LOCAL[UNIQ_COMMAND_ID]
+    
+    return weechat.WEECHAT_RC_OK
+  
+  #
+  # DEL - SETUP VARIABLES
+  #
+  
+  def setup_command_variables_del():
+    global SCRIPT_ARGS, SCRIPT_ARGS_DESCRIPTION, SCRIPT_COMPLETION, SCRIPT_COMMAND_CALL, COLOR_TEXT, PREPARE_USER_CALL
+    
+    global HELP_COMMAND
+    HELP_COMMAND['DEL'] = '''
+%(bold)s%(italic)s--- DEL <botid>%(nitalic)s%(nbold)s''' % COLOR_TEXT + '''
+ Delete remote bot from your control.
+   /wrecon DEL %s
+''' % (get_random_string(16))
+    
+    HELP_COMMAND['DELETE'] = HELP_COMMAND['DEL']
+    
+    SCRIPT_ARGS                   = SCRIPT_ARGS + ' | [DEL[ETE] <botid>]'
+    SCRIPT_ARGS_DESCRIPTION       = SCRIPT_ARGS_DESCRIPTION + HELP_COMMAND['DELETE']
+    SCRIPT_COMPLETION             = SCRIPT_COMPLETION + ' || DEL || DELETE'
+    SCRIPT_COMMAND_CALL['DELETE'] = user_command_add
+    
+    PREPARE_USER_CALL['DEL']      = prepare_command_del
+    PREPARE_USER_CALL['DELETE']   = PREPARE_USER_CALL['DEL']
+    
+    global SHORT_HELP
+    
+    SHORT_HELP                        = SHORT_HELP + '''
+DELETE             DEL[ETE] <BotID>'''
+    
+    return
+  #
   ###### END COMMAND DEL
   
   #
@@ -2921,6 +3009,7 @@ ADD                ADD <BotID> <BotKEY> [a note]'''
     
     # SETUP VARIABLES OF COMMANDS
     setup_command_variables_add()
+    setup_command_variables_del()
     setup_command_variables_advertise()
     setup_command_variables_help()
     setup_command_variables_me()
