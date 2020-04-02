@@ -2981,9 +2981,76 @@ ADD                ADD <BotID> <BotKEY> [a note]'''
     SHORT_HELP                        = SHORT_HELP + '''
 DELETE             DEL[ETE] <BotID>'''
     
+    global ARGUMENTS_REQUIRED
+    ARGUMENTS_REQUIRED['DELETE'] = 1
+    
     return
   #
   ###### END COMMAND DEL
+  
+  ######
+  #
+  # COMMAND LIST
+  #
+  
+  #
+  # LIST - PREPARE COMMAND
+  #
+  
+  def prepare_command_list(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
+    global WRECON_BOT_ID
+    
+    COMMAND         = 'LIST'
+    UNIQ_COMMAND_ID = WRECON_BOT_ID + COMMAND_ID
+    
+    return [COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST, UNIQ_COMMAND_ID]
+  
+  #
+  # LIST
+  #
+  
+  def user_command_list(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
+    return weechat.WEECHAT_RC_OK
+  
+  #
+  # LIST - SETUP VARIABLES
+  #
+  
+  def setup_command_variables_list():
+    global SCRIPT_ARGS, SCRIPT_ARGS_DESCRIPTION, SCRIPT_COMPLETION, SCRIPT_COMMAND_CALL, COLOR_TEXT, PREPARE_USER_CALL
+    
+    global HELP_COMMAND
+    HELP_COMMAND['L'] = '''
+%(bold)s%(italic)s--- L[IST] <A[DDED]>|<G[RANTED]>%(nitalic)s%(nbold)s
+ List of ADDED bots you can control, or GRANTED bots which can control your system.
+   /wrecon LIST ADDED
+   /wrecon L A
+   /wrecon LIST G
+   /wrecon L GRANTED
+''' % COLOR_TEXT
+    
+    HELP_COMMAND['LIST']        = HELP_COMMAND['L']
+    
+    SCRIPT_ARGS                 = SCRIPT_ARGS + ' | [L[IST] <A[DDED]>|<G[RANTED]>]'
+    SCRIPT_ARGS_DESCRIPTION     = SCRIPT_ARGS_DESCRIPTION + HELP_COMMAND['LIST']
+    SCRIPT_COMPLETION           = SCRIPT_COMPLETION + ' || L || LIST'
+    SCRIPT_COMMAND_CALL['LIST'] = user_command_list
+    
+    PREPARE_USER_CALL['L']      = prepare_command_list
+    PREPARE_USER_CALL['LIST']   = PREPARE_USER_CALL['L']
+    
+    global SHORT_HELP
+    
+    SHORT_HELP                        = SHORT_HELP + '''
+LIST               L[IST] A[DDED]|G[RANTED]'''
+    
+    global ARGUMENTS_REQUIRED
+    ARGUMENTS_REQUIRED['LIST']  = 1
+    
+    return
+  
+  #
+  ###### END COMMAND LIST
   
   #
   ###### END ALL COMMANDS
@@ -3012,6 +3079,7 @@ DELETE             DEL[ETE] <BotID>'''
     setup_command_variables_del()
     setup_command_variables_advertise()
     setup_command_variables_help()
+    setup_command_variables_list()
     setup_command_variables_me()
     setup_command_variables_register()
     setup_command_variables_unregister()
