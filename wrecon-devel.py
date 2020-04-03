@@ -161,17 +161,18 @@ else:
     global SCRIPT_NAME
 
     if isinstance(INPUT_MESSAGE, list):
+      weechat.prnt(BUFFER, '')
       for OUTPUT_MESSAGE in INPUT_MESSAGE:
         weechat.prnt(BUFFER, '[%s]\t%s' % (SCRIPT_NAME, str(OUTPUT_MESSAGE)))
+      weechat.prnt(BUFFER, '')
     else:
       weechat.prnt(BUFFER, '[%s]\t%s' % (SCRIPT_NAME, str(INPUT_MESSAGE)))
-
+    
     return weechat.WEECHAT_RC_OK
   
   def display_message_info(BUFFER, INPUT_TAG, INPUT_MESSAGE):
     global WRECON_BOT_NAME, WRECON_BOT_ID
     
-    OUT_MESSAGE     = ['']
     OUT_MESSAGE.append('--- %s (%s %s) ---' % (INPUT_TAG, WRECON_BOT_NAME, WRECON_BOT_ID))
     
     if isinstance(INPUT_MESSAGE, list):
@@ -3003,6 +3004,12 @@ DELETE             DEL[ETE] <BotID>'''
     COMMAND         = 'LIST'
     UNIQ_COMMAND_ID = WRECON_BOT_ID + COMMAND_ID
     
+    if len(COMMAND_ARGUMENTS_LIST) == 1:
+      if COMMAND_ARGUMENTS_LIST[0].upper() == 'A' or 'ADDED':
+        COMMAND_ARGUMENTS_LIST[0] == 'ADDED'
+      if COMMAND_ARGUMENTS_LIST[0].upper() == 'G' or 'GRANTED':
+        COMMAND_ARGUMENTS_LIST[0] == 'GRANTED'
+    
     return [COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST, UNIQ_COMMAND_ID]
   
   #
@@ -3010,6 +3017,20 @@ DELETE             DEL[ETE] <BotID>'''
   #
   
   def user_command_list(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
+    global SCRIPT_NAME
+    
+    OUT_MESSAGE_TAG = 'LIST INFO'
+    
+    if not COMMAND_ARGUMENTS_LIST[0] == 'ADDED' or not not COMMAND_ARGUMENTS_LIST[0] == 'GRANTED':
+      OUT_MESSAGE_TAG = 'LIST ERROR'
+      OUT_MESSAGE     = ['ERROR: INCORRECT ARGUMENT']
+      OUT_MESSAGE.append('See help for command /%s HELP %s' % (SCRIPT_NAME, COMMAND))
+      OUT_MESSAGE.append('')
+    else:
+      pass
+    
+    display_message_info(BUFFER, OUT_MESSAGE_TAG, OUT_MESSAGE)
+    
     return weechat.WEECHAT_RC_OK
   
   #
