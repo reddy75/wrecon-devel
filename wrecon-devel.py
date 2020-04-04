@@ -1661,7 +1661,7 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
     if VERIFY_BOT == WRECON_BOT_ID or (VERIFY_BOT == COMMAND_ID and SOURCE == 'LOCAL'):
       return COMMAND_CAN_BE_EXECUTED
     
-    if SOURCE == 'LOCAL':
+    if SOURCE in ['LOCAL', 'PRE-LOCAL', 'INTERNAL']:
       global COMMAND_REQUIREMENTS_LOCAL
       COMMAND_REQUIREMENTS = COMMAND_REQUIREMENTS_LOCAL
     else:
@@ -1690,9 +1690,9 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
     
     if COMMAND in COMMAND_VERSION:
       # Check remote bot was advertised
-      VERIFY_BOT = verify_remote_bot_advertised(BUFFER, VERIFY_BOT, COMMAND_ID)
+      COMMAND_CAN_BE_EXECUTED = verify_remote_bot_advertised(BUFFER, VERIFY_BOT, COMMAND_ID)
       
-      if VERIFY_BOT == True:
+      if COMMAND_CAN_BE_EXECUTED == True:
         REMOTE_BOT_NAME         = WRECON_REMOTE_BOTS_ADVERTISED[VERIFY_BOT].split('|')[0]
         TARGET_VERSION          = WRECON_REMOTE_BOTS_ADVERTISED[VERIFY_BOT].split('|')[1]
         SOURCE_VERSION          = COMMAND_VERSION[COMMAND]
@@ -1738,8 +1738,8 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
     if not TARGET_BOT_ID in WRECON_REMOTE_BOTS_CONTROL:
       VERIFY_RESULT = False
       display_message(BUFFER, '[%s] %s < REMOTE BOT IS NOT ADDED/REGISTERED' % (COMMAND_ID, TARGET_BOT_ID))
-    else:
-      VERIFY_RESULT = verify_remote_bot_verified(BUFFER, TARGET_BOT_ID, COMMAND_ID)
+    # ~ else:
+      # ~ VERIFY_RESULT = verify_remote_bot_verified(BUFFER, TARGET_BOT_ID, COMMAND_ID)
     
     return VERIFY_RESULT
   
@@ -2191,8 +2191,6 @@ UPDATE             UP[DATE] [BotID]'''
     global COMMAND_REQUIREMENTS_LOCAL, COMMAND_REQUIREMENTS_REMOTE
     COMMAND_REQUIREMENTS_LOCAL['UPDATE']            = verify_remote_bot_control
     COMMAND_REQUIREMENTS_REMOTE[BUFFER_CMD_UPD_EXE] = verify_remote_bot_granted
-    
-    # ~ COMMAND_REQUIREMENTS[[BUFFER_CMD_UPD_EXE] = verify_remote_bot_granted
     
     return
     
