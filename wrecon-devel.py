@@ -975,15 +975,26 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
       
       EXECUTION_ALLOWED = False
       
-      if SOURCE == 'LOCAL' or SOURCE == 'PRE-LOCAL' or SOURCE == 'INTERNAL':
+      if SOURCE in ['LOCAL', 'PRE-LOCAL', 'INTERNAL']:
         
-        if SOURCE == 'PRE-LOCAL':
-          TARGET_BOT_ID, COMMAND_ID, UNIQ_COMMAND_ID = COMMAND_ARGUMENTS_LIST[0:2]
+        if SOURCE in ['INTERNAL', 'PRE-LOCAL']:
+          # ~ display_message(BUFFER, 'PRE-LOCAL ARGS : %s' % COMMAND_ARGUMENTS_LIST)
+          TARGET_BOT_ID     = COMMAND_ARGUMENTS_LIST[0]
+          COMMAND_ID        = COMMAND_ARGUMENTS_LIST[1]
+          UNIQ_COMMAND_ID   = COMMAND_ARGUMENTS_LIST[2]
           COMMAND_ARGUMENTS_LIST.pop(0)
           COMMAND_ARGUMENTS_LIST.pop(0)
           COMMAND_ARGUMENTS_LIST.pop(0)
-          COMMAND_ARGUMENTS                          = ' '.join(COMMAND_ARGUMENTS_LIST)
-        else:
+          COMMAND_ARGUMENTS = ' '.join(COMMAND_ARGUMENTS_LIST)
+          if UNIQ_COMMAND_ID in DISPLAY_COMMAND:
+            del DISPLAY_COMMAND[UNIQ_COMMAND_ID]
+        
+        if SOURCE == 'INTERNAL':
+          COMMAND_ARGUMENTS_LIST                     = [TARGET_BOT_ID]
+          COMMAND_ARGUMENTS                          = TARGET_BOT_ID
+          ID_CALL_LOCAL[UNIQ_COMMAND_ID]             = [COMMAND, COMMAND_ID, COMMAND_ARGUMENTS_LIST]
+        
+        if SOURCE == 'LOCAL':
           UNIQ_COMMAND_ID                  = WRECON_BOT_ID + COMMAND_ID
           ID_CALL_LOCAL[UNIQ_COMMAND_ID]   = [COMMAND, COMMAND_ID, COMMAND_ARGUMENTS_LIST]
           DISPLAY_COMMAND[UNIQ_COMMAND_ID] = True
@@ -1002,7 +1013,7 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
         
         # First we check command exist
         
-        if SOURCE == 'LOCAL' or SOURCE == 'PRE-LOAL':
+        if SOURCE in ['LOCAL', 'PRE-LOCAL']:
           PRE_SOURCE = 'PRE-LOCAL'
         else:
           PRE_SOURCE = 'INTERNAL'
@@ -1377,19 +1388,35 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
 
   #####
   #
-  # FUNCTION GET NUMBER OR STRING
+  # FUNCTION GET BOT ID
   
-  def get_number_or_string(INPUT_NUMBER_OR_STRING):
+  def get_bot_id(INPUT_NUMBER_OR_STRING, DATA_OF_BOTS):
     
-    RETURN_IS_NUMBER = False
+    INPUT_IS_NUMBER = False
     
     try:
-      OUTPUT_RESULT    = int(INPUT_NUMBER_OR_STRING)
-      RETURN_IS_NUMBER = True
+      BOT_ID          = int(INPUT_NUMBER_OR_STRING)
+      INPUT_IS_NUMBER = True
     except ValueError:
-      OUTPUT_RESULT    =  INPUT_NUMBER_OR_STRING
+      BOT_ID          = INPUT_NUMBER_OR_STRING
     
-    return [RETURN_IS_NUMBER, OUTPUT_RESULT]
+    if INPUT_IS_NUMBER == True:
+      INDEX    = BOT_ID - 1
+      BOT_LIST = []
+      
+      if isinstance(DATA_OF_BOTS, dict):
+        BOT_LIST = list(DATA_OF_BOTS.keys())
+      
+      if isinstance(DATA_OF_BOTS, list):
+        BOT_LIST = DATA_OF_BOTS
+      
+      if INDEX <= len(BOT_LIST):
+        BOT_ID = BOT_LIST[INDEX]
+      else:
+        INDEX += 1
+        BOT_ID = '%s' % INDEX
+    
+    return BOT_ID
   
   #
   ##### END
@@ -1441,11 +1468,12 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
     return
   
   def validate_command(WEECHAT_DATA, BUFFER, SOURCE, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS, UNIQ_COMMAND_ID):
+    global WAIT_FOR_VERIFICATION, DISPLAY_COMMAND
     
     # FIRST WE CHECK COMMAND BELONG TO US OR ADVERTISEMENT WAS REQUESTED
     COMMAND_CAN_BE_EXECUTED = function_validate_1_check_target_bot(SOURCE, COMMAND, TARGET_BOT_ID)
     
-    display_data('validate_command', WEECHAT_DATA, BUFFER, SOURCE, '', '', '', '', '', COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS)
+    # ~ display_data('validate_command', WEECHAT_DATA, BUFFER, SOURCE, '', '', '', '', '', COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS)
     # ~ display_message(BUFFER, 'COMMAND CAN BE EXECUTED : %s' % COMMAND_CAN_BE_EXECUTED)
     
     # WE SIMPLY IGNORE COMMANDS NOT BELOG TO US
@@ -1455,9 +1483,10 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
       
       # ASSIGN VARIABLES of LOCAL or REMOTE CALL
       ID_CALL, SCRIPT_CALL, VERIFY_BOT = function_validate_2_setup_variables(SOURCE, TARGET_BOT_ID, SOURCE_BOT_ID)
-          
+      
+      TARGET_UNIQ_ID = VERIFY_BOT + COMMAND_ID
+      
       # SOMETIME WE NEED DISPLAY WHAT IS CALLED (just only in first call)
-      global DISPLAY_COMMAND
       if UNIQ_COMMAND_ID in DISPLAY_COMMAND and SOURCE == 'PRE-LOCAL':
         display_message(BUFFER, '[%s] %s EXECUTE > %s %s' % (COMMAND_ID, VERIFY_BOT, COMMAND, COMMAND_ARGUMENTS))
       
@@ -1474,7 +1503,10 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
       # CHECK COMMAND EXIST
       if COMMAND_CAN_BE_EXECUTED == True and not COMMAND in SCRIPT_CALL:
         COMMAND_CAN_BE_EXECUTED = False
-        display_message(BUFFER, '[%s] ERROR: UNKNOWN %s COMMAND -> %s' % (COMMAND_ID, SOURCE, COMMAND))
+        if SOURCE in ['LOCAL', 'PRE-LOCAL', 'INTERNAL']:
+          display_message(BUFFER, '[%s] ERROR: UNKNOWN COMMAND -> %s' % (COMMAND_ID, COMMAND))
+        else:
+          display_message(BUFFER, '[%s] ERROR: UNKNOWN %s COMMAND -> %s' % (COMMAND_ID, SOURCE, COMMAND))
       
       # CHECK NUMBER OF COMMAND ARGUMENTS, only LOCAL command is checked
       if COMMAND_CAN_BE_EXECUTED == True and SOURCE == 'LOCAL':
@@ -1483,14 +1515,15 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
           display_message(BUFFER, '[%s] ERROR: %s' % (COMMAND_ID, ERROR_MESSAGE))
       
       # CHECK REQUIREMENTS FOR EXECUTION, LOCAL and REMOTE command are checked, and PRE-LOCAL SOURCE is excluded
-      if COMMAND_CAN_BE_EXECUTED == True and SOURCE != 'PRE-LOCAL':
+      if COMMAND_CAN_BE_EXECUTED == True and not SOURCE == 'PRE-LOCAL':
         COMMAND_CAN_BE_EXECUTED = function_validate_4_requirements(SOURCE, BUFFER, COMMAND, VERIFY_BOT, COMMAND_ID)
         # Command can be executed only when each requirement has been verified and fulfilled
+        # ~ display_data('validate_command', WEECHAT_DATA, BUFFER, SOURCE, '', '', '', '', '', COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS)
+        # ~ display_message(BUFFER, 'COMMAND CAN BE EXECUTED : %s : %s' % (UNIQ_COMMAND_ID, COMMAND_CAN_BE_EXECUTED))
         if COMMAND_CAN_BE_EXECUTED == False:
         # Verify we executed additional verification, then we setup necessary variable, and then wait for result
-          if UNIQ_COMMAND_ID in WAIT_FOR_VERIFICATION:
-            COMMAND_CAN_BE_EXECUTED = False
-            WAIT_FOR_VERIFICATION[UNIQ_COMMAND_ID] = [WEECHAT_DATA, BUFFER, SOURCE, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS, UNIQ_COMMAND_ID]
+          if TARGET_UNIQ_ID in WAIT_FOR_VERIFICATION:
+            WAIT_FOR_VERIFICATION[TARGET_UNIQ_ID] = [WEECHAT_DATA, BUFFER, SOURCE, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS, UNIQ_COMMAND_ID]
           else:
         # Here we know that additional verification has been executed, but result failed
             display_message(BUFFER, '[%s] %s < REQUIREMENT RESULT UNSUCCESSFUL' % (COMMAND_ID, VERIFY_BOT))
@@ -1503,14 +1536,14 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
       if COMMAND_CAN_BE_EXECUTED == True:
         FUNCTION = SCRIPT_CALL[COMMAND]
       else:
-        if not UNIQ_COMMAND_ID in WAIT_FOR_VERIFICATION:
+        if not TARGET_UNIQ_ID in WAIT_FOR_VERIFICATION:
           display_message(BUFFER, '[%s] %s < EXECUTION DENIED' % (COMMAND_ID, VERIFY_BOT))
+          cleanup_unique_command_id(SOURCE, TARGET_UNIQ_ID)
         else:
-          display_message(BUFFER, '[%s] VERIFICATION OF %s IS N PROGRESS' % (COMMAND_ID, VERIFY_BOT))
+          display_message(BUFFER, '[%s] VERIFICATION OF %s IS IN PROGRESS' % (COMMAND_ID, VERIFY_BOT))
       
-    if not UNIQ_COMMAND_ID in WAIT_FOR_VERIFICATION and COMMAND_CAN_BE_EXECUTED == False:
+    if COMMAND_CAN_BE_EXECUTED == False:
       FUNCTION = ''
-      cleanup_unique_command_id(SOURCE, UNIQ_COMMAND_ID)
     
     return [COMMAND_CAN_BE_EXECUTED, FUNCTION]
   
@@ -1529,7 +1562,7 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
     if COMMAND == BUFFER_CMD_ADV_REQ:
       RETURN_RESULT = True
     
-    if SOURCE == 'LOCAL' or SOURCE == 'PRE-LOCAL':
+    if SOURCE in ['LOCAL', 'PRE-LOCAL', 'INTERNAL']:
       RETURN_RESULT = True
     
     return RETURN_RESULT
@@ -1555,7 +1588,7 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
     
     if SOURCE == 'INTERNAL':
       ID_CALL     = ID_CALL_LOCAL
-      VERIFY_BoT  = TARGET_BOT_ID
+      VERIFY_BOT  = TARGET_BOT_ID
       SCRIPT_CALL = SCRIPT_INTERNAL_CALL
     
     if SOURCE == 'REMOTE':
@@ -1676,7 +1709,7 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
   #
   
   def cleanup_unique_command_id(SOURCE, UNIQ_COMMAND_ID):
-    if SOURCE == 'LOCAL' or SOURCE == 'PRE-LOCAL':
+    if SOURCE in ['LOCAL', 'PRE-LOCAL', 'INTERNAL']:
       global ID_CALL_LOCAL
       if UNIQ_COMMAND_ID in ID_CALL_LOCAL:
         del ID_CALL_LOCAL[UNIQ_COMMAND_ID]
@@ -1715,28 +1748,30 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
   #
   
   def verify_remote_bot_advertised(BUFFER, TARGET_BOT_ID, COMMAND_ID):
-    global WRECON_BOT_ID
+    global WRECON_BOT_ID, WRECON_REMOTE_BOTS_ADVERTISED, ID_CALL_LOCAL, WAIT_FOR_VERIFICATION
     
     VERIFY_RESULT = True
     
     if TARGET_BOT_ID == WRECON_BOT_ID:
       return VERIFY_RESULT
     
-    global WAIT_FOR_VERIFICATION, WRECON_REMOTE_BOTS_ADVERTISED
-    
+    # IF WE ARE MISSING DATA OF REMOTE BOT, THEN WE REQUEST IT
     UNIQ_COMMAND_ID = TARGET_BOT_ID + COMMAND_ID
     
-    # IF WE ARE MISSING DATA OF REMOTE BOT, THEN WE REQUEST IT
     if not TARGET_BOT_ID in WRECON_REMOTE_BOTS_ADVERTISED:
-      global ID_CALL_LOCAL
       
       VERIFY_RESULT                  = False
       ID_CALL_LOCAL[UNIQ_COMMAND_ID] = 'ADDITIONAL ADVERTISE REQUEST'
       
       # WE NEED GET ADVERTISEMENET DATA OF REMOTE BOT ADDITIONALLY, IF IT WAS NOT REQUESTED
-      if not UNIQ_COMMAND_ID in WAIT_FOR_VERIFICATION:
+      if UNIQ_COMMAND_ID in WAIT_FOR_VERIFICATION:
+        del WAIT_FOR_VERIFICATION[UNIQ_COMMAND_ID]
+      else:
         WAIT_FOR_VERIFICATION[UNIQ_COMMAND_ID] = ''
-        command_pre_validation('', BUFFER, 'PRE-LOCAL', '', '', '', '', '', 'ADA %s %s %s' % (TARGET_BOT_ID, COMMAND_ID, UNIQ_COMMAND_ID))
+        command_pre_validation('', BUFFER, 'INTERNAL', '', '', '', '', '', 'ADA %s %s %s' % (TARGET_BOT_ID, COMMAND_ID, UNIQ_COMMAND_ID))
+    
+    if VERIFY_RESULT == True and UNIQ_COMMAND_ID in WAIT_FOR_VERIFICATION:
+      del WAIT_FOR_VERIFICATION[UNIQ_COMMAND_ID]
     
     return VERIFY_RESULT
   
@@ -1810,19 +1845,8 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
     if not COMMAND_ARGUMENTS_LIST:
       TARGET_BOT_ID = WRECON_BOT_ID
     else:
-      TARGET_BOT_ID = COMMAND_ARGUMENTS_LIST[0]
-      
-      IS_NUMBER, INDEX = get_number_or_string(TARGET_BOT_ID)
-      
-      if IS_NUMBER == True:
-        INDEX -= 1
-        if INDEX <= len(WRECON_REMOTE_BOTS_CONTROL):
-          REMOTE_BOTS   = list(WRECON_REMOTE_BOTS_CONTROL.keys())
-          TARGET_BOT_ID = REMOTE_BOTS[INDEX]
-          COMMAND_ARGUMENTS_LIST = [TARGET_BOT_ID]
-        else:
-          INDEX += 1
-          TARGET_BOT_ID = '%s' % INDEX
+      TARGET_BOT_ID          = get_bot_id(COMMAND_ARGUMENTS_LIST[0], WRECON_REMOTE_BOTS_CONTROL)
+      COMMAND_ARGUMENTS_LIST = [TARGET_BOT_ID]
       
     UNIQ_COMMAND_ID = WRECON_BOT_ID + COMMAND_ID
     
@@ -2315,11 +2339,12 @@ HELP               H[ELP] [COMMAND]'''
     if COMMAND == 'ADVERTISE':
       COMMAND         = BUFFER_CMD_ADV_REQ
       UNIQ_COMMAND_ID = SOURCE_BOT_ID + COMMAND_ID
+      TARGET_BOT_ID   = COMMAND_ID
     else:
       COMMAND         = BUFFER_CMD_ADA_REQ
       UNIQ_COMMAND_ID = TARGET_BOT_ID + COMMAND_ID
     # current user command no need to be validated, and will be executed without additional istelsf validation
-    weechat.command(WRECON_BUFFER_CHANNEL, '%s %s %s %s' % (COMMAND, COMMAND_ID, WRECON_BOT_ID, COMMAND_ID))
+    weechat.command(WRECON_BUFFER_CHANNEL, '%s %s %s %s' % (COMMAND, TARGET_BOT_ID, WRECON_BOT_ID, COMMAND_ID))
     
     # Following part ensure we will remember our call,
     # and We will wait for all results until TIMEOUT_COMMAND_SHORT, then later results will be refused
@@ -2361,7 +2386,7 @@ HELP               H[ELP] [COMMAND]'''
   #
   
   def buffer_command_advertise_2_result_received(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
-    global ID_CALL_LOCAL, BUFFER_CMD_ADV_REP, BUFFER_CMD_ADA_REP, VERIFY_RESULT_ADV, COUNT_ADVERTISED_BOTS
+    global ID_CALL_LOCAL, BUFFER_CMD_ADV_REP, BUFFER_CMD_ADA_REP, VERIFY_RESULT_ADV, COUNT_ADVERTISED_BOTS, WAIT_FOR_VERIFICATION
     
     # ~ display_message(BUFFER, 'ADV RESULT RECEIVED %s' % [WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST])
     # ~ display_data('buffer_command_advertise_2_result_received', WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST)
@@ -2381,15 +2406,16 @@ HELP               H[ELP] [COMMAND]'''
       function_advertise_save_data(BUFFER, TAGS, PREFIX, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST)
       
       # In case it was additional advertise, we can stop hook and remove variables immediately
-      if COMMAND == BUFFER_CMD_ADA_REP and UNIQ_COMMAND_ID in VERIFY_RESULT_ADV:
-        weechat.unhook(VERIFY_RESULT_ADV[UNIQ_COMMAND_ID])
-        del VERIFY_RESULT_ADV[UNIQ_COMMAND_ID]
+      UNIQ_ID = SOURCE_BOT_ID + COMMAND_ID
+      if COMMAND == BUFFER_CMD_ADA_REP and UNIQ_ID in VERIFY_RESULT_ADV:
+        weechat.unhook(VERIFY_RESULT_ADV[UNIQ_ID])
+        del VERIFY_RESULT_ADV[UNIQ_ID]
       
       # ADDITIONAL ADVERTISE IS USUALLY CALLED WHEN DATA NEEDED
       # THEN WE CHECK WHICH COMMAND INITIATED
-      global WAIT_FOR_VERIFICATION
-      if UNIQ_COMMAND_ID in WAIT_FOR_VERIFICATION:
-        command_recall(WAIT_FOR_VERIFICATION[UNIQ_COMMAND_ID])
+        if UNIQ_ID in WAIT_FOR_VERIFICATION:
+          WEECHAT_DATA, BUFFER, SOURCE, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS, UNIQ_COMMAND_ID = WAIT_FOR_VERIFICATION[UNIQ_ID]
+          command_recall(WEECHAT_DATA, BUFFER, SOURCE, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS, UNIQ_COMMAND_ID)
     
     # Clean up variables, we finished
     UNIQ_COMMAND_ID = SOURCE_BOT_ID + COMMAND_ID
@@ -2423,7 +2449,8 @@ HELP               H[ELP] [COMMAND]'''
       
       # And recall requested command, when was requested for additional verification (advertisement)
       if UNIQ_COMMAND_ID in WAIT_FOR_VERIFICATION:
-        command_recall(WAIT_FOR_VERIFICATION[UNIQ_COMMAND_ID])
+        WEECHAT_DATA, BUFFER, SOURCE, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS, UNIQ_COMMAND_ID = WAIT_FOR_VERIFICATION[UNIQ_COMMAND_ID]
+        command_recall(WEECHAT_DATA, BUFFER, SOURCE, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS, UNIQ_COMMAND_ID)
     
     return weechat.WEECHAT_RC_OK
   
