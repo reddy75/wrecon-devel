@@ -1377,6 +1377,25 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
 
   #####
   #
+  # FUNCTION GET NUMBER OR STRING
+  
+  def get_number_or_string(INPUT_NUMBER_OR_STRING):
+    
+    RETURN_IS_NUMBER = False
+    
+    try:
+      OUTPUT_RESULT    = int(INPUT_NUMBER_OR_STRING)
+      RETURN_IS_NUMBER = True
+    except ValueError:
+      OUTPUT_RESULT    =  INPUT_NUMBER_OR_STRING
+    
+    return [RETURN_IS_NUMBER, OUTPUT_RESULT]
+  
+  #
+  ##### END
+  
+  #####
+  #
   # FUNCTION COMPARE VERSION OF COMMAND
   
   def compare_version_of_command(SOURCE_VERSION, TARGET_VERSION):
@@ -1426,7 +1445,7 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
     # FIRST WE CHECK COMMAND BELONG TO US OR ADVERTISEMENT WAS REQUESTED
     COMMAND_CAN_BE_EXECUTED = function_validate_1_check_target_bot(SOURCE, COMMAND, TARGET_BOT_ID)
     
-    # ~ display_data('validate_command', WEECHAT_DATA, BUFFER, SOURCE, '', '', '', '', '', COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS)
+    display_data('validate_command', WEECHAT_DATA, BUFFER, SOURCE, '', '', '', '', '', COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS)
     # ~ display_message(BUFFER, 'COMMAND CAN BE EXECUTED : %s' % COMMAND_CAN_BE_EXECUTED)
     
     # WE SIMPLY IGNORE COMMANDS NOT BELOG TO US
@@ -1784,7 +1803,7 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
   #
   
   def prepare_command_update(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
-    global WRECON_BOT_ID, BUFFER_CMD_UPD_EXE
+    global WRECON_BOT_ID, BUFFER_CMD_UPD_EXE, WRECON_REMOTE_BOTS_CONTROL
     
     COMMAND = 'UPDATE'
     
@@ -1792,7 +1811,19 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
       TARGET_BOT_ID = WRECON_BOT_ID
     else:
       TARGET_BOT_ID = COMMAND_ARGUMENTS_LIST[0]
-    
+      
+      IS_NUMBER, INDEX = get_number_or_string(TARGET_BOT_ID)
+      
+      if IS_NUMBER == True:
+        INDEX -= 1
+        if INDEX <= len(WRECON_REMOTE_BOTS_CONTROL):
+          REMOTE_BOTS   = list(WRECON_REMOTE_BOTS_CONTROL.keys())
+          TARGET_BOT_ID = REMOTE_BOTS[INDEX]
+          COMMAND_ARGUMENTS_LIST = [TARGET_BOT_ID]
+        else:
+          INDEX += 1
+          TARGET_BOT_ID = '%s' % INDEX
+      
     UNIQ_COMMAND_ID = WRECON_BOT_ID + COMMAND_ID
     
     # ~ display_data('prepare_command_update', WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST)
@@ -1805,6 +1836,8 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
   
   def user_command_update(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
     global WRECON_BOT_ID, BUFFER_CMD_UPD_EXE
+    
+    UNIQ_COMMAND_ID = SOURCE_BOT_ID + COMMAND_ID
     
     # ~ display_data('user_command_update', WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST)
     
@@ -1845,6 +1878,8 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
         global SCRIPT_FILE
         display_message(BUFFER, 'RESTARTING WRECON...')
         weechat.command(BUFFER, '/wait 3s /script reload %s' % SCRIPT_FILE)
+    
+    cleanup_unique_command_id(SOURCE, UNIQ_COMMAND_ID)
     
     return weechat.WEECHAT_RC_OK
     
@@ -2769,7 +2804,7 @@ REGISTER           REG[ISTER] <ChannelKEY> <ChannelEncryptKEY>'''
     else:
       display_message_info(BUFFER, 'UNREGISTER INFO', OUT_MESSAGE)
     
-    cleanup_unique_command_id('LOCAL', UNIQ_COMMAND_ID)
+    cleanup_unique_command_id(SOURCE, UNIQ_COMMAND_ID)
     
     return weechat.WEECHAT_RC_OK
   
@@ -2954,8 +2989,7 @@ ADD                ADD <BotID> <BotKEY> [a note]'''
     
     display_message_info(BUFFER, OUT_MESSAGE_TAG, OUT_MESSAGE)
     
-    if UNIQ_COMMAND_ID in ID_CALL_LOCAL:
-      del ID_CALL_LOCAL[UNIQ_COMMAND_ID]
+    cleanup_unique_command_id(SOURCE, UNIQ_COMMAND_ID)
     
     return weechat.WEECHAT_RC_OK
   
@@ -3030,6 +3064,8 @@ DELETE             DEL[ETE] <BotID>'''
     
     OUT_MESSAGE_TAG = 'LIST INFO'
     
+    UNIQ_COMMAND_ID = TARGET_BOT_ID + COMMAND_ID
+    
     COMMAND_ARGUMENT = COMMAND_ARGUMENTS_LIST[0]
     
     if not COMMAND_ARGUMENT in ['ADDED', 'GRANTED']:
@@ -3062,6 +3098,8 @@ DELETE             DEL[ETE] <BotID>'''
       OUT_MESSAGE.append('')
       
     display_message_info(BUFFER, OUT_MESSAGE_TAG, OUT_MESSAGE)
+    
+    cleanup_unique_command_id(SOURCE, UNIQ_COMMAND_ID)
     
     return weechat.WEECHAT_RC_OK
   
