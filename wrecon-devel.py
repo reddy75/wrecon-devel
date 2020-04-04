@@ -161,10 +161,10 @@ else:
     global SCRIPT_NAME
 
     if isinstance(INPUT_MESSAGE, list):
-      weechat.prnt(BUFFER, '')
+      # ~ weechat.prnt(BUFFER, '')
+      # ~ INPUT_MESSAGE.append('[%s]\t%s' %(SCRIPT_NAME, ''))
       for OUTPUT_MESSAGE in INPUT_MESSAGE:
-        weechat.prnt(BUFFER, '[%s]\t%s' % (SCRIPT_NAME, str(OUTPUT_MESSAGE)))
-      weechat.prnt(BUFFER, '')
+        weechat.prnt(BUFFER, '\t%s' % str(OUTPUT_MESSAGE))
     else:
       weechat.prnt(BUFFER, '[%s]\t%s' % (SCRIPT_NAME, str(INPUT_MESSAGE)))
     
@@ -173,7 +173,9 @@ else:
   def display_message_info(BUFFER, INPUT_TAG, INPUT_MESSAGE):
     global WRECON_BOT_NAME, WRECON_BOT_ID
     
+    OUT_MESSAGE      =['']
     OUT_MESSAGE.append('--- %s (%s %s) ---' % (INPUT_TAG, WRECON_BOT_NAME, WRECON_BOT_ID))
+    OUT_MESSAGE.append('')
     
     if isinstance(INPUT_MESSAGE, list):
       for OUT_MSG in INPUT_MESSAGE:
@@ -2168,23 +2170,27 @@ UPDATE             UP[DATE] [BotID]'''
     else:
       SHOW_TIMESTAMP = ''
     
-    OUT_MESSAGE     = ['']
-      
-    # Display help, if argument (command) was not provided
+    # Display short help of all commands, if argument (command) was not provided
     if not COMMAND_ARGUMENTS_LIST:
-      OUT_MESSAGE.append('SHORT HELP %s %s%s' % (SCRIPT_NAME, SCRIPT_VERSION, SHOW_TIMESTAMP))
-      OUT_MESSAGE.append('')
-      OUT_MESSAGE.append('For detailed help of all commands type command /weechat help %s' % SCRIPT_NAME)
-      OUT_MESSAGE.append('For detailed help of a command type command /%s help COMMAND' % SCRIPT_NAME)
       
+      OUT_MESSAGE = '''SHORT HELP OF ALL COMMANDS (%s %s%s)
+
+For detailed help of all commands type command /weechat help %s
+For detailed help of a command type command /%s help COMMAND
+
+COMMAND            COMMAND [and arguments]
+----------------   ----------------------------------------------------------''' % (SCRIPT_NAME, SCRIPT_VERSION, SHOW_TIMESTAMP, SCRIPT_NAME, SCRIPT_NAME)
+      
+      OUT_MESSAGE = OUT_MESSAGE + SHORT_HELP
       display_message(BUFFER, OUT_MESSAGE)
-      display_message(BUFFER, SHORT_HELP)
     # Or display help for given command (if exist)
     else:
       COMMAND_HELP = COMMAND_ARGUMENTS_LIST[0].upper()
-      OUT_MESSAGE.append('')
       if COMMAND_HELP in HELP_COMMAND:
-        display_message(BUFFER, HELP_COMMAND[COMMAND_HELP])
+        OUT_MESSAGE     = ['HELP OF COMMAND > %s' % COMMAND_HELP]
+        OUT_MESSAGE.append(HELP_COMMAND[COMMAND_HELP])
+        OUT_MESSAGE.append('')
+        display_message(BUFFER, OUT_MESSAGE)
       else:
         display_message(BUFFER, 'ERROR: HELP OF UNKNOWN COMMAND -> %s' % COMMAND_HELP)
     
@@ -3005,10 +3011,13 @@ DELETE             DEL[ETE] <BotID>'''
     UNIQ_COMMAND_ID = WRECON_BOT_ID + COMMAND_ID
     
     if len(COMMAND_ARGUMENTS_LIST) == 1:
-      if COMMAND_ARGUMENTS_LIST[0].upper() == 'A' or 'ADDED':
-        COMMAND_ARGUMENTS_LIST[0] == 'ADDED'
-      if COMMAND_ARGUMENTS_LIST[0].upper() == 'G' or 'GRANTED':
-        COMMAND_ARGUMENTS_LIST[0] == 'GRANTED'
+      COMMAND_ARGUMENT = COMMAND_ARGUMENTS_LIST[0].upper()
+      
+      if COMMAND_ARGUMENT in ['A', 'ADDED']:
+        COMMAND_ARGUMENTS_LIST[0] = 'ADDED'
+      
+      if COMMAND_ARGUMENT in ['G', 'GRANTED']:
+        COMMAND_ARGUMENTS_LIST[0] = 'GRANTED'
     
     return [COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST, UNIQ_COMMAND_ID]
   
@@ -3017,18 +3026,41 @@ DELETE             DEL[ETE] <BotID>'''
   #
   
   def user_command_list(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
-    global SCRIPT_NAME
+    global SCRIPT_NAME, WRECON_REMOTE_BOTS_CONTROL, WRECON_REMOTE_BOTS_GRANTED
     
     OUT_MESSAGE_TAG = 'LIST INFO'
     
-    if not COMMAND_ARGUMENTS_LIST[0] == 'ADDED' or not not COMMAND_ARGUMENTS_LIST[0] == 'GRANTED':
+    COMMAND_ARGUMENT = COMMAND_ARGUMENTS_LIST[0]
+    
+    if not COMMAND_ARGUMENT in ['ADDED', 'GRANTED']:
       OUT_MESSAGE_TAG = 'LIST ERROR'
       OUT_MESSAGE     = ['ERROR: INCORRECT ARGUMENT']
       OUT_MESSAGE.append('See help for command /%s HELP %s' % (SCRIPT_NAME, COMMAND))
       OUT_MESSAGE.append('')
     else:
-      pass
-    
+      if COMMAND_ARGUMENT == 'ADDED':
+        LIST_OF_BOTS = WRECON_REMOTE_BOTS_CONTROL
+      else:
+        LIST_OF_BOTS = WRECON_REMOTE_BOTS_GRANTED
+      
+      OUT_MESSAGE_TAG = 'LIST OF %s BOT(s)' % COMMAND_ARGUMENT
+      OUT_MESSAGE     = ['INDEX      BOT ID                Info']
+      OUT_MESSAGE.append('--------   -------------------   --------------------------')
+      
+      if len(LIST_OF_BOTS) == 0:
+        OUT_MESSAGE.append('No records found in table of %s BOTs' % COMMAND_ARGUMENT)
+      else:
+        BOT_INDEX = 0
+        
+        for REMOTE_BOT in LIST_OF_BOTS:
+          BOT_INDEX += 1
+          if COMMAND_ARGUMENT == 'ADDED':
+            OUT_MESSAGE.append('%5d      %s      %s' % (BOT_INDEX, REMOTE_BOT, LIST_OF_BOTS[REMOTE_BOT][1]))
+          else:
+            OUT_MESSAGE.append('%5d      %s      %s' % (BOT_INDEX, REMOTE_BOT, LIST_OF_BOTS[REMOTE_BOT]))
+      
+      OUT_MESSAGE.append('')
+      
     display_message_info(BUFFER, OUT_MESSAGE_TAG, OUT_MESSAGE)
     
     return weechat.WEECHAT_RC_OK
