@@ -1486,7 +1486,7 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
     return
   
   def validate_command(WEECHAT_DATA, BUFFER, SOURCE, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS, UNIQ_COMMAND_ID):
-    global DISPLAY_COMMAND, WAIT_FOR_VERIFICATION
+    global DISPLAY_COMMAND
     
     FUNCTION = ''
     
@@ -1534,49 +1534,73 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
         if COMMAND_CAN_BE_EXECUTED == False:
           display_message(BUFFER, '[%s] ERROR: %s' % (COMMAND_ID, ERROR_MESSAGE))
       
-      display_message(BUFFER, 'VALIDATE - WAIT FOR VERIFICATION   : %s' % WAIT_FOR_VERIFICATION)
-      display_message(BUFFER, 'SOURCE, COMMAND                    : %s : %s' % (SOURCE, COMMAND))
+      
       # CHECK REQUIREMENTS FOR EXECUTION, LOCAL and REMOTE command are checked, and PRE-LOCAL SOURCE is excluded
       if COMMAND_CAN_BE_EXECUTED == True and SOURCE != 'PRE-LOCAL':
-        COMMAND_CAN_BE_EXECUTED, WAIT_FOR_VERIFICATION  = function_validate_4_requirements(SOURCE, BUFFER, COMMAND, VERIFY_BOT, COMMAND_ID, WAIT_FOR_VERIFICATION)
-        # Command can be executed only when each requirement has been verified and fulfilled
-        # ~ display_data('validate_command', WEECHAT_DATA, BUFFER, SOURCE, '', '', '', '', '', COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS)
-        display_message(BUFFER, 'COMMAND CAN BE EXECUTED : %s : %s : %s' % (COMMAND_CAN_BE_EXECUTED, UNIQ_COMMAND_ID, COMMAND_ARGUMENTS))
-        display_message(BUFFER, 'WAIT FOR VERIFICATION 1 : %s' % WAIT_FOR_VERIFICATION)
-      
-        if COMMAND_CAN_BE_EXECUTED == False:
-          if TARGET_UNIQ_ID in WAIT_FOR_VERIFICATION:
-          # Verify we executed additional verification, then we setup necessary variable, and then wait for result
-            CALL_COMMAND = WAIT_FOR_VERIFICATION[TARGET_UNIQ_ID][0]
-            CALL_DATA    = WAIT_FOR_VERIFICATION[TARGET_UNIQ_ID][1:]
-            display_message(BUFFER, 'W COMMAND : %s' % CALL_COMMAND)
-            display_message(BUFFER, 'W DATA    : %s' % CALL_DATA)
-            WAIT_FOR_VERIFICATION[TARGET_UNIQ_ID] = [WEECHAT_DATA, BUFFER, SOURCE, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS, UNIQ_COMMAND_ID]
-            CALL_COMMAND(CALL_DATA)
-          else:
-          # Here we know that additional verification has been executed, but result failed
-            display_message(BUFFER, '[%s] %s < REQUIREMENT RESULT UNSUCCESSFUL' % (COMMAND_ID, VERIFY_BOT))
-      
-      display_message(BUFFER, 'WAIT FOR VERIFICATION 2 : %s' % WAIT_FOR_VERIFICATION)
-      
+        # ~ display_message(BUFFER, 'REQUIREMENT CHCK1 : %s : %s : %s : %s : %s' % (SOURCE, VERIFY_BOT, COMMAND_ID, COMMAND_CAN_BE_EXECUTED, COMMAND))
+        COMMAND_CAN_BE_EXECUTED  = function_validate_4_requirements(SOURCE, BUFFER, COMMAND, VERIFY_BOT, COMMAND_ID)
+        # ~ display_message(BUFFER, 'REQUIREMENT CHCK2 : %s : %s : %s : %s : %s' % (SOURCE, VERIFY_BOT, COMMAND_ID, COMMAND_CAN_BE_EXECUTED, COMMAND))
+        
       # CHECK VERSION FOR EXECUTION, only for LOCAL command is checked
       # we need to be sure, that remote bot have required version for execution
       if COMMAND_CAN_BE_EXECUTED == True:
-        COMMAND_CAN_BE_EXECUTED, WAIT_FOR_VERIFICATION = verify_remote_bot_version(BUFFER, COMMAND, VERIFY_BOT, COMMAND_ID, WAIT_FOR_VERIFICATION)
+        COMMAND_CAN_BE_EXECUTED = verify_remote_bot_version(BUFFER, COMMAND, VERIFY_BOT, COMMAND_ID)
+        
+      if COMMAND_CAN_BE_EXECUTED == False:
+        verify_wait4verify_1_prepare(WEECHAT_DATA, BUFFER, SOURCE, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS, UNIQ_COMMAND_ID, TARGET_UNIQ_ID)
+      
         
       if COMMAND_CAN_BE_EXECUTED == True:
         FUNCTION = SCRIPT_CALL[COMMAND]
       else:
-        if not TARGET_UNIQ_ID in WAIT_FOR_VERIFICATION:
-          display_message(BUFFER, '[%s] %s < EXECUTION DENIED' % (COMMAND_ID, VERIFY_BOT))
-          cleanup_unique_command_id(SOURCE, TARGET_UNIQ_ID)
-        else:
-          display_message(BUFFER, '[%s] VERIFICATION OF %s IS IN PROGRESS' % (COMMAND_ID, VERIFY_BOT))
+        verify_wait4verify_2_report(BUFFER, TARGET_UNIQ_ID, COMMAND_ID, VERIFY_BOT, SOURCE)
       
     if COMMAND_CAN_BE_EXECUTED == False:
       FUNCTION = ''
     
     return [COMMAND_CAN_BE_EXECUTED, FUNCTION]
+  
+  #
+  # VALIDATE - WAIT FOR VERIFICATION AFTER CHECK OF REQUIREMENT
+  # This is called when COMMAND_CAN_BE_EXECUTED is False
+  
+  def verify_wait4verify_1_prepare(WEECHAT_DATA, BUFFER, SOURCE, COMMAND, VERIFY_BOT, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS, UNIQ_COMMAND_ID, TARGET_UNIQ_ID):
+    global WAIT_FOR_VERIFICATION
+    
+    # ~ display_message(BUFFER, 'VALIDATE - WAIT FOR VERIFICATION   : %s' % WAIT_FOR_VERIFICATION)
+    # ~ display_message(BUFFER, 'SOURCE, COMMAND                    : %s : %s' % (SOURCE, COMMAND))
+    
+    if TARGET_UNIQ_ID in WAIT_FOR_VERIFICATION:
+      CALL_DATA    = WAIT_FOR_VERIFICATION[TARGET_UNIQ_ID]
+      CALL_COMMAND = CALL_DATA[0]
+      CALL_DATA.pop(0)
+      WWEECHAT_DATA, WBUFFER, WSOURCE, WCOMMAND, WTARGET_BOT_ID, WSOURCE_BOT_ID, WCOMMAND_ID, WCOMMAND_ARGUMENTS, WUNIQ_COMMAND_ID = CALL_DATA
+      
+      # SAVE ACTUAL DATA INTO WAIT_FOR_VERIFICATION
+      WAIT_FOR_VERIFICATION[TARGET_UNIQ_ID] = [WEECHAT_DATA, BUFFER, SOURCE, COMMAND, VERIFY_BOT, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS, UNIQ_COMMAND_ID]
+      
+      # THEN CALL ADDITIONAL VERIFICATION COMMAND
+      # ~ display_message(BUFFER, 'VALIDATE PREPARE : %s : %s' % (CALL_COMMAND, CALL_DATA))
+      CALL_COMMAND(WWEECHAT_DATA, WBUFFER, WSOURCE, WCOMMAND, WTARGET_BOT_ID, WSOURCE_BOT_ID, WCOMMAND_ID, WCOMMAND_ARGUMENTS, WUNIQ_COMMAND_ID)
+    else:
+      # Here we know that additional verification has been executed, but result failed
+      display_message(BUFFER, '[%s] %s < REQUIREMENT RESULT UNSUCCESSFUL' % (COMMAND_ID, VERIFY_BOT))
+    
+    return
+  #
+  # VALIDATE - WAIT FOR VERIFICATION AFTER ALL CHECKS
+  #
+  
+  def verify_wait4verify_2_report(BUFFER, TARGET_UNIQ_ID, COMMAND_ID, VERIFY_BOT, SOURCE):
+    global WAIT_FOR_VERIFICATION
+    
+    if not TARGET_UNIQ_ID in WAIT_FOR_VERIFICATION:
+      display_message(BUFFER, '[%s] %s < EXECUTION DENIED' % (COMMAND_ID, VERIFY_BOT))
+      cleanup_unique_command_id(SOURCE, TARGET_UNIQ_ID)
+    else:
+      display_message(BUFFER, '[%s] VERIFICATION OF %s IS IN PROGRESS' % (COMMAND_ID, VERIFY_BOT))
+    
+    return
   
   #
   # VALIDATE - CHECK COMMAND BELOGN TO US OR ADVERTISEMENT WAS REQUESTED
@@ -1685,43 +1709,41 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
   # CHECK COMMAND REQUIREMENTS
   #
   
-  def function_validate_4_requirements(SOURCE, BUFFER, COMMAND, VERIFY_BOT, COMMAND_ID, WAIT_FOR_VERIFICATION):
-    global WRECON_BOT_ID
+  def function_validate_4_requirements(SOURCE, BUFFER, COMMAND, VERIFY_BOT, COMMAND_ID):
+    global WRECON_BOT_ID, COMMAND_REQUIREMENTS_LOCAL, COMMAND_REQUIREMENTS_REMOTE
     
     COMMAND_CAN_BE_EXECUTED = True
     
     if VERIFY_BOT == WRECON_BOT_ID or (VERIFY_BOT == COMMAND_ID and SOURCE == 'LOCAL'):
-      return [COMMAND_CAN_BE_EXECUTED, WAIT_FOR_VERIFICATION]
-    
-    COMMAND_CAN_BE_EXECUTED = True
+      return COMMAND_CAN_BE_EXECUTED
     
     if SOURCE in ['LOCAL', 'PRE-LOCAL', 'INTERNAL']:
-      global COMMAND_REQUIREMENTS_LOCAL
       COMMAND_REQUIREMENTS = COMMAND_REQUIREMENTS_LOCAL
     else:
-      global COMMAND_REQUIREMENTS_REMOTE
       COMMAND_REQUIREMENTS = COMMAND_REQUIREMENTS_REMOTE
     
     if COMMAND in COMMAND_REQUIREMENTS:
-      COMMAND_CAN_BE_EXECUTED, WAIT_FOR_VERIFICATION = COMMAND_REQUIREMENTS[COMMAND](BUFFER, VERIFY_BOT, COMMAND_ID, WAIT_FOR_VERIFICATION)
+      COMMAND_CAN_BE_EXECUTED = COMMAND_REQUIREMENTS[COMMAND](BUFFER, VERIFY_BOT, COMMAND_ID)
       
-    return [COMMAND_CAN_BE_EXECUTED, WAIT_FOR_VERIFICATION]
+    return COMMAND_CAN_BE_EXECUTED
   
   #
   # VALIDATE COMMAND VERSION (some commands are not in previous version)
   # this command require remote bot is advertised
   
-  def verify_remote_bot_version(BUFFER, COMMAND, VERIFY_BOT, COMMAND_ID, WAIT_FOR_VERIFICATION):
+  def verify_remote_bot_version(BUFFER, COMMAND, VERIFY_BOT, COMMAND_ID):
     global WRECON_BOT_ID, COMMAND_VERSION, WRECON_REMOTE_BOTS_ADVERTISED
     
     COMMAND_CAN_BE_EXECUTED = True
     
+    # ~ display_message(BUFFER, 'VERIFY VERSION 1  : %s : %s' % (VERIFY_BOT, COMMAND_ID))
+    
     if VERIFY_BOT == WRECON_BOT_ID:
-      return [COMMAND_CAN_BE_EXECUTED, WAIT_FOR_VERIFICATION]
+      return COMMAND_CAN_BE_EXECUTED
     
     if COMMAND in COMMAND_VERSION:
       # Check remote bot was advertised
-      COMMAND_CAN_BE_EXECUTED, WAIT_FOR_VERIFICATION = verify_remote_bot_advertised(BUFFER, VERIFY_BOT, COMMAND_ID, WAIT_FOR_VERIFICATION)
+      COMMAND_CAN_BE_EXECUTED  = verify_remote_bot_advertised(BUFFER, VERIFY_BOT, COMMAND_ID)
       
       if COMMAND_CAN_BE_EXECUTED == True:
         REMOTE_BOT_NAME         = WRECON_REMOTE_BOTS_ADVERTISED[VERIFY_BOT].split('|')[0]
@@ -1733,7 +1755,9 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
         if COMMAND_CAN_BE_EXECUTED == False:
           display_message(BUFFER, '[%s] %s < VERSION %s REQUIRED ON %s (%s)' % (COMMAND_ID, COMMAND, SOURCE_VERSION, VERIFY_BOT, REMOTE_BOT_NAME))
     
-    return [COMMAND_CAN_BE_EXECUTED, WAIT_FOR_VERIFICATION]
+    # ~ display_message(BUFFER, 'VERIFY VERSION 2  : %s : %s : %s' % (COMMAND_CAN_BE_EXECUTED, VERIFY_BOT, COMMAND_ID))
+    
+    return COMMAND_CAN_BE_EXECUTED
   
   #
   # CLEANUP ID VARIABLES (LOCAL or REMOTE) AFTER EXECUTION
@@ -1755,39 +1779,43 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
   # VERIFY WE CAN CONTROL REMOTE BOT FOR REMOTE EXECUTION (added BOT)
   # (for call)
   
-  def verify_remote_bot_control(BUFFER, TARGET_BOT_ID, COMMAND_ID, WAIT_FOR_VERIFICATION):
+  def verify_remote_bot_control(BUFFER, VERIFY_BOT, COMMAND_ID):
     global WRECON_BOT_ID, WRECON_REMOTE_BOTS_CONTROL
     
     COMMAND_CAN_BE_EXECUTED = True
     
-    if TARGET_BOT_ID == WRECON_BOT_ID:
-      return [COMMAND_CAN_BE_EXECUTED, WAIT_FOR_VERIFICATION]
+    # ~ display_message(BUFFER, 'VERIFY CONTROL    : %s : %s' % (VERIFY_BOT, COMMAND_ID))
+    
+    if VERIFY_BOT == WRECON_BOT_ID:
+      return COMMAND_CAN_BE_EXECUTED
     
     # CHECK WE HAVE ADDED BOT
-    if not TARGET_BOT_ID in WRECON_REMOTE_BOTS_CONTROL:
+    if not VERIFY_BOT in WRECON_REMOTE_BOTS_CONTROL:
       COMMAND_CAN_BE_EXECUTED = False
-      display_message(BUFFER, '[%s] %s < REMOTE BOT IS NOT ADDED/REGISTERED' % (COMMAND_ID, TARGET_BOT_ID))
+      display_message(BUFFER, '[%s] %s < REMOTE BOT IS NOT ADDED/REGISTERED' % (COMMAND_ID, VERIFY_BOT))
     # ~ else:
-      # ~ COMMAND_CAN_BE_EXECUTED = verify_remote_bot_verified(BUFFER, TARGET_BOT_ID, COMMAND_ID)
+      # ~ COMMAND_CAN_BE_EXECUTED = verify_remote_bot_verified(BUFFER, VERIFY_BOT, COMMAND_ID)
     
-    return [COMMAND_CAN_BE_EXECUTED, WAIT_FOR_VERIFICATION]
+    return COMMAND_CAN_BE_EXECUTED
   
   #
   # VERIFY REMOTE BOT WAS ADVERTISED
   #
   
-  def verify_remote_bot_advertised(BUFFER, TARGET_BOT_ID, COMMAND_ID, WAIT_FOR_VERIFICATION):
-    global WRECON_BOT_ID, WRECON_REMOTE_BOTS_ADVERTISED, ID_CALL_LOCAL
+  def verify_remote_bot_advertised(BUFFER, VERIFY_BOT, COMMAND_ID):
+    global WRECON_BOT_ID, WRECON_REMOTE_BOTS_ADVERTISED, ID_CALL_LOCAL, WAIT_FOR_VERIFICATION
     
     COMMAND_CAN_BE_EXECUTED = True
     
-    if TARGET_BOT_ID == WRECON_BOT_ID:
-      return [COMMAND_CAN_BE_EXECUTED, WAIT_FOR_VERIFICATION]
+    # ~ display_message(BUFFER, 'VERIFY ADVERTISED : %s : %s' % (VERIFY_BOT, COMMAND_ID))
+    
+    if VERIFY_BOT == WRECON_BOT_ID:
+      return COMMAND_CAN_BE_EXECUTED
     
     # IF WE ARE MISSING DATA OF REMOTE BOT, THEN WE REQUEST IT
-    UNIQ_COMMAND_ID = TARGET_BOT_ID + COMMAND_ID
+    UNIQ_COMMAND_ID = VERIFY_BOT + COMMAND_ID
     
-    if not TARGET_BOT_ID in WRECON_REMOTE_BOTS_ADVERTISED:
+    if not VERIFY_BOT in WRECON_REMOTE_BOTS_ADVERTISED:
       
       COMMAND_CAN_BE_EXECUTED        = False
       ID_CALL_LOCAL[UNIQ_COMMAND_ID] = 'ADDITIONAL ADVERTISE REQUEST'
@@ -1796,15 +1824,13 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
       if UNIQ_COMMAND_ID in WAIT_FOR_VERIFICATION:
         del WAIT_FOR_VERIFICATION[UNIQ_COMMAND_ID]
       else:
-        WAIT_FOR_VERIFICATION[UNIQ_COMMAND_ID] = [command_pre_validation, '', BUFFER, 'INTERNAL', '', '', '', '', '', 'ADA %s %s %s' % (TARGET_BOT_ID, COMMAND_ID, UNIQ_COMMAND_ID)]
-        # ~ VERIFICATION_DATA[UNIQ_COMMAND_ID]     = WAIT_FOR_VERIFICATION[UNIQ_COMMAND_ID]
-        # ~ command_pre_validation('', BUFFER, 'INTERNAL', '', '', '', '', '', 'ADA %s %s %s' % (TARGET_BOT_ID, COMMAND_ID, UNIQ_COMMAND_ID))
+        WAIT_FOR_VERIFICATION[UNIQ_COMMAND_ID] = [command_pre_validation, '', BUFFER, 'INTERNAL', '', '', '', '', '', 'ADA %s %s %s' % (VERIFY_BOT, COMMAND_ID, UNIQ_COMMAND_ID)]
     
     if COMMAND_CAN_BE_EXECUTED == True and UNIQ_COMMAND_ID in WAIT_FOR_VERIFICATION:
       del WAIT_FOR_VERIFICATION[UNIQ_COMMAND_ID]
     
-    display_message(BUFFER, 'ADV VERIFICATION : %s : %s' % (COMMAND_CAN_BE_EXECUTED, WAIT_FOR_VERIFICATION))
-    return [COMMAND_CAN_BE_EXECUTED, WAIT_FOR_VERIFICATION]
+    # ~ display_message(BUFFER, 'ADV VERIFICATION  : %s : %s' % (COMMAND_CAN_BE_EXECUTED, WAIT_FOR_VERIFICATION))
+    return COMMAND_CAN_BE_EXECUTED
   
   #
   # VERIFY REMOTE BOT WAS VERIFIED
@@ -1812,19 +1838,21 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
   # Verification require remote BOT is advertised
   # In case remote BOT was not advertised, current function is not called, and command will end up with error message
   
-  def verify_remote_bot_verified(BUFFER, TARGET_BOT_ID, COMMAND_ID, WAIT_FOR_VERIFICATION):
-    global WRECON_BOT_ID, WRECON_REMOTE_BOTS_VERIFIED
+  def verify_remote_bot_verified(BUFFER, VERIFY_BOT, COMMAND_ID):
+    global WRECON_BOT_ID, WRECON_REMOTE_BOTS_VERIFIED, WAIT_FOR_VERIFICATION
     
     COMMAND_CAN_BE_EXECUTED = True
     
-    if TARGET_BOT_ID == WRECON_BOT_ID:
-      return [COMMAND_CAN_BE_EXECUTED, WAIT_FOR_VERIFICATION]
+    # ~ display_message(BUFFER, 'VERIFY VERIFIED    : %s : %s' % (VERIFY_BOT, COMMAND_ID))
+    
+    if VERIFY_BOT == WRECON_BOT_ID:
+      return COMMAND_CAN_BE_EXECUTED
     
     # IF WE ARE MISSING DATA OF REMOTE BOT, THEN WE REQUEST IT
-    UNIQ_COMMAND_ID = TARGET_BOT_ID + COMMAND_ID
+    UNIQ_COMMAND_ID = VERIFY_BOT + COMMAND_ID
     
     # TARGET BOT will be in saved table only in case verification was successful
-    if not TARGET_BOT_ID in WRECON_REMOTE_BOTS_VERIFIED:
+    if not VERIFY_BOT in WRECON_REMOTE_BOTS_VERIFIED:
       
       COMMAND_CAN_BE_EXECUTED        = False
       ID_CALL_LOCAL[UNIQ_COMMAND_ID] = 'ADDITIONAL VERIFICATION REQUEST'
@@ -1833,38 +1861,40 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
       if UNIQ_COMMAND_ID in WAIT_FOR_VERIFICATION:
         del WAIT_FOR_VERIFICATION[UNIQ_COMMAND_ID]
       else:
-        WAIT_FOR_VERIFICATION[UNIQ_COMMAND_ID] = [command_pre_validation, '', BUFFER, 'INTERNAL', '', '', '', '', '', 'VERIFY %s %s %s' % (TARGET_BOT_ID, COMMAND_ID, UNIQ_COMMAND_ID)]
+        WAIT_FOR_VERIFICATION[UNIQ_COMMAND_ID] = [command_pre_validation, '', BUFFER, 'INTERNAL', '', '', '', '', '', 'VERIFY %s %s %s' % (VERIFY_BOT, COMMAND_ID, UNIQ_COMMAND_ID)]
         # ~ VERIFICATION_DATA[UNIQ_COMMAND_ID]     = WAIT_FOR_VERIFICATION[UNIQ_COMMAND_ID]
-        # ~ command_pre_validation('', BUFFER, 'INTERNAL', '', '', '', '', '', 'VERIFY %s %s %s' % (TARGET_BOT_ID, COMMAND_ID, UNIQ_COMMAND_ID))
+        # ~ command_pre_validation('', BUFFER, 'INTERNAL', '', '', '', '', '', 'VERIFY %s %s %s' % (VERIFY_BOT, COMMAND_ID, UNIQ_COMMAND_ID))
     
     if COMMAND_CAN_BE_EXECUTED == True and UNIQ_COMMAND_ID in WAIT_FOR_VERIFICATION:
       del WAIT_FOR_VERIFICATION[UNIQ_COMMAND_ID]
     
-    return [COMMAND_CAN_BE_EXECUTED, WAIT_FOR_VERIFICATION]
+    return COMMAND_CAN_BE_EXECUTED
 
   #
   # VERIFY REMOTE BOT WAS GRANTED (granted BOT)
   # verification require remote BOT is verified
   
-  def verify_remote_bot_granted(BUFFER, TARGET_BOT_ID, COMMAND_ID, WAIT_FOR_VERIFICATION):
+  def verify_remote_bot_granted(BUFFER, VERIFY_BOT, COMMAND_ID):
     global WRECON_BOT_ID
     
     COMMAND_CAN_BE_EXECUTED = True
     
-    if TARGET_BOT_ID == WRECON_BOT_ID:
-      return [COMMAND_CAN_BE_EXECUTED, WAIT_FOR_VERIFICATION]
+    # ~ display_message(BUFFER, 'VERIFY GRANTED    : %s : %s' % (VERIFY_BOT, COMMAND_ID))
+    
+    if VERIFY_BOT == WRECON_BOT_ID:
+      return COMMAND_CAN_BE_EXECUTED
     
     global WRECON_REMOTE_BOTS_GRANTED
     
     # CHECK WE GRANTED REMOTE BOT
-    if not TARGET_BOT_ID in WRECON_REMOTE_BOTS_GRANTED:
+    if not VERIFY_BOT in WRECON_REMOTE_BOTS_GRANTED:
       COMMAND_CAN_BE_EXECUTED = False
-      display_message(BUFFER, '[%s] %s < REMOTE BOT IS NOT GRANTED' % (COMMAND_ID, TARGET_BOT_ID))
+      display_message(BUFFER, '[%s] %s < REMOTE BOT IS NOT GRANTED' % (COMMAND_ID, VERIFY_BOT))
     else:
       # THEN CHECK GRANTED BOT WAS VERIFIED
-      COMMAND_CAN_BE_EXECUTED, WAIT_FOR_VERIFICATION = verify_remote_bot_verified(BUFFER, TARGET_BOT_ID, COMMAND_ID, WAIT_FOR_VERIFICATION)
+      COMMAND_CAN_BE_EXECUTED  = verify_remote_bot_verified(BUFFER, VERIFY_BOT, COMMAND_ID)
     
-    return [COMMAND_CAN_BE_EXECUTED, WAIT_FOR_VERIFICATION]
+    return COMMAND_CAN_BE_EXECUTED
   
   ######
   #
@@ -2613,7 +2643,7 @@ HELP               H[ELP] [COMMAND]'''
       # We need unhook our timer
       weechat.unhook(VERIFY_RESULT_ADV[UNIQ_COMMAND_ID])
       
-      display_message(WRECON_BUFFER_CHANNEL, 'ADV RESULT : %s' % WAIT_FOR_VERIFICATION)
+      # ~ display_message(WRECON_BUFFER_CHANNEL, 'ADV RESULT : %s' % WAIT_FOR_VERIFICATION)
       
       # And recall requested command, when was requested for additional verification (advertisement)
       if UNIQ_COMMAND_ID in WAIT_FOR_VERIFICATION:
@@ -3292,13 +3322,27 @@ DELETE             DEL[ETE] <BotID>'''
         
         for REMOTE_BOT in LIST_OF_BOTS:
           BOT_INDEX += 1
-          DATA_ADVERTISED = ''
+          SHOW_DATA       = ''
           if REMOTE_BOT in WRECON_REMOTE_BOTS_ADVERTISED:
-            DATA_ADVERTISED = '   %s' % WRECON_REMOTE_BOTS_ADVERTISED[REMOTE_BOT]
+            DATA_ADVERTISED  = '   %s' % WRECON_REMOTE_BOTS_ADVERTISED[REMOTE_BOT]
+            
+            SHOW_BOT_NAME    = DATA_ADVERTISED.split('|')[0]
+            if SHOW_BOT_NAME == '':
+              SHOW_BOT_NAME = 'Unnamed'
+            
+            SHOW_BOT_VERSION = DATA_ADVERTISED.split('|')[1]
+            if SHOW_BOT_VERSION != '':
+              SHOW_BOT_VERSION = 'v' + SHOW_BOT_VERSION
+            
+            if SHOW_BOT_VERSION == '':
+              SHOW_DATA        = '%s (No version detected)' % SHOW_BOT_NAME
+            else:
+              SHOW_DATA        = '%s (%s)' % (SHOW_BOT_NAME, SHOW_BOT_VERSION)
+          
           if COMMAND_ARGUMENT == 'ADDED':
-            OUT_MESSAGE.append('%5d    %s    %-26s%s' % (BOT_INDEX, REMOTE_BOT, LIST_OF_BOTS[REMOTE_BOT][1], DATA_ADVERTISED))
+            OUT_MESSAGE.append('%5d    %s    %-26s%s' % (BOT_INDEX, REMOTE_BOT, LIST_OF_BOTS[REMOTE_BOT][1], SHOW_DATA))
           else:
-            OUT_MESSAGE.append('%5d    %s    %-26s%s' % (BOT_INDEX, REMOTE_BOT, LIST_OF_BOTS[REMOTE_BOT], DATA_ADVERTISED))
+            OUT_MESSAGE.append('%5d    %s    %-26s%s' % (BOT_INDEX, REMOTE_BOT, LIST_OF_BOTS[REMOTE_BOT], SHOW_DATA))
       
       OUT_MESSAGE.append('')
       
