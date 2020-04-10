@@ -949,8 +949,12 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
   def command_recall(WEECHAT_DATA, BUFFER, SOURCE, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS, UNIQ_COMMAND_ID):
     # DEBUG
     # ~ display_message(BUFFER, 'DEBUG - command_recall: %s' % [WEECHAT_DATA, BUFFER, SOURCE, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS, UNIQ_COMMAND_ID])
-    # ~ SOURCE = 'PRE-LOCAL'
-    DATA   = '%s %s %s %s %s' % (COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS)
+    
+    if SOURCE == 'LOCAL':
+      SOURCE = 'PRE-LOCAL'
+      
+    DATA = '%s %s %s %s %s' % (COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS)
+    
     command_pre_validation(WEECHAT_DATA, BUFFER, SOURCE, '', '', '', '', '', DATA)
     return weechat.WEECHAT_RC_OK
   
@@ -959,6 +963,8 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
   # is called from user input or call from buffer
   
   def command_pre_validation(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, DATA):
+    # HERE WE PREPARE VARIABLES
+    global ID_CALL_LOCAL, ID_CALL_REMOTE, WRECON_BOT_ID, DISPLAY_COMMAND
     
     if SOURCE == 'LOCAL':
       COMMAND_ID  = get_command_uniq_id()
@@ -967,7 +973,7 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
     
     if not DATA:
       if not COMMAND_ID:
-          COMMAND_ID = '????-????'
+        COMMAND_ID = '????-????'
       display_message(BUFFER, '[%s] %s CALL ERROR: MISSING COMMAND' % (COMMAND_ID, SOURCE))
     else:
       ARGUMENTS = DATA.split(' ')
@@ -993,11 +999,9 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
         COMMAND_ARGUMENTS      = ' '.join(ARGUMENTS)
         COMMAND_ARGUMENTS_LIST = COMMAND_ARGUMENTS.split(' ')
       
-      # HERE WE PREPARE LOCAL COMMAND
-      global ID_CALL_LOCAL, ID_CALL_REMOTE, WRECON_BOT_ID, DISPLAY_COMMAND
-      
       EXECUTION_ALLOWED = False
       
+      # HERE WE PREPARE LOCAL, PRE-LOCAL or INTERNAL COMMANDS
       if SOURCE in ['LOCAL', 'PRE-LOCAL', 'INTERNAL']:
         
         if SOURCE in ['INTERNAL', 'PRE-LOCAL']:
@@ -1009,6 +1013,7 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
           COMMAND_ARGUMENTS_LIST.pop(0)
           COMMAND_ARGUMENTS_LIST.pop(0)
           COMMAND_ARGUMENTS = ' '.join(COMMAND_ARGUMENTS_LIST)
+          ID_CALL_LOCAL[UNIQ_COMMAND_ID]   = [COMMAND, COMMAND_ID, COMMAND_ARGUMENTS_LIST]
           if UNIQ_COMMAND_ID in DISPLAY_COMMAND:
             del DISPLAY_COMMAND[UNIQ_COMMAND_ID]
         
@@ -1021,6 +1026,9 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
           UNIQ_COMMAND_ID                  = WRECON_BOT_ID + COMMAND_ID
           ID_CALL_LOCAL[UNIQ_COMMAND_ID]   = [COMMAND, COMMAND_ID, COMMAND_ARGUMENTS_LIST]
           DISPLAY_COMMAND[UNIQ_COMMAND_ID] = True
+        
+        # DEBUG
+        display_message(BUFFER, 'DEBUG - command_pre_validation: ID_CALL_LOCAL : %s' % ID_CALL_LOCAL)
         
         DATE      = ''
         TAGS      = ''
@@ -1038,6 +1046,7 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
         
         if SOURCE in ['LOCAL', 'PRE-LOCAL']:
           PRE_SOURCE = 'PRE-LOCAL'
+          # ~ SOURCE     = 'LOCAL'
         else:
           PRE_SOURCE = 'INTERNAL'
         
@@ -1520,6 +1529,9 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
       if UNIQ_COMMAND_ID in DISPLAY_COMMAND:
         del DISPLAY_COMMAND[UNIQ_COMMAND_ID]
       
+      # DEBUG
+      display_message(BUFFER, 'DEBUG - validate_command: SOURCE : %s : ID_CALL : %s' % (SOURCE, ID_CALL))
+      
       # CHECK WE HAVE ASSIGNED UNIQ_COMMAND_ID FROM CALL
       # This is security feature to block 'fake' execution
       if not UNIQ_COMMAND_ID in ID_CALL:
@@ -1595,6 +1607,11 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
     else:
       # Here we know that additional verification has been executed, but result failed
       display_message(BUFFER, '[%s] %s < REQUIREMENT RESULT UNSUCCESSFUL' % (COMMAND_ID, VERIFY_BOT))
+    
+    # DEBUG
+    # ~ display_message(BUFFER, 'DEBUG - verify_wait4verify_1_prepare : %s' % [WEECHAT_DATA, BUFFER, SOURCE, COMMAND, VERIFY_BOT, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS, UNIQ_COMMAND_ID, TARGET_UNIQ_ID])
+    # ~ display_message(BUFFER, 'DEBUG - verify_wait4verify_1_prepare : WAIT_FOR_VERIFICATION : %s' % WAIT_FOR_VERIFICATION)
+
     
     return
   #
@@ -2326,8 +2343,8 @@ UPDATE             UP[DATE] [BotID]'''
     ARGUMENTS_OPTIONAL['UPDATE'] = 1
     
     global SCRIPT_COMPLETION, SCRIPT_COMMAND_CALL, PREPARE_USER_CALL, SCRIPT_BUFFER_CALL, COMMAND_VERSION
-    SCRIPT_COMPLETION             = SCRIPT_COMPLETION + ' || UP || UPDATE'
-    SCRIPT_COMMAND_CALL['UPDATE'] = user_command_update
+    SCRIPT_COMPLETION              = SCRIPT_COMPLETION + ' || UP || UPDATE'
+    SCRIPT_COMMAND_CALL['UPDATE']  = user_command_update
     
     PREPARE_USER_CALL['UP']               = prepare_command_update
     PREPARE_USER_CALL['UPDATE']           = PREPARE_USER_CALL['UP']
