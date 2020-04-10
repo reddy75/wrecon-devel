@@ -969,7 +969,8 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
     if SOURCE == 'LOCAL':
       COMMAND_ID  = get_command_uniq_id()
     
-    # ~ display_message(BUFFER, 'CMDPREVALID : %s' % DATA)
+    # DEBUG
+    # ~ display_message(BUFFER, 'DEBUG - (1) command_pre_validation: ID_CALL_LOCAL : %s' % ID_CALL_LOCAL)
     
     if not DATA:
       if not COMMAND_ID:
@@ -980,6 +981,7 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
       COMMAND   = ARGUMENTS[0].upper()
       ARGUMENTS.pop(0)
       
+      # DEBUG
       # ~ display_data('command_pre_validation', WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, '', '', '', ARGUMENTS)
       
       if SOURCE == 'REMOTE':
@@ -1006,14 +1008,25 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
         
         if SOURCE in ['INTERNAL', 'PRE-LOCAL']:
           # ~ display_message(BUFFER, 'PRE-LOCAL ARGS : %s' % COMMAND_ARGUMENTS_LIST)
+          # DEBUG
+          # ~ display_message(BUFFER, 'DEBUG - ARGS : %s' % COMMAND_ARGUMENTS_LIST)
           TARGET_BOT_ID     = COMMAND_ARGUMENTS_LIST[0]
           COMMAND_ID        = COMMAND_ARGUMENTS_LIST[1]
           UNIQ_COMMAND_ID   = COMMAND_ARGUMENTS_LIST[2]
+          
+          if SOURCE == 'PRE-LOCAL':
+            COMMAND_ID      = UNIQ_COMMAND_ID
+            UNIQ_COMMAND_ID = WRECON_BOT_ID + COMMAND_ID
+          
+          # DEBUG
+          # ~ display_message(BUFFER, 'DEBUG - ARGS : TARGET_BOT_ID   : %s' % TARGET_BOT_ID)
+          # ~ display_message(BUFFER, 'DEBUG - ARGS : COMMAND_ID      : %s' % COMMAND_ID)
+          # ~ display_message(BUFFER, 'DEBUG - ARGS : UNIQ_COMMAND_ID : %s' % UNIQ_COMMAND_ID)
+          
           COMMAND_ARGUMENTS_LIST.pop(0)
           COMMAND_ARGUMENTS_LIST.pop(0)
           COMMAND_ARGUMENTS_LIST.pop(0)
           COMMAND_ARGUMENTS = ' '.join(COMMAND_ARGUMENTS_LIST)
-          ID_CALL_LOCAL[UNIQ_COMMAND_ID]   = [COMMAND, COMMAND_ID, COMMAND_ARGUMENTS_LIST]
           if UNIQ_COMMAND_ID in DISPLAY_COMMAND:
             del DISPLAY_COMMAND[UNIQ_COMMAND_ID]
         
@@ -1028,7 +1041,7 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
           DISPLAY_COMMAND[UNIQ_COMMAND_ID] = True
         
         # DEBUG
-        display_message(BUFFER, 'DEBUG - command_pre_validation: ID_CALL_LOCAL : %s' % ID_CALL_LOCAL)
+        # ~ display_message(BUFFER, 'DEBUG - (2) command_pre_validation: ID_CALL_LOCAL : %s' % ID_CALL_LOCAL)
         
         DATE      = ''
         TAGS      = ''
@@ -1063,6 +1076,7 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
           
           EXECUTION_ALLOWED, EXECUTE_COMMAND = validate_command(WEECHAT_DATA, BUFFER, SOURCE, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS, UNIQ_COMMAND_ID)
           
+          # DEBUG
           # ~ display_message(BUFFER, 'COMMAND   : %s' % [WEECHAT_DATA, BUFFER, SOURCE, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS, UNIQ_COMMAND_ID])
           # ~ display_message(BUFFER, 'LOCAL EXE : %s' % EXECUTION_ALLOWED)
           # ~ display_message(BUFFER, 'LOCAL FNC : %s' % EXECUTE_COMMAND)
@@ -1507,6 +1521,7 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
     # FIRST WE CHECK COMMAND BELONG TO US OR ADVERTISEMENT WAS REQUESTED
     COMMAND_CAN_BE_EXECUTED = function_validate_1_check_target_bot(SOURCE, COMMAND, TARGET_BOT_ID)
     
+    # DEBUG
     # ~ display_data('DEBUG - validate_command:', WEECHAT_DATA, BUFFER, SOURCE, '', '', '', '', '', COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS)
     # ~ display_message(BUFFER, 'DEBUG - validate_command: COMMAND CAN BE EXECUTED : %s' % COMMAND_CAN_BE_EXECUTED)
     # ~ display_message(BUFFER, 'DEBUG - validate_command: %s' % [WEECHAT_DATA, BUFFER, SOURCE, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS, UNIQ_COMMAND_ID])
@@ -1530,7 +1545,7 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
         del DISPLAY_COMMAND[UNIQ_COMMAND_ID]
       
       # DEBUG
-      display_message(BUFFER, 'DEBUG - validate_command: SOURCE : %s : ID_CALL : %s' % (SOURCE, ID_CALL))
+      # ~ display_message(BUFFER, 'DEBUG - validate_command: SOURCE : %s : ID_CALL : %s' % (SOURCE, ID_CALL))
       
       # CHECK WE HAVE ASSIGNED UNIQ_COMMAND_ID FROM CALL
       # This is security feature to block 'fake' execution
@@ -1660,7 +1675,7 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
   #
   
   def function_validate_2_setup_variables(SOURCE, TARGET_BOT_ID, SOURCE_BOT_ID):
-    global ID_CALL_LOCAL, ID_CALL_REMOTE, SCRIPT_COMMAND_CALL, PREPARE_USER_CALL, SCRIPT_INTERNAL_CALL
+    global ID_CALL_LOCAL, ID_CALL_REMOTE, SCRIPT_COMMAND_CALL, PREPARE_USER_CALL, SCRIPT_INTERNAL_CALL, WRECON_BUFFER_CHANNEL
   
     # PREPARE VARIABLES OF LOCAL CALL
     # Command was called by USER
@@ -1689,6 +1704,9 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
       ID_CALL     = ID_CALL_REMOTE
       VERIFY_BOT  = SOURCE_BOT_ID
       SCRIPT_CALL = SCRIPT_BUFFER_CALL
+    
+    # DEBUG
+    # ~ display_message(WRECON_BUFFER_CHANNEL, 'DEBUG - function_validate_2_setup_variables: %s' % ID_CALL)
     
     # We return variables of tables of current command
     return [ID_CALL, SCRIPT_CALL, VERIFY_BOT]
@@ -2859,11 +2877,16 @@ HELP               H[ELP] [COMMAND]'''
         TARGET_BOT_ID = WRECON_BOT_ID
         COMMAND_ID    = UNIQ_COMMAND_ID[0:8]
       
+      # DEBUG
+      # ~ display_message(WRECON_BUFFER_CHANNEL, 'DEBUG - function_advertise_wait_result: UNIQ_COMMAND_ID : %s' % UNIQ_COMMAND_ID)
+      # ~ display_message(WRECON_BUFFER_CHANNEL, 'DEBUG - function_advertise_wait_result: TARGET_BOT_ID   : %s' % TARGET_BOT_ID)
+      # ~ display_message(WRECON_BUFFER_CHANNEL, 'DEBUG - function_advertise_wait_result: COMMAND_ID      : %s' % COMMAND_ID)
+      
       display_message(WRECON_BUFFER_CHANNEL, '[%s] Number of bots advertised : %s' % (COMMAND_ID, COUNT_ADVERTISED_BOTS))
       
       # Command has been called locally, we also clean up LOCAL CALL ID
       cleanup_unique_command_id('LOCAL', UNIQ_COMMAND_ID)
-    
+      
       # We need unhook our timer
       weechat.unhook(VERIFY_RESULT_ADV[UNIQ_COMMAND_ID])
       
