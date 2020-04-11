@@ -568,12 +568,15 @@ else:
   #              table contain BOT IDs and BOT NAMEs only
   
   def setup_wrecon_variables_of_remote_bots():
-    global WRECON_REMOTE_BOTS_CONTROL, WRECON_REMOTE_BOTS_GRANTED, WRECON_REMOTE_BOTS_VERIFIED, WRECON_REMOTE_BOTS_ADVERTISED
+    global WRECON_REMOTE_BOTS_CONTROL, WRECON_REMOTE_BOTS_GRANTED, WRECON_REMOTE_BOTS_VERIFIED, WRECON_REMOTE_BOTS_ADVERTISED, WRECON_REMOTE_BOTS_GRANTED_SEECRET
     
     WRECON_REMOTE_BOTS_CONTROL    = weechat.string_eval_expression("${sec.data.wrecon_remote_bots_control}",{},{},{})
     WRECON_REMOTE_BOTS_GRANTED    = weechat.string_eval_expression("${sec.data.wrecon_remote_bots_granted}",{},{},{})
     WRECON_REMOTE_BOTS_VERIFIED   = {}
     WRECON_REMOTE_BOTS_ADVERTISED = {}
+    
+    WRECON_REMOTE_BOTS_CONTROL_SEECRET = weechat.string_eval_expression("${sec.data.wrecon_remote_bots_control_seecret}",{},{},{})
+    WRECON_REMOTE_BOTS_GRANTED_SEECRET = weechat.string_eval_expression("${sec.data.wrecon_remote_bots_granted_seecret}",{},{},{})
     
     if WRECON_REMOTE_BOTS_CONTROL:
       WRECON_REMOTE_BOTS_CONTROL = ast.literal_eval(WRECON_REMOTE_BOTS_CONTROL)
@@ -584,6 +587,16 @@ else:
       WRECON_REMOTE_BOTS_GRANTED = ast.literal_eval(WRECON_REMOTE_BOTS_GRANTED)
     else:
       WRECON_REMOTE_BOTS_GRANTED = {}
+    
+    if WRECON_REMOTE_BOTS_CONTROL_SEECRET:
+      WRECON_REMOTE_BOTS_CONTROL_SEECRET = ast.literal_eval(WRECON_REMOTE_BOTS_CONTROL_SEECRET)
+    else:
+      WRECON_REMOTE_BOTS_CONTROL_SEECRET = {}
+    
+    if WRECON_REMOTE_BOTS_GRANTED_SEECRET:
+      WRECON_REMOTE_BOTS_GRANTED_SEECRET = ast.literal_eval(WRECON_REMOTE_BOTS_GRANTED_SEECRET)
+    else:
+      WRECON_REMOTE_BOTS_GRANTED_SEECRET = {}
   
     #
     # SETUP VARIABLES OF COUNTER COMMAND AND AUTO ADVERTISE
@@ -3377,7 +3390,7 @@ UNREGISTER         UN[REGISTER]'''
   #
   
   def user_command_add(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
-    global ID_CALL_LOCAL, WRECON_REMOTE_BOTS_CONTROL
+    global ID_CALL_LOCAL, WRECON_REMOTE_BOTS_CONTROL, WRECON_REMOTE_BOTS_CONTROL_SEECRET
     
     OUT_MESSAGE = []
     
@@ -3402,10 +3415,12 @@ UNREGISTER         UN[REGISTER]'''
       OUT_MESSAGE.append('BOT ID %s ALREADY EXIST IN YOUR LIST.' % NEW_BOT_ID)
     else:
       OUT_MESSAGE_TAG = 'ADD INFO'
-      OUT_MESSAGE.append('NEW BOT HAS BEEN SUCCESSFULLY ADDED.')
-      WRECON_REMOTE_BOTS_CONTROL[NEW_BOT_ID] = [NEW_BOT_KEY, NEW_BOT_INFO]
+      OUT_MESSAGE.append('NEW BOT ID %s (%s) HAS BEEN SUCCESSFULLY ADDED.' % (NEW_BOT_ID, WRECON_REMOTE_BOTS_CONTROL[WRECON_REMOTE_BOTS_CONTROL][1]))
+      WRECON_REMOTE_BOTS_CONTROL[NEW_BOT_ID]         = [NEW_BOT_KEY, NEW_BOT_INFO]
+      WRECON_REMOTE_BOTS_CONTROL_SEECRET[NEW_BOT_ID] = []
       OUT_MESSAGE.append('%s (%s)' % (NEW_BOT_ID, WRECON_REMOTE_BOTS_CONTROL[NEW_BOT_ID][1]))
-      weechat.command(buffer, '/secure set WRECON_REMOTE_BOTS_CONTROL %s' % (WRECON_REMOTE_BOTS_CONTROL))
+      weechat.command(BUFFER, '/secure set wrecon_remote_bots_control %s' % (WRECON_REMOTE_BOTS_CONTROL))
+      weechat.command(BUFFER, '/secure set wrecon_remote_bots_control_seecret %s' % (WRECON_REMOTE_BOTS_CONTROL_SEECRET))
     
     OUT_MESSAGE.append('')
     
@@ -3462,7 +3477,7 @@ ADD                ADD <BotID> <BotKEY> [a note]'''
   #
   
   def prepare_command_del(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
-    global WRECON_REMOTE_BOTS_CONTROL, WRECON_BOT_ID
+    global WRECON_REMOTE_BOTS_CONTROL, WRECON_BOT_ID, WRECON_REMOTE_BOTS_CONTROL_SEECRET
     
     COMMAND = 'DELETE'
     
@@ -3475,7 +3490,7 @@ ADD                ADD <BotID> <BotKEY> [a note]'''
   #
   
   def user_command_del(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
-    global ID_CALL_LOCAL, WRECON_REMOTE_BOTS_CONTROL
+    global ID_CALL_LOCAL, WRECON_REMOTE_BOTS_CONTROL, WRECON_REMOTE_BOTS_CONTROL_SEECRET
     
     OUT_MESSAGE = []
     
@@ -3498,7 +3513,10 @@ ADD                ADD <BotID> <BotKEY> [a note]'''
       OUT_MESSAGE.append('DELETE : %s (%s)' % (DEL_BOT_ID, WRECON_REMOTE_BOTS_CONTROL[DEL_BOT_ID][1]))
       OUT_MESSAGE.append('BOT ID %s HAS BEEN SUCCESSFULLY DELETED.' % DEL_BOT_ID)
       del WRECON_REMOTE_BOTS_CONTROL[DEL_BOT_ID]
-      weechat.command(buffer, '/secure set WRECON_REMOTE_BOTS_CONTROL %s' % (WRECON_REMOTE_BOTS_CONTROL))
+      if DEL_BOT_ID in WRECON_REMOTE_BOTS_CONTROL_SEECRET:
+        del WRECON_REMOTE_BOTS_CONTROL_SEECRET[DEL_BOT_ID]
+      weechat.command(BUFFER, '/secure set wrecon_remote_bots_control %s' % (WRECON_REMOTE_BOTS_CONTROL))
+      weechat.command(BUFFER, '/secure set wrecon_remote_bots_control_seecret %s' % (WRECON_REMOTE_BOTS_CONTROL_SEECRET))
     
     OUT_MESSAGE.append('')
     
@@ -3567,9 +3585,9 @@ DELETE             DEL[ETE] <BotID>|<INDEX>'''
   #
   
   def user_command_grant(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
-    global WRECON_REMOTE_BOTS_GRANTED
+    global WRECON_REMOTE_BOTS_GRANTED, WRECON_REMOTE_BOTS_GRANTED_SEECRET
     
-    OUT_MESSAGE = ['']
+    OUT_MESSAGE = []
     
     ADD_GRANTED = COMMAND_ARGUMENTS_LIST[0]
     
@@ -3577,14 +3595,18 @@ DELETE             DEL[ETE] <BotID>|<INDEX>'''
     
     ADD_GRANTED_INFO = ' '.join(COMMAND_ARGUMENTS_LIST)
     
-    
     if ADD_GRANTED in WRECON_REMOTE_BOTS_GRANTED:
       OUT_MESSAGE_TAG  = 'GRANT ERROR'
       OUT_MESSAEG.append('BOT ID %s ALREADY EXIST IN YOUR LIST.' % ADD_GRANTED)
     else:
+      WRECON_REMOTE_BOTS_GRANTED[ADD_GRANTED]         = ADD_GRANTED_INFO
+      WRECON_REMOTE_BOTS_GRANTED_SEECRET[ADD_GRANTED] = []
       OUT_MESSAGE_TAG = 'GRANT INFO'
-      OUT_MESSAGE.append('NEW BOT HAS BEEN SUCCESSFULLY ADDED.')
-      WRECON_REMOTE_BOTS_GRANTED[ADD_GRANTED] = ADD_GRANTED_INFO
+      OUT_MESSAGE.append('NEW BOT ID %s (%s) HAS BEEN SUCCESSFULLY GRANTED.' % (ADD_GRANTED, WRECON_REMOTE_BOTS_GRANTED[ADD_GRANTED]))
+      weechat.command(BUFFER, '/secure set wrecon_remote_bots_granted %s' % (WRECON_REMOTE_BOTS_GRANTED))
+      weechat.command(BUFFER, '/secure set wrecon_remote_bots_granted_seecret %s' % (WRECON_REMOTE_BOTS_GRANTED_SEECRET))
+    
+    OUT_MESSAGE.append('')
     
     display_message_info(BUFFER, OUT_MESSAGE_TAG, OUT_MESSAGE)
     
@@ -3620,7 +3642,7 @@ DELETE             DEL[ETE] <BotID>|<INDEX>'''
     
     global SHORT_HELP
     
-    SHORT_HELP                        = SHORT_HELP + '''
+    SHORT_HELP                   = SHORT_HELP + '''
 GRANT              G[RANT] <BotID> [a note]'''
     
     global ARGUMENTS_REQUIRED_MINIMAL
@@ -3652,6 +3674,39 @@ GRANT              G[RANT] <BotID> [a note]'''
   #
   
   def user_command_revoke(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
+    global WRECON_REMOTE_BOTS_GRANTED, WRECON_REMOTE_BOTS_GRANTED_SEECRET
+    
+    OUT_MESSAGE = []
+    
+    UNIQ_COMMAND_ID = TARGET_BOT_ID + COMMAND_ID
+    
+    # DEBUG
+    # ~ display_message(BUFFER, 'DEBUG - user_command_del: COMMAND_ARGUMENTS_LIST : %s' % COMMAND_ARGUMENTS_LIST)
+    
+    REVOKE_BOT_ID = get_bot_id(COMMAND_ARGUMENTS_LIST[0], WRECON_REMOTE_BOTS_GRANTED)
+    
+    # DEBUG
+    # ~ display_message(BUFFER, 'DEBUG - user_command_del: REVOKE_BOT_ID              : %s' % REVOKE_BOT_ID)
+    # ~ display_message(BUFFER, 'DEBUG - user_command_del: WRECON_REMOTE_BOTS_GRANTED : %s' % WRECON_REMOTE_BOTS_GRANTED)
+    
+    if not REVOKE_BOT_ID in WRECON_REMOTE_BOTS_GRANTED:
+      OUT_MESSAGE_TAG = 'REVOKE ERROR'
+      OUT_MESSAGE.append('BOT ID %s DOES NOT EXISTS IN YOUR LIST.' % REVOKE_BOT_ID)
+    else:
+      OUT_MESSAGE_TAG = 'REVOKE INFO'
+      OUT_MESSAGE.append('REVOKE : %s (%s)' % (REVOKE_BOT_ID, WRECON_REMOTE_BOTS_GRANTED[REVOKE_BOT_ID]))
+      OUT_MESSAGE.append('BOT ID %s HAS BEEN SUCCESSFULLY REVOKED.' % REVOKE_BOT_ID)
+      del WRECON_REMOTE_BOTS_GRANTED[REVOKE_BOT_ID]
+      if REVOKE_BOT_ID in WRECON_REMOTE_BOTS_GRANTED_SEECRET:
+        del WRECON_REMOTE_BOTS_GRANTED_SEECRET[REVOKE_BOT_ID]
+      weechat.command(BUFFER, '/secure set wrecon_remote_bots_granted %s' % (WRECON_REMOTE_BOTS_GRANTED))
+      weechat.command(BUFFER, '/secure set wrecon_remote_bots_granted_seecret %s' % (WRECON_REMOTE_BOTS_GRANTED_SEECRET))
+    
+    OUT_MESSAGE.append('')
+    
+    display_message_info(BUFFER, OUT_MESSAGE_TAG, OUT_MESSAGE)
+    
+    cleanup_unique_command_id(SOURCE, UNIQ_COMMAND_ID)
     return weechat.WEECHAT_RC_OK
   
   #
@@ -3687,7 +3742,7 @@ GRANT              G[RANT] <BotID> [a note]'''
     
     global SHORT_HELP
     
-    SHORT_HELP                        = SHORT_HELP + '''
+    SHORT_HELP                    = SHORT_HELP + '''
 REVOKE             REV[OKE] <BotID>|<INDEX>'''
     
     return
