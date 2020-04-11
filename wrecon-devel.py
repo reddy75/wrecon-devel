@@ -850,6 +850,27 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
   
   #####
   #
+  # FUNCTION GET VERSION AND TIMESTAMP
+  
+  def get_version_and_timestamp(INPUT_VERSION, INPUT_TIMESTAMP):
+    
+    LIST_VERSION     = INPUT_VERSION.split(' ')
+    OUTPUT_VERSION   = LIST_VERSION[0].split('v')[0]
+    LIST_VERSION.pop(0)
+    
+    OUTPUT_TIMESTAMP = INPUT_TIMESTAMP
+    
+    if len(LIST_VERSION) > 0:
+      OUT_STAMP = ' '.join(LIST_VERSION)
+      OUTPUT_TIMESTAMP = '%s %s' % (OUT_STAMP, OUTPUT_TIMESTAMP)
+    
+    return [OUTPUT_VERSION, OUTPUT_TIMESTAMP]
+  
+  #
+  ##### END FUNCTION GET VERSION AND TIMESTAMP
+  
+  #####
+  #
   # GET NICK INFO
   
   def get_nick_info(TAGS, PREFIX):
@@ -1447,7 +1468,7 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
       BOT_ID          = INPUT_NUMBER_OR_STRING
     
     if INPUT_IS_NUMBER == True:
-      INDEX    = BOT_ID - 1
+      INDEX    = BOT_ID
       BOT_LIST = []
       
       if isinstance(DATA_OF_BOTS, dict):
@@ -1456,11 +1477,11 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
       if isinstance(DATA_OF_BOTS, list):
         BOT_LIST = DATA_OF_BOTS
       
-      if INDEX <= len(BOT_LIST):
-        BOT_ID = BOT_LIST[INDEX]
-      else:
-        INDEX += 1
+      if INDEX == 0 or INDEX > len(BOT_LIST):
         BOT_ID = '%s' % INDEX
+      else:
+        INDEX  = BOT_ID - 1
+        BOT_ID = BOT_LIST[INDEX]
     
     return BOT_ID
   
@@ -3024,12 +3045,14 @@ ADVERTISE          ADV[ERTISE]'''
   def user_command_me(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
     global WRECON_BOT_NAME, WRECON_BOT_ID, WRECON_BOT_KEY, SCRIPT_VERSION, SCRIPT_TIMESTAMP
     
+    WRECON_VER, WRECON_STM = get_version_and_timestamp(SCRIPT_VERSION, SCRIPT_TIMESTAMP)
+    
     OUT_MESSAGE     = ['']
     OUT_MESSAGE.append('Bot name  : %s' % WRECON_BOT_NAME)
     OUT_MESSAGE.append('Bot ID    : %s' % WRECON_BOT_ID)
     OUT_MESSAGE.append('Bot KEY   : %s' % WRECON_BOT_KEY)
-    OUT_MESSAGE.append('VERSION   : %s' % SCRIPT_VERSION)
-    OUT_MESSAGE.append('TIMESTAMP : %s' % SCRIPT_TIMESTAMP)
+    OUT_MESSAGE.append('VERSION   : %s' % WRECON_VER)
+    OUT_MESSAGE.append('TIMESTAMP : %s' % WRECON_STM)
     
     global WRECON_CHANNEL, WRECON_SERVER, WRECON_CHANNEL_KEY, WRECON_CHANNEL_ENCRYPTION_KEY
     
@@ -3343,6 +3366,9 @@ UNREGISTER         UN[REGISTER]'''
     
     UNIQ_COMMAND_ID = WRECON_BOT_ID + COMMAND_ID
     
+    # DEBUG
+    # ~ display_message(BUFFER, 'DEBUG - prepare_command_add: COMMAND_ARGUMENTS_LIST : %s' % COMMAND_ARGUMENTS_LIST)
+    
     return [COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST, UNIQ_COMMAND_ID]
   
   #
@@ -3352,9 +3378,12 @@ UNREGISTER         UN[REGISTER]'''
   def user_command_add(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
     global ID_CALL_LOCAL, WRECON_REMOTE_BOTS_CONTROL
     
-    OUT_MESSAGE = ['']
+    OUT_MESSAGE = []
     
     UNIQ_COMMAND_ID = TARGET_BOT_ID + COMMAND_ID
+    
+    # DEBUG
+    # ~ display_message(BUFFER, 'DEBUG - user_command_add: COMMAND_ARGUMENTS_LIST : %s' % COMMAND_ARGUMENTS_LIST)
     
     NEW_BOT_ID  = COMMAND_ARGUMENTS_LIST[0]
     NEW_BOT_KEY = COMMAND_ARGUMENTS_LIST[1]
@@ -3374,8 +3403,9 @@ UNREGISTER         UN[REGISTER]'''
       OUT_MESSAGE_TAG = 'ADD INFO'
       OUT_MESSAGE.append('NEW BOT HAS BEEN SUCCESSFULLY ADDED.')
       WRECON_REMOTE_BOTS_CONTROL[NEW_BOT_ID] = [NEW_BOT_KEY, NEW_BOT_INFO]
+      OUT_MESSAGE.append('%s (%s)' % (NEW_BOT_ID, WRECON_REMOTE_BOTS_CONTROL[NEW_BOT_ID][1]))
+      weechat.command(buffer, '/secure set WRECON_REMOTE_BOTS_CONTROL %s' % (WRECON_REMOTE_BOTS_CONTROL))
     
-    OUT_MESSAGE.append('%s (%s)' % (NEW_BOT_ID, WRECON_REMOTE_BOTS_CONTROL[NEW_BOT_ID][1]))
     OUT_MESSAGE.append('')
     
     display_message_info(BUFFER, OUT_MESSAGE_TAG, OUT_MESSAGE)
@@ -3415,7 +3445,7 @@ UNREGISTER         UN[REGISTER]'''
 ADD                ADD <BotID> <BotKEY> [a note]'''
     
     global ARGUMENTS_REQUIRED_MINIMAL
-    ARGUMENTS_REQUIRED_MINIMAL['REGISTER'] = 2
+    ARGUMENTS_REQUIRED_MINIMAL['ADD'] = 2
     
     return
   
@@ -3446,29 +3476,29 @@ ADD                ADD <BotID> <BotKEY> [a note]'''
   def user_command_del(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
     global ID_CALL_LOCAL, WRECON_REMOTE_BOTS_CONTROL
     
-    OUT_MESSAGE = ['']
+    OUT_MESSAGE = []
     
     UNIQ_COMMAND_ID = TARGET_BOT_ID + COMMAND_ID
     
-    DEL_BOT_ID  = COMMAND_ARGUMENTS_LIST[0]
+    # DEBUG
+    # ~ display_message(BUFFER, 'DEBUG - user_command_del: COMMAND_ARGUMENTS_LIST : %s' % COMMAND_ARGUMENTS_LIST)
     
-    COMMAND_ARGUMENTS_LIST.pop(0)
-    COMMAND_ARGUMENTS_LIST.pop(0)
+    DEL_BOT_ID = get_bot_id(COMMAND_ARGUMENTS_LIST[0], WRECON_REMOTE_BOTS_CONTROL)
     
-    if len(COMMAND_ARGUMENTS_LIST) > 0:
-      NEW_BOT_INFO = ' '.join(COMMAND_ARGUMENTS_LIST)
-    else:
-      NEW_BOT_INFO = ''
+    # DEBUG
+    # ~ display_message(BUFFER, 'DEBUG - user_command_del: DEL_BOT_ID                 : %s' % DEL_BOT_ID)
+    # ~ display_message(BUFFER, 'DEBUG - user_command_del: WRECON_REMOTE_BOTS_CONTROL : %s ' % WRECON_REMOTE_BOTS_CONTROL)
     
     if not DEL_BOT_ID in WRECON_REMOTE_BOTS_CONTROL:
       OUT_MESSAGE_TAG = 'DEL ERROR'
       OUT_MESSAGE.append('BOT ID %s DOES NOT EXISTS IN YOUR LIST.' % DEL_BOT_ID)
     else:
-      OUT_MESSAGE_TAG = 'ADD INFO'
+      OUT_MESSAGE_TAG = 'DEL INFO'
+      OUT_MESSAGE.append('DELETE : %s (%s)' % (DEL_BOT_ID, WRECON_REMOTE_BOTS_CONTROL[DEL_BOT_ID][1]))
       OUT_MESSAGE.append('BOT ID %s HAS BEEN SUCCESSFULLY DELETED.' % DEL_BOT_ID)
       del WRECON_REMOTE_BOTS_CONTROL[DEL_BOT_ID]
+      weechat.command(buffer, '/secure set WRECON_REMOTE_BOTS_CONTROL %s' % (WRECON_REMOTE_BOTS_CONTROL))
     
-    OUT_MESSAGE.append('%s (%s)' % (DEL_BOT_ID, WRECON_REMOTE_BOTS_CONTROL[DEL_BOT_ID][1]))
     OUT_MESSAGE.append('')
     
     display_message_info(BUFFER, OUT_MESSAGE_TAG, OUT_MESSAGE)
@@ -3486,17 +3516,18 @@ ADD                ADD <BotID> <BotKEY> [a note]'''
     
     global HELP_COMMAND
     HELP_COMMAND['DEL'] = '''
-%(bold)s%(italic)s--- DEL <botid>%(nitalic)s%(nbold)s''' % COLOR_TEXT + '''
+%(bold)s%(italic)s--- DEL <botid>|<INDEX>%(nitalic)s%(nbold)s''' % COLOR_TEXT + '''
  Delete remote bot from your control.
+   /wrecon DEL 4
    /wrecon DEL %s
 ''' % (get_random_string(16))
     
     HELP_COMMAND['DELETE'] = HELP_COMMAND['DEL']
     
-    SCRIPT_ARGS                   = SCRIPT_ARGS + ' | [DEL[ETE] <botid>]'
+    SCRIPT_ARGS                   = SCRIPT_ARGS + ' | [DEL[ETE] <botid>|<INDEX>]'
     SCRIPT_ARGS_DESCRIPTION       = SCRIPT_ARGS_DESCRIPTION + HELP_COMMAND['DELETE']
     SCRIPT_COMPLETION             = SCRIPT_COMPLETION + ' || DEL || DELETE'
-    SCRIPT_COMMAND_CALL['DELETE'] = user_command_add
+    SCRIPT_COMMAND_CALL['DELETE'] = user_command_del
     
     PREPARE_USER_CALL['DEL']      = prepare_command_del
     PREPARE_USER_CALL['DELETE']   = PREPARE_USER_CALL['DEL']
@@ -3504,7 +3535,7 @@ ADD                ADD <BotID> <BotKEY> [a note]'''
     global SHORT_HELP
     
     SHORT_HELP                        = SHORT_HELP + '''
-DELETE             DEL[ETE] <BotID>'''
+DELETE             DEL[ETE] <BotID>|<INDEX>'''
     
     global ARGUMENTS_REQUIRED
     ARGUMENTS_REQUIRED['DELETE'] = 1
@@ -3512,6 +3543,100 @@ DELETE             DEL[ETE] <BotID>'''
     return
   #
   ###### END COMMAND DEL
+  
+  ######
+  #
+  # COMMAND GRANT
+  
+  #
+  # GRANT - PREPARE COMMAND
+  #
+  
+  def prepare_command_grant(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
+    global WRECON_REMOTE_BOTS_CONTROL, WRECON_BOT_ID
+    
+    COMMAND = 'GRANT'
+    
+    UNIQ_COMMAND_ID = WRECON_BOT_ID + COMMAND_ID
+    
+    return [COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST, UNIQ_COMMAND_ID]
+  
+  #
+  # GRANT - COMMAND
+  #
+  
+  def user_command_grant(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
+    global WRECON_REMOTE_BOTS_GRANTED
+    
+    OUT_MESSAGE = ['']
+    
+    ADD_GRANTED = COMMAND_ARGUMENTS_LIST[0]
+    
+    COMMAND_ARGUMENTS_LIST.pop(0)
+    
+    ADD_GRANTED_INFO = ' '.join(COMMAND_ARGUMENTS_LIST)
+    
+    
+    if ADD_GRANTED in WRECON_REMOTE_BOTS_GRANTED:
+      OUT_MESSAGE_TAG  = 'GRANT ERROR'
+      OUT_MESSAEG.append('BOT ID %s ALREADY EXIST IN YOUR LIST.' % ADD_GRANTED)
+    else:
+      OUT_MESSAGE_TAG = 'GRANT INFO'
+      OUT_MESSAGE.append('NEW BOT HAS BEEN SUCCESSFULLY ADDED.')
+      WRECON_REMOTE_BOTS_GRANTED[ADD_GRANTED] = ADD_GRANTED_INFO
+    
+    display_message_info(BUFFER, OUT_MESSAGE_TAG, OUT_MESSAGE)
+    
+    return weechat.WEECHAT_RC_OK
+  
+  #
+  # GRANT - PREPARE VARIABLES
+  #
+  
+  def setup_command_variables_grant():
+    global SCRIPT_ARGS, SCRIPT_ARGS_DESCRIPTION, SCRIPT_COMPLETION, SCRIPT_COMMAND_CALL, WRECON_DEFAULT_BOTNAMES, COLOR_TEXT
+    
+    global HELP_COMMAND    
+    HELP_COMMAND['G'] = '''
+%(bold)s%(italic)s--- G[RANT] <botid> [note]%(nitalic)s%(nbold)s''' % COLOR_TEXT + '''
+ Grant access to your system for remote bot by botid. For update of your note of bot you can do execute GRANT command again.
+ Opposite of command GRANT is command REVOKE.
+   /wrecon GRANT %s
+   /wrecon G %s
+   /wrecon G %s %s
+''' % (get_random_string(16), get_random_string(16), get_random_string(16), random.choice(WRECON_DEFAULT_BOTNAMES))
+    
+    HELP_COMMAND['GRANT']        = HELP_COMMAND['G']
+    
+    SCRIPT_ARGS                  = SCRIPT_ARGS + ' | [G[RANT] <BotID> [a note]]'
+    SCRIPT_ARGS_DESCRIPTION      = SCRIPT_ARGS_DESCRIPTION + HELP_COMMAND['GRANT']
+    SCRIPT_COMPLETION            = SCRIPT_COMPLETION + ' || G || GRANT'
+    SCRIPT_COMMAND_CALL['GRANT'] = user_command_grant 
+    
+    PREPARE_USER_CALL['G']       = prepare_command_grant
+    PREPARE_USER_CALL['GRANT']   = PREPARE_USER_CALL['G']
+    
+    global SHORT_HELP
+    
+    SHORT_HELP                        = SHORT_HELP + '''
+GRANT              G[RANT] <BotID> [a note]'''
+    
+    global ARGUMENTS_REQUIRED_MINIMAL
+    ARGUMENTS_REQUIRED_MINIMAL['GRANT'] = 1
+    
+    return
+  
+  #
+  ###### END COMMAND GRANT
+  
+  ######
+  #
+  # COMMAND REVOKE
+  
+  
+  
+  #
+  ###### END COMMAND REVOKE
   
   ######
   #
@@ -3667,9 +3792,12 @@ LIST               L[IST] A[DDED]|G[RANTED]'''
     setup_wrecon_variables_of_remote_bots()
     
     # SETUP VARIABLES OF COMMANDS
+    # This ensure alphabetical sort of help instructions, because command
+    # functions are not sorted alphabetically
     setup_command_variables_add()
-    setup_command_variables_del()
     setup_command_variables_advertise()
+    setup_command_variables_del()
+    setup_command_variables_grant()
     setup_command_variables_help()
     setup_command_variables_list()
     setup_command_variables_me()
