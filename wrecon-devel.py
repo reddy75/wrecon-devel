@@ -2367,22 +2367,23 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
     global HELP_COMMAND
     
     HELP_COMMAND['UP'] = '''
-%(bold)s%(italic)s--- UP[DATE] [BotID]%(nitalic)s%(nbold)s''' % COLOR_TEXT + '''
+%(bold)s%(italic)s--- UP[DATE] [BotID]|[INDEX]%(nitalic)s%(nbold)s''' % COLOR_TEXT + '''
  Update script from github. This will check new released version, and in case newest version is found, it will trigger update.
  You can also update remote BOT if you are GRANTED to do. With no argument it will trigger update of local BOT, else update for remote BOT will be called.
    /wrecon UP
    /wrecon UPDATE %s
+   /wrecon UP 4
 ''' % (get_random_string(16))
     
     HELP_COMMAND['UPDATE'] = HELP_COMMAND['UP']
     
-    SCRIPT_ARGS                       = SCRIPT_ARGS + ' | [UP[DATE] [BotID]]'
+    SCRIPT_ARGS                       = SCRIPT_ARGS + ' | [UP[DATE] [BotID]]|[INDEX]'
     SCRIPT_ARGS_DESCRIPTION           = SCRIPT_ARGS_DESCRIPTION + HELP_COMMAND['UPDATE']
     
     global SHORT_HELP
     
     SHORT_HELP                       = SHORT_HELP + '''
-UPDATE             UP[DATE] [BotID]'''
+UPDATE             UP[DATE] [BotID]|<INDEX>'''
     
     global ARGUMENTS_OPTIONAL
     ARGUMENTS_OPTIONAL['UPDATE'] = 1
@@ -2736,9 +2737,9 @@ COMMAND            COMMAND [and arguments]
 %(bold)s%(italic)s--- H[ELP] [COMMAND]%(nitalic)s%(nbold)s''' % COLOR_TEXT + '''
  Without argument will show short help of commands (overview). For detailed help of all commands use /help wrecon.
  With argument (command) will show help of given command (argument).
-   /wrecon h
-   /wrecon help
-   /wrecon h adv
+   /wrecon H
+   /wrecon HELP
+   /wrecon H ADV
 '''
     
     HELP_COMMAND['HELP'] = HELP_COMMAND['H']
@@ -3516,7 +3517,7 @@ ADD                ADD <BotID> <BotKEY> [a note]'''
     
     global HELP_COMMAND
     HELP_COMMAND['DEL'] = '''
-%(bold)s%(italic)s--- DEL <botid>|<INDEX>%(nitalic)s%(nbold)s''' % COLOR_TEXT + '''
+%(bold)s%(italic)s--- DEL <BotID>|<INDEX>%(nitalic)s%(nbold)s''' % COLOR_TEXT + '''
  Delete remote bot from your control.
    /wrecon DEL 4
    /wrecon DEL %s
@@ -3594,11 +3595,12 @@ DELETE             DEL[ETE] <BotID>|<INDEX>'''
   #
   
   def setup_command_variables_grant():
-    global SCRIPT_ARGS, SCRIPT_ARGS_DESCRIPTION, SCRIPT_COMPLETION, SCRIPT_COMMAND_CALL, WRECON_DEFAULT_BOTNAMES, COLOR_TEXT
+    global SCRIPT_ARGS, SCRIPT_ARGS_DESCRIPTION, SCRIPT_COMPLETION, SCRIPT_COMMAND_CALL, WRECON_DEFAULT_BOTNAMES, COLOR_TEXT, PREPARE_USER_CALL
     
-    global HELP_COMMAND    
+    global HELP_COMMAND
+    
     HELP_COMMAND['G'] = '''
-%(bold)s%(italic)s--- G[RANT] <botid> [note]%(nitalic)s%(nbold)s''' % COLOR_TEXT + '''
+%(bold)s%(italic)s--- G[RANT] <BotID> [a note]%(nitalic)s%(nbold)s''' % COLOR_TEXT + '''
  Grant access to your system for remote bot by botid. For update of your note of bot you can do execute GRANT command again.
  Opposite of command GRANT is command REVOKE.
    /wrecon GRANT %s
@@ -3633,7 +3635,62 @@ GRANT              G[RANT] <BotID> [a note]'''
   #
   # COMMAND REVOKE
   
+  #
+  # REVOKE - PREPARE COMMAND
+  #
+  def prepare_command_revoke(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
+    global WRECON_REMOTE_BOTS_CONTROL, WRECON_BOT_ID
+    
+    COMMAND = 'REVOKE'
+    
+    UNIQ_COMMAND_ID = WRECON_BOT_ID + COMMAND_ID
+    
+    return [COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST, UNIQ_COMMAND_ID]
   
+  #
+  # REVOKE - COMMAND
+  #
+  
+  def user_command_revoke(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
+    return weechat.WEECHAT_RC_OK
+  
+  #
+  # REVOKE - SETUP VARIABLES
+  #
+  
+  def setup_command_variables_revoke():
+    global SCRIPT_ARGS, SCRIPT_ARGS_DESCRIPTION, SCRIPT_COMPLETION, SCRIPT_COMMAND_CALL, COLOR_TEXT, PREPARE_USER_CALL
+    
+    global HELP_COMMAND
+    
+    HELP_COMMAND['REV'] = '''
+%(bold)s%(italic)s--- REV[OKE] <BotID>|<INDEX>%(nitalic)s%(nbold)s''' % COLOR_TEXT + '''
+ Revoke granted access to your system of remote bot.
+   /wrecon REVOKE %s
+   /wrecon REV %s
+   /wrecon REV 3
+''' % (get_random_string(16), get_random_string(16))
+    
+    HELP_COMMAND['REVOKE']        = HELP_COMMAND['REV']
+    
+    SCRIPT_ARGS                   = SCRIPT_ARGS + ' | [REV[OKE] <BotID>|<INDEX>]'
+    SCRIPT_ARGS_DESCRIPTION       = SCRIPT_ARGS_DESCRIPTION + HELP_COMMAND['REVOKE']
+    
+    SCRIPT_COMPLETION             = SCRIPT_COMPLETION + ' || REV || REVOKE'
+    SCRIPT_COMMAND_CALL['REVOKE'] = user_command_revoke
+    
+    PREPARE_USER_CALL['REV']      = prepare_command_revoke
+    PREPARE_USER_CALL['REVOKE']   = PREPARE_USER_CALL['REV']
+    
+    global ARGUMENTS_REQUIRED
+    ARGUMENTS_REQUIRED['REVOKE']  = 1
+    
+    global SHORT_HELP
+    
+    SHORT_HELP                        = SHORT_HELP + '''
+REVOKE             REV[OKE] <BotID>|<INDEX>'''
+    
+    return
   
   #
   ###### END COMMAND REVOKE
@@ -3802,6 +3859,7 @@ LIST               L[IST] A[DDED]|G[RANTED]'''
     setup_command_variables_list()
     setup_command_variables_me()
     setup_command_variables_register()
+    setup_command_variables_revoke()
     setup_command_variables_unregister()
     setup_command_variables_update()
     setup_command_variables_verify()
