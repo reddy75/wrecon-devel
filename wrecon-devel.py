@@ -30,11 +30,11 @@
 
 # Changelog:
 # 2.00.0 (unusable, full reworking in progress)
-# - Full code rewriting (for better lucidity)
+# - Full code rewriting (for better lucidity, and also for code enhancements)
 # -- function 'display_message' replaces 'f_message' and 'f_message_simple'
 # -- function 'user_command_update' fully changed (splitted into functions)
 # -- functions 'encrypt/decrypt' enhanced into levels (also backward compatibility ensure with older script communication)
-# -- added possibility choice BOT by INDEX number (commands DEL/RENAME/REVOKE/SSH/UPDATE/)
+# -- added possibility choice BOT by INDEX number (for commands DEL/RENAME/REVOKE/SSH/UPDATE)
 # -- 
 #
 # 1.18.13 - Bug fix UPDATE (arguments incorrectly checked after additional advertise)
@@ -3591,7 +3591,7 @@ ADD                ADD <BotID> <BotKEY> [a note]'''
     HELP_COMMAND['DEL'] = '''
 %(bold)s%(italic)s--- DEL <BotID>|<INDEX>%(nitalic)s%(nbold)s''' % COLOR_TEXT + '''
  Delete remote bot from your control.
- Remote BOT can be chosen by BOT ID or INDEX number of list of ADDED.
+ Remote BOT can be chosen by BOT ID or INDEX number of list of ADDED bots.
    /wrecon DEL 4
    /wrecon DEL %s
 ''' % (get_random_string(16))
@@ -3808,6 +3808,60 @@ REVOKE             REV[OKE] <BotID>|<INDEX>'''
   
   ######
   #
+  # COMMAND RENAME
+  #
+  
+  def prepare_command_rename(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
+    return [COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST, UNIQ_COMMAND_ID]
+  
+  def user_command_rename(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
+    return weechat.WEECHAT_RC_OK
+  
+  def setup_command_variables_rename():
+    global SCRIPT_ARGS, SCRIPT_ARGS_DESCRIPTION, COLOR_TEXT, SCRIPT_COMPLETION, SCRIPT_COMMAND_CALL, BUFFER_CMD_REN_EXE, BUFFER_CMD_REN_REP, PREPARE_USER_CALL, COMMAND_VERSION, GLOBAL_VERSION_LIMIT, WRECON_DEFAULT_BOTNAMES
+    BUFFER_CMD_REN_EXE   = '%sE-REN'   % (COMMAND_IN_BUFFER)
+    BUFFER_CMD_REN_REP   = '%sREN-R'   % (COMMAND_IN_BUFFER)
+    
+    global HELP_COMMAND
+    
+    HELP_COMMAND['REN'] = '''
+%(bold)s%(italic)s--- REN[AME] <M[YBOT]|<BotID>|<INDEX> <New Name>%(nitalic)s%(nbold)s''' % COLOR_TEXT + '''
+ Rename a BOT. For local bot use option M or MYBOT.
+ For remote BOT can be chosen BOT ID or INDEX number of list of ADDED bots.
+   /wrecon RENAME MYBOT %s
+   /wrecon RENAME 3 %s
+   /wrecon RENAME %s %s
+   /wrecon REN M %s
+   /wrecon REN 5 %s
+''' % (random.choice(WRECON_DEFAULT_BOTNAMES), random.choice(WRECON_DEFAULT_BOTNAMES), get_random_string(16), random.choice(WRECON_DEFAULT_BOTNAMES), random.choice(WRECON_DEFAULT_BOTNAMES), random.choice(WRECON_DEFAULT_BOTNAMES))
+    
+    HELP_COMMAND['RENAME']        = HELP_COMMAND['REN']
+    
+    SCRIPT_ARGS                   = SCRIPT_ARGS + ' | [REN[AME] <M[YBOT]|BotID>|<INDEX> <New Name>]'
+    SCRIPT_ARGS_DESCRIPTION       = SCRIPT_ARGS_DESCRIPTION + HELP_COMMAND['RENAME']
+    SCRIPT_COMPLETION             = SCRIPT_COMPLETION + ' || REN || RENAME'
+    SCRIPT_COMMAND_CALL['RENAME'] = user_command_rename
+    
+    PREPARE_USER_CALL['REN']      = prepare_command_rename
+    PREPARE_USER_CALL['RENAME']   = PREPARE_USER_CALL['REN']
+    
+    global ARGUMENTS_REQUIRED_MINIMAL
+    ARGUMENTS_REQUIRED_MINIMAL['RENAME'] = 3
+    
+    COMMAND_VERSION[BUFFER_CMD_REN_EXE] = GLOBAL_VERSION_LIMIT
+    
+    global SHORT_HELP
+    
+    SHORT_HELP                    = SHORT_HELP + '''
+RENAME             REN[AME] M[YBOT]|<BotID>|<INDEX> <New Name>'''
+    
+    return
+  
+  #
+  ###### END COMMAND RENAME
+  
+  ######
+  #
   # COMMAND LIST
   #
   
@@ -3908,6 +3962,7 @@ REVOKE             REV[OKE] <BotID>|<INDEX>'''
     HELP_COMMAND['L'] = '''
 %(bold)s%(italic)s--- L[IST] <A[DDED]>|<G[RANTED]>%(nitalic)s%(nbold)s
  List of ADDED bots you can control, or GRANTED bots which can control your system.
+ List also contain INDEX numbers of ADDED or GRANTED bots.
    /wrecon LIST ADDED
    /wrecon L A
    /wrecon LIST G
@@ -3980,6 +4035,7 @@ LIST               L[IST] A[DDED]|G[RANTED]'''
     setup_command_variables_list()
     setup_command_variables_me()
     setup_command_variables_register()
+    setup_command_variables_rename()
     setup_command_variables_revoke()
     setup_command_variables_unregister()
     setup_command_variables_update()
