@@ -34,7 +34,9 @@
 # -- function 'display_message' replaces 'f_message' and 'f_message_simple'
 # -- function 'user_command_update' fully changed (splitted into functions)
 # -- functions 'encrypt/decrypt' enhanced into levels (also backward compatibility ensure with older script communication)
+# -- added possibility choice BOT by INDEX number (commands DEL/RENAME/REVOKE/SSH/UPDATE/)
 # -- 
+#
 # 1.18.13 - Bug fix UPDATE (arguments incorrectly checked after additional advertise)
 # 1.18.12 - Bug fix REGISTER/UNREGISTER (add/del registered channels and keys)
 # 1.18.11 - Bug fix UPDATE CHECK VERSION
@@ -2383,6 +2385,7 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
 %(bold)s%(italic)s--- UP[DATE] [BotID]|[INDEX]%(nitalic)s%(nbold)s''' % COLOR_TEXT + '''
  Update script from github. This will check new released version, and in case newest version is found, it will trigger update.
  You can also update remote BOT if you are GRANTED to do. With no argument it will trigger update of local BOT, else update for remote BOT will be called.
+ Remote BOT can be chosen by BOT ID or INDEX number of list of ADDED.
    /wrecon UP
    /wrecon UPDATE %s
    /wrecon UP 4
@@ -3537,6 +3540,7 @@ ADD                ADD <BotID> <BotKEY> [a note]'''
     HELP_COMMAND['DEL'] = '''
 %(bold)s%(italic)s--- DEL <BotID>|<INDEX>%(nitalic)s%(nbold)s''' % COLOR_TEXT + '''
  Delete remote bot from your control.
+ Remote BOT can be chosen by BOT ID or INDEX number of list of ADDED.
    /wrecon DEL 4
    /wrecon DEL %s
 ''' % (get_random_string(16))
@@ -3721,6 +3725,7 @@ GRANT              G[RANT] <BotID> [a note]'''
     HELP_COMMAND['REV'] = '''
 %(bold)s%(italic)s--- REV[OKE] <BotID>|<INDEX>%(nitalic)s%(nbold)s''' % COLOR_TEXT + '''
  Revoke granted access to your system of remote bot.
+ Remote BOT can be chosen by BOT ID or INDEX number of list of GRANTED.
    /wrecon REVOKE %s
    /wrecon REV %s
    /wrecon REV 3
