@@ -2791,16 +2791,16 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
     
     # After 1st initialisation and transfer SYS and BKEY we have all data needed
     # Then we can verify with SYS
-    VERIFICATION_PROTOCOL['']    = [2,  '', 'rsn', verify_protocol_6]         # 6 Request/Reply   - DATA      - from local and remote
+    #VERIFICATION_PROTOCOL['']    = [2,  '', 'rsn', verify_protocol_6]         # 6 Request/Reply   - DATA      - from local and remote
     
     # In case verification failed, then we try BKEY as backup verification
     # It is possible that remote system can by running on flashdisk and was changed to different hardware
     # This we verify now
-    VERIFICATION_PROTOCOL['rsn'] = [2, 'Snr', 'x', verify_protocol_7_rsn]     # 7 Request         - DATA       - from local for new SYS
-    VERIFICATION_PROTOCOL['Snr'] = [2,  '',   'x', verify_protocol_8_Snr]     # 8 Reply new SYS   - SnDATA     - from remote with new SYS
+    VERIFICATION_PROTOCOL['rsn'] = [2, 'Snr', 'x', verify_protocol_6_rsn]     # 6 Request         - DATA       - from local for new SYS
+    VERIFICATION_PROTOCOL['Snr'] = [2,  '',   'x', verify_protocol_7_Snr]     # 7 Reply new SYS   - SnDATA     - from remote with new SYS
     
     # In case all verifications failed again, then all is refused
-    VERIFICATION_PROTOCOL['x']   = [2,  'x',  'x', verify_protocol_9_x]       # 9 Request/Reply   - DATA       - from local to remote
+    VERIFICATION_PROTOCOL['x']   = [2,  'x',  'x', verify_protocol_8_x]       # 8 Request/Reply   - DATA       - from local to remote
     
     return
   
