@@ -775,6 +775,11 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
     WAIT_FOR_VERSION       = {}
     WAIT_FOR_RENAME        = {}
     
+    # VARIABLES FOR ENHANCED ENCRYPTION VERIFICATION
+    global VERIFICATION_PROTOCOL, VERIFICATION_REPLY_EXPECT
+    VERIFICATION_PROTOCOL     = {}
+    VERIFICATION_REPLY_EXPECT = {}
+    
     return
   
   #
@@ -2503,8 +2508,8 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
   # Will not be called when we are missing ADVERTISE data of remote BOT
   
   def buffer_command_verify(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
-    global WRECON_BUFFER_CHANNEL, WAIT_FOR_VERIFICATION, BUFFER_CMD_VAL_EXE, WRECON_REMOTE_BOTS_ADVERTISED, WAIT_FOR_REMOTE_DATA, WRECON_REMOTE_BOTS_CONTROL, VERIFY_RESULT_VAL, TIMEOUT_COMMAND_SHORT
-    global WRECON_BOT_KEY
+    global BUFFER_CMD_VAL_EXE, WAIT_FOR_REMOTE_DATA, VERIFY_RESULT_VAL, TIMEOUT_COMMAND_SHORT
+    global WRECON_BOT_KEY, VERIFICATION_PROTOCOL, WRECON_REMOTE_BOTS_GRANTED_SECRET, VERIFICATION_REPLY_EXPECT
     
     # DEBUG
     # ~ display_data('DEBUG - buffer_command_verify:', WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST)
@@ -2514,13 +2519,32 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
     
     UNIQ_COMMAND_ID = TARGET_BOT_ID + COMMAND_ID
     
-    ENCRYPT_LEVEL = get_target_level_01_encryption(TARGET_BOT_ID)
+    ENCRYPT_LEVEL  = get_target_level_01_encryption(TARGET_BOT_ID)
+    
+    ENCRYPT_KEY1   = WRECON_BOT_KEY
+    VERIFY_COMMAND = BUFFER_CMD_VAL_EXE
     
     # DEBUG
     # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify: ENCRYPT_LEVEL : %s' % ENCRYPT_LEVEL)
     
-    ENCRYPT_KEY1 = WRECON_BOT_KEY
-    ENCRYPT_KEY2 = ''
+    # We need determine which verification will be used
+    if ENCRYPT_LEVEL == 0:
+      ENCRYPT_KEY2 = ''
+      
+    else:
+    # Continue with enhanced level of verification
+      REMOTE_SECRET_SYSINFO, REMOTE_SECRET_KEY = get_remote_secret(WRECON_REMOTE_BOTS_GRANTED_SECRET, TARGET_BOT_ID)
+      if REMOTE_SECRET_SYSINFO == '':
+        L2_PROTOCOL  = list(VERIFICATION_PROTOCOL)[0]
+        ENCRYPT_KEY2 = ''
+      else:
+        L2_PROTOCOL  = ''
+        ENCRYPT_KEY2 = REMOTE_SECRET_SYSINFO
+        
+      ENCRYPT_LEVEL                              = VERIFICATION_PROTOCOL[L2_PROTOCOL][0]
+      VERIFICATION_REPLY_EXPECT[UNIQ_COMMAND_ID] = VERIFICATION_PROTOCOL[L2_PROTOCOL][1]
+      
+      VERIFY_COMMAND                             = VERIFY_COMMAND + ' ' + L2_PROTOCOL
     
     ENCRYPT_SEECRET_DATA = string_encrypt(ENCRYPT_LEVEL, SECRET_DATA, ENCRYPT_KEY1, ENCRYPT_KEY2)
     
@@ -2538,7 +2562,7 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
   # Called from buffer, this is received from remote BOT as request
   
   def buffer_command_verify_1_requested(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
-    global BUFFER_CMD_VAL_REP, WRECON_BOT_KEY, WRECON_REMOTE_BOTS_CONTROL
+    global BUFFER_CMD_VAL_REP, WRECON_BOT_KEY, WRECON_REMOTE_BOTS_CONTROL, VERIFICATION_PROTOCOL, WRECON_REMOTE_BOTS_CONTROL_SEECRET
     
     # ~ display_data('buffer_command_verify_1_requested', WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST)
     # ~ display_data('DEBUG - buffer_command_verify_1_  requested:', WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST)
@@ -2551,10 +2575,24 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
     
     ENCRYPT_LEVEL = get_target_level_01_encryption(SOURCE_BOT_ID)
     
-    SECRET_DATA = COMMAND_ARGUMENTS_LIST[0]
-    
+    SECRET_DATA    = COMMAND_ARGUMENTS_LIST[0]
+    VERIFY_COMMAND = BUFFER_CMD_VAL_REP
+
     # DEBUG
     # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_1_requested: ENCRYPT_LEVEL : %s' % ENCRYPT_LEVEL)
+    
+    if ENCRYPT_LEVEL > 0:
+      ENCRYPT_KEY2  = get_device_seecrets()
+      if SECRET_DATA in VERIFICATION_PROTOCOL:
+        L2_PROTOCOL    = SECRET_DATA
+        INDEX_PROTOCOL = list(VERIFICATION_PROTOCOL).index(L2_PROTOCOL)
+        SECRET_DATA    = COMMAND_ARGUMENTS_LIST.pop(0)
+        ENCRYPT_LEVEL  = VERIFICATION_PROTOCOL[L2_PROTOCOL][0]
+        
+        
+        if INDEX_PROTOCOL == 0:
+          
+      
     
     # WE RECEIVED ENCRYPTED DATA
     # DECRYPTED DATA WILL RETURN HASH BACK IN ENCRYPTED FORM
@@ -2567,7 +2605,7 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
     # 3. ENCRYPT HASH
     ENCRYPT_SEECRET_DATA = string_encrypt(ENCRYPT_LEVEL, HASH_DATA, ENCRYPT_KEY1, ENCRYPT_KEY2)
     # 4. SEND BACK ENCRYPTED HASH TO REQUESTOR
-    weechat.command(BUFFER, '%s %s %s %s %s' % (BUFFER_CMD_VAL_REP, SOURCE_BOT_ID, TARGET_BOT_ID, COMMAND_ID, ENCRYPT_SEECRET_DATA))
+    weechat.command(BUFFER, '%s %s %s %s %s' % (VERIFY_COMMAND, SOURCE_BOT_ID, TARGET_BOT_ID, COMMAND_ID, ENCRYPT_SEECRET_DATA))
     
     cleanup_unique_command_id(SOURCE, UNIQ_COMMAND_ID)
     
@@ -2579,7 +2617,7 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
   
   def buffer_command_verify_2_result_received(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
     global BUFFER_CMD_VAL_ERR, BUFFER_CMD_VAL_REA, BUFFER_CMD_VAL_REP, WRECON_REMOTE_BOTS_CONTROL, WAIT_FOR_REMOTE_DATA, VERIFY_RESULT_VAL, WRECON_REMOTE_BOTS_ADVERTISED
-    global ID_CALL_LOCAL, ID_CALL_REMOTE, WRECON_BOT_KEY, WRECON_BOT_ID
+    global ID_CALL_LOCAL, ID_CALL_REMOTE, WRECON_BOT_KEY, WRECON_BOT_ID, VERIFICATION_PROTOCOL
     
     UNIQ_COMMAND_ID = SOURCE_BOT_ID + COMMAND_ID
     
@@ -2730,6 +2768,39 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
     global ARGUMENTS_REQUIRED_MINIMAL
     ARGUMENTS_REQUIRED_MINIMAL['VERIFY']           = 1
     ARGUMENTS_REQUIRED_MINIMAL[BUFFER_CMD_VAL_EXE] = 1
+    
+    global VERIFICATION_PROTOCOL
+    
+    # Following variables are protocol for requesting information
+    # There should be strict order of following IDs
+    
+    #                               +------------------ Encryption level
+    #                               |
+    #                               |    +------------- Next verification ID, when verification was successful
+    #                               |    |
+    #                               |    |     +------- Next verification ID, when verification fail
+    #                               |    |     |
+    #                               |    |     |     +- Call function
+    #                               |    |     |     | 
+    VERIFICATION_PROTOCOL['ree'] = [1, 'eer', 'x', verify_protocol_0_ree]     # 0 Request         - DATA      - 1st initialisation - from local
+    VERIFICATION_PROTOCOL['eer'] = [1, 'rre', 'x', verify_protocol_1_eer]     # 1 Reply           - DATA      - 1st initialisation - reply from remote
+    VERIFICATION_PROTOCOL['rre'] = [2, 'ner', 'x', verify_protocol_2_rre]     # 2 Request SYS     - reDATA    - 1st initialisation - from local for SYS
+    VERIFICATION_PROTOCOL['ner'] = [2, 'rnr', 'x', verify_protocol_3_ner]     # 3 Reply SYS       - neDATA    - 1st initialisation - from remote with SYS
+    VERIFICATION_PROTOCOL['rnr'] = [2, 'nnr', 'x', verify_protocol_4_rnr]     # 4 Request BKEY    - nrDATA    - 1st initialisation - from local for BKEY
+    VERIFICATION_PROTOCOL['nnr'] = [2,  '',   'x', verify_protocol_5_nnr]     # 5 Reply BKEY      - nnDATA    - 1st initialisation - from remote with BKEY
+    
+    # After 1st initialisation and transfer SYS and BKEY we have all data needed
+    # Then we can verify with SYS
+    VERIFICATION_PROTOCOL['']    = [2,  '', 'rsn', verify_protocol_6]         # 6 Request/Reply   - DATA      - from local and remote
+    
+    # In case verification failed, then we try BKEY as backup verification
+    # It is possible that remote system can by running on flashdisk and was changed to different hardware
+    # This we verify now
+    VERIFICATION_PROTOCOL['rsn'] = [2, 'Snr', 'x', verify_protocol_7_rsn]     # 7 Request         - DATA       - from local for new SYS
+    VERIFICATION_PROTOCOL['Snr'] = [2,  '',   'x', verify_protocol_8_Snr]     # 8 Reply new SYS   - SnDATA     - from remote with new SYS
+    
+    # In case all verifications failed again, then all is refused
+    VERIFICATION_PROTOCOL['x']   = [2,  'x',  'x', verify_protocol_9_x]       # 9 Request/Reply   - DATA       - from local to remote
     
     return
   
