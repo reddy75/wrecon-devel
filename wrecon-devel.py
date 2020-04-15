@@ -2778,29 +2778,31 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
     #                               |
     #                               |    +------------- Next verification ID, when verification was successful
     #                               |    |
-    #                               |    |     +------- Next verification ID, when verification fail
-    #                               |    |     |
-    #                               |    |     |     +- Call function
-    #                               |    |     |     | 
-    VERIFICATION_PROTOCOL['ree'] = [1, 'eer', 'x', verify_protocol_0_ree]     # 0 Request         - DATA      - 1st initialisation - from local
-    VERIFICATION_PROTOCOL['eer'] = [1, 'rre', 'x', verify_protocol_1_eer]     # 1 Reply           - DATA      - 1st initialisation - reply from remote
-    VERIFICATION_PROTOCOL['rre'] = [2, 'ner', 'x', verify_protocol_2_rre]     # 2 Request SYS     - reDATA    - 1st initialisation - from local for SYS
-    VERIFICATION_PROTOCOL['ner'] = [2, 'rnr', 'x', verify_protocol_3_ner]     # 3 Reply SYS       - neDATA    - 1st initialisation - from remote with SYS
-    VERIFICATION_PROTOCOL['rnr'] = [2, 'nnr', 'x', verify_protocol_4_rnr]     # 4 Request BKEY    - nrDATA    - 1st initialisation - from local for BKEY
-    VERIFICATION_PROTOCOL['nnr'] = [2,  '',   'x', verify_protocol_5_nnr]     # 5 Reply BKEY      - nnDATA    - 1st initialisation - from remote with BKEY
+    #                               |    |
+    #                               |    |
+    #                               |    |           +- Call function
+    #                               |    |           | 
+    VERIFICATION_PROTOCOL['ree'] = [1, 'eer', verify_protocol_0_ree]     # 0 Request         - DATA       - 1st initialisation - from local
+    VERIFICATION_PROTOCOL['eer'] = [1, 'rre', verify_protocol_1_eer]     # 1 Reply           - DATA       - 1st initialisation - reply from remote
+    VERIFICATION_PROTOCOL['rre'] = [2, 'ner', verify_protocol_2_rre]     # 2 Request SYS     - reDATA     - 1st initialisation - from local for SYS
+    VERIFICATION_PROTOCOL['ner'] = [2, 'rnr', verify_protocol_3_ner]     # 3 Reply SYS       - neDATA     - 1st initialisation - from remote with SYS
+    VERIFICATION_PROTOCOL['rnr'] = [2, 'nnr', verify_protocol_4_rnr]     # 4 Request BKEY    - nrDATA     - 1st initialisation - from local for BKEY
+    VERIFICATION_PROTOCOL['nnr'] = [2,  '',   verify_protocol_5_nnr]     # 5 Reply BKEY      - nnDATA     - 1st initialisation - from remote with BKEY
     
     # After 1st initialisation and transfer SYS and BKEY we have all data needed
-    # Then we can verify with SYS
-    #VERIFICATION_PROTOCOL['']    = [2,  '', 'rsn', verify_protocol_6]         # 6 Request/Reply   - DATA      - from local and remote
+    # Then we can verify with SYS automatically
+    #VERIFICATION_PROTOCOL['']    = [2,  '', 'rvn', verify_protocol_6]         # 6 Request/Reply   - DATA      - from local and remote
     
     # In case verification failed, then we try BKEY as backup verification
     # It is possible that remote system can by running on flashdisk and was changed to different hardware
     # This we verify now
-    VERIFICATION_PROTOCOL['rsn'] = [2, 'Snr', 'x', verify_protocol_6_rsn]     # 6 Request         - DATA       - from local for new SYS
-    VERIFICATION_PROTOCOL['Snr'] = [2,  '',   'x', verify_protocol_7_Snr]     # 7 Reply new SYS   - SnDATA     - from remote with new SYS
+    VERIFICATION_PROTOCOL['rvn'] = [2, 'vnr', verify_protocol_6_rvn]     # 6 Request         - DATA       - verify with BKEY - from local
+    VERIFICATION_PROTOCOL['vnr'] = [2, 'rsn', verify_protocol_7_vnr]     # 7 Reply           - DATA       - verify with BKEY - reply from remote
+    VERIFICATION_PROTOCOL['rsn'] = [2, 'Snr', verify_protocol_8_rsn]     # 6 Request new SYS - DATA       - from local for new SYS
+    VERIFICATION_PROTOCOL['Snr'] = [2,  '',   verify_protocol_9_Snr]     # 7 Reply new SYS   - SnDATA     - from remote with new SYS
     
     # In case all verifications failed again, then all is refused
-    VERIFICATION_PROTOCOL['x']   = [2,  'x',  'x', verify_protocol_8_x]       # 8 Request/Reply   - DATA       - from local to remote
+    VERIFICATION_PROTOCOL['x']   = [2,  'x',  verify_protocol_X_x]       # 8 Request/Reply   - DATA       - from local to remote
     
     return
   
