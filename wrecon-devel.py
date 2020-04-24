@@ -2578,8 +2578,6 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
     SECRET_DATA    = COMMAND_ARGUMENTS_LIST[0]
     VERIFY_COMMAND = BUFFER_CMD_VAL_REP
     
-    L2_VERIFY_NEW_DATA = ''
-
     # DEBUG
     # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_1_requested: ENCRYPT_LEVEL : %s' % ENCRYPT_LEVEL)
     
@@ -2601,7 +2599,6 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
           L2_PROTOCOL      = VERIFICATION_PROTOCOL[INITIAL_FUNCTION][0]
           # Call the function for prepare all necessary variables
           ERROR, ENCRYPT_LEVEL, ENCRYPT_KEY1, ENCRYPT_KEY2, SEND_DATA = initial_function(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST)
-          L2_VERIFY_NEW_DATA = INITIAL_FUNCTION
       # Here we have DATA of REMOTE bot, we try verify by usual way with enhanced encryption
 
       else:
@@ -2618,13 +2615,13 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
       # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_1_requested: SEECRET : %s : %s' % (HASH_DATA, DECRYPT_SEECRET_DATA))
       # 3. ENCRYPT HASH
       
-      if L2_VERIFY_NEW_DATA:
+      if L2_PROTOCOL and SEND_DATA:
         HASH_DATA = '%s %s' % (HASH_DATA, SEND_DATA)
         
       ENCRYPT_SEECRET_DATA = string_encrypt(ENCRYPT_LEVEL, HASH_DATA, ENCRYPT_KEY1, ENCRYPT_KEY2)
       # 4. SEND BACK ENCRYPTED HASH TO REQUESTOR
       
-      if L2_VERIFY_NEW_DATA:
+      if L2_PROTOCOL and SEND_DATA:
         ENCRYPT_SEECRET_DATA = '%s %s' % (VERIFICATION_PROTOCOL[INITIAL_FUNCTION][1], ENCRYPT_SEECRET_DATA)
       weechat.command(BUFFER, '%s %s %s %s %s' % (VERIFY_COMMAND, SOURCE_BOT_ID, TARGET_BOT_ID, COMMAND_ID, ENCRYPT_SEECRET_DATA))
     else:
