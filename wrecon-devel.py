@@ -2508,7 +2508,7 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
   # Will not be called when we are missing ADVERTISE data of remote BOT
   
   def buffer_command_verify(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
-    global BUFFER_CMD_VAL_EXE, WAIT_FOR_REMOTE_DATA, VERIFY_RESULT_VAL, TIMEOUT_COMMAND_SHORT
+    global BUFFER_CMD_VAL_EXE, BUFFER_CMD_VAL_ERR, WAIT_FOR_REMOTE_DATA, VERIFY_RESULT_VAL, TIMEOUT_COMMAND_SHORT
     global WRECON_BOT_KEY, VERIFICATION_PROTOCOL, WRECON_REMOTE_BOTS_GRANTED_SECRET
     
     # DEBUG
@@ -2522,6 +2522,9 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
     ENCRYPT_KEY2   = ''
     SEND_DATA      = ''
     L2_PROTOCOL    = ''
+    ERROR          = False
+    
+    VERIFY_COMMAND = BUFFER_CMD_VAL_EXE
     
     # DEBUG
     # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify: ENCRYPT_LEVEL : %s' % ENCRYPT_LEVEL)
@@ -2536,23 +2539,32 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
         L2_PROTOCOL      = VERIFICATION_PROTOCOL[INITIAL_FUNCTION][0]
         # Call the function for prepare all necessary variables
         ERROR, ENCRYPT_LEVEL, ENCRYPT_KEY1, ENCRYPT_KEY2, SEND_DATA = initial_function(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST)
+        if ERROR == True:
+          VERIFY_COMMAND = BUFFER_CMD_VAL_ERR
       # Here we have DATA of REMOTE bot, we try verify by usual way with enhanced encryption
       else:
-        ENCRYPT_KEY2                               = REMOTE_SECRET_SYSINFO
+        ENCRYPT_KEY2 = REMOTE_SECRET_SYSINFO
+    
+    if ERROR == False:
+      SECRET_DATA  = get_random_string(31)
+      SECRET_HASH  = get_hash(SECRET_DATA)
       
-    SECRET_DATA  = get_random_string(31)
-    SECRET_HASH  = get_hash(SECRET_DATA)
-    
-    if L2_PROTOCOL and SEND_DATA:
-      SECRET_DATA = '%s %s' % (SECRET_DATA, SEND_DATA)
-    
-    SEND_DATAX                            = string_encrypt(ENCRYPT_LEVEL, SECRET_DATA, ENCRYPT_KEY1, ENCRYPT_KEY2)
-    WAIT_FOR_REMOTE_DATA[UNIQ_COMMAND_ID] = SECRET_HASH
-    
-    # SEND INITIAL REQUEST FOR VERIFICATION TO REMOTE BOT
-    weechat.command(BUFFER, '%s %s %s %s %s' % (BUFFER_CMD_VAL_EXE, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, SEND_DATAX))
-    
-    VERIFY_RESULT_VAL[UNIQ_COMMAND_ID] = weechat.hook_timer(TIMEOUT_COMMAND_SHORT*1000, 0, 1, 'function_verify_wait_result', UNIQ_COMMAND_ID)
+      if L2_PROTOCOL and SEND_DATA:
+        SECRET_DATA = '%s %s' % (SECRET_DATA, SEND_DATA)
+      
+      ENCRYPT_SEECRET_DATA                  = string_encrypt(ENCRYPT_LEVEL, SECRET_DATA, ENCRYPT_KEY1, ENCRYPT_KEY2)
+      WAIT_FOR_REMOTE_DATA[UNIQ_COMMAND_ID] = SECRET_HASH
+      
+      # SEND INITIAL REQUEST FOR VERIFICATION TO REMOTE BOT
+      if L2_PROTOCOL and SEND_DATA:
+        ENCRYPT_SEECRET_DATA = '%s %s' % (INITIAL_FUNCTION, ENCRYPT_SEECRET_DATA)
+        
+      weechat.command(BUFFER, '%s %s %s %s %s' % (VERIFY_COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, ENCRYPT_SEECRET_DATA))
+      VERIFY_RESULT_VAL[UNIQ_COMMAND_ID] = weechat.hook_timer(TIMEOUT_COMMAND_SHORT*1000, 0, 1, 'function_verify_wait_result', UNIQ_COMMAND_ID)
+    else:
+      weechat.command(BUFFER, '%s %s %s %s ERROR IN INITIALIZATION VERIFICATION' % (VERIFY_COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID))
+      if UNIQ_COMMAND_ID in VERIFICATION_REPLY_EXPECT:
+        del VERIFICATION_REPLY_EXPECT[UNIQ_COMMAND_ID]
     
     return weechat.WEECHAT_RC_OK
   
@@ -2570,8 +2582,11 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
     
     UNIQ_COMMAND_ID = SOURCE_BOT_ID + COMMAND_ID
     
-    ENCRYPT_KEY1 = WRECON_REMOTE_BOTS_CONTROL[SOURCE_BOT_ID][0]
-    ENCRYPT_KEY2 = ''
+    ENCRYPT_KEY1   = WRECON_REMOTE_BOTS_CONTROL[SOURCE_BOT_ID][0]
+    ENCRYPT_KEY2   = ''
+    SEND_DATA      = ''
+    L2_PROTOCOL    = ''
+    ERROR          = False
     
     ENCRYPT_LEVEL  = get_target_level_01_encryption(SOURCE_BOT_ID)
     
@@ -2591,7 +2606,7 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
           ERROR          = True
           VERIFY_COMMAND = BUFFER_CMD_VAL_ERR
           display_message(BUFFER, '[%s] %s < PROTOCOL VIOLATION' % (COMMAND_ID, SOURCE_BOT_ID))
-
+        
         else:
           INITIAL_FUNCTION = SECRET_DATA
           SECRET_DATA      = COMMAND_ARGUMENTS_LIST.pop(0)
@@ -2600,7 +2615,7 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
           # Call the function for prepare all necessary variables
           ERROR, ENCRYPT_LEVEL, ENCRYPT_KEY1, ENCRYPT_KEY2, SEND_DATA = initial_function(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST)
       # Here we have DATA of REMOTE bot, we try verify by usual way with enhanced encryption
-
+      
       else:
         ENCRYPT_KEY2  = get_device_seecrets()
     
