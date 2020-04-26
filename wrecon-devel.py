@@ -2686,9 +2686,11 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
         SECRET_DATA   = COMMAND_ARGUMENTS_LIST[0]
         ENCRYPT_KEY1  = WRECON_BOT_KEY
         ENCRYPT_KEY2  = ''
-        
+        SEND_DATA     = ''
+        L2_PROTOCOL   = ''
+        ERROR         = False
+
         FINAL_VERIFICATION = True
-        ERROR              = False
         
         # PREPARE DATA IN CASE LEVEL IS HIGHER
         if ENCRYPT_LEVEL > 0:
@@ -2696,13 +2698,16 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
         # THEN WE PROCEED WITH ADDITIONAL VERIFICATION
           if SECRET_DATA in VERIFICATION_PROTOCOL:
             FINAL_VERIFICATION = False
-            INITIAL_FUNCTION = SECRET_DATA
-            SECRET_DATA      = COMMAND_ARGUMENTS_LIST.pop(0)
-            initial_function = VERIFICATION_PROTOCOL[INITIAL_FUNCTION][2]
-            L2_PROTOCOL      = VERIFICATION_PROTOCOL[INITIAL_FUNCTION][0]
+            INITIAL_FUNCTION   = SECRET_DATA
+            SECRET_DATA        = COMMAND_ARGUMENTS_LIST.pop(0)
+            initial_function   = VERIFICATION_PROTOCOL[INITIAL_FUNCTION][2]
+            L2_PROTOCOL        = VERIFICATION_PROTOCOL[INITIAL_FUNCTION][0]
             # Call the function for prepare all necessary variables
             ERROR, ENCRYPT_LEVEL, ENCRYPT_KEY1, ENCRYPT_KEY2, SEND_DATA = initial_function(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST)
         # HERE WE HAVE PROBABLY ALL NECESSARY DATA OF REMOTE BOT OF HIGHER LEVEL OF ENCRYPTION
+            if UNIQ_COMMAND_ID in VERIFY_RESULT_VAL:
+              weechat.unhook(VERIFY_RESULT_VAL[UNIQ_COMMAND_ID])
+              VERIFY_RESULT_VAL[UNIQ_COMMAND_ID] = weechat.hook_timer(TIMEOUT_COMMAND_SHORT*1000, 0, 1, 'function_verify_wait_result', UNIQ_COMMAND_ID)
           else:
             REMOTE_SECRET_SYSINFO, REMOTE_SECRET_KEY = get_remote_secret(WRECON_REMOTE_BOTS_GRANTED_SECRET, TARGET_BOT_ID)
             ENCRYPT_KEY2 = REMOTE_SECRET_SYSINFO
@@ -2710,20 +2715,13 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
         # HERE WE ENSURE DATA WILL BE DECRYPTED FOR ALL LEVELS OF ENCRYPTION
         if ERROR == False:
           DECRYPT_DATA  = string_decrypt(ENCRYPT_LEVEL, SECRET_DATA, ENCRYPT_KEY1, ENCRYPT_KEY2)
+        else:
+          FINAL_VERIFICATION = True
         
-        # HERE WE CONTINUE WITH ADDITIONAL VERIFICATION
-        if FINAL_VERIFICATION == False:
-        # BUT IN CASE ADDITIONAL VERIFICATION FAILED, THEN
-          if ERROR == True:
-            FINAL_VERIFICATION = True
-          else:
-            # TODO
-            pass
-          
         # NOW COMPARE DATA ARE EXPECTED RESULT
         if FINAL_VERIFICATION == True:
+          weechat.unhook(VERIFY_RESULT_VAL[UNIQ_COMMAND_ID])
           if DECRYPT_DATA == WAIT_FOR_REMOTE_DATA[UNIQ_COMMAND_ID]:
-            weechat.unhook(VERIFY_RESULT_VAL[UNIQ_COMMAND_ID])
             weechat.command(BUFFER, '%s %s %s %s VERIFICATION SUCCESSFUL' % (BUFFER_CMD_VAL_REA, SOURCE_BOT_ID, TARGET_BOT_ID, COMMAND_ID))
             
             # PREPERE DATA FOR SAVE
@@ -2738,6 +2736,8 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
               RECALL_FUNCTION(WEECHAT_DATA, BUFFER, SOURCE, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS, UNIQ_COMMAND_ID)
           else:
             weechat.command(BUFFER, '%s %s %s %s VERIFICATION FAILED' % (BUFFER_CMD_VAL_ERR, SOURCE_BOT_ID, TARGET_BOT_ID, COMMAND_ID))
+        else:
+          
     
     return weechat.WEECHAT_RC_OK
   
