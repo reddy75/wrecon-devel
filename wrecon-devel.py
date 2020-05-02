@@ -1601,7 +1601,7 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
     
     FUNCTION = ''
     
-    # FIRST WE CHECK COMMAND BELONG TO US OR ADVERTISEMENT WAS REQUESTED
+    # FIRST WE CHECK COMMAND BELONG TO US OR ADVERTISEMENT HAS BEEN REQUESTED
     COMMAND_CAN_BE_EXECUTED = function_validate_1_check_target_bot(SOURCE, COMMAND, TARGET_BOT_ID)
     
     # DEBUG
@@ -2653,29 +2653,70 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
   # Called from buffer, we are received data from remote BOT of our request
   
   def buffer_command_verify_2_result_received(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
-    global BUFFER_CMD_VAL_EXE, BUFFER_CMD_VAL_ERR, BUFFER_CMD_VAL_REA, BUFFER_CMD_VAL_REP, WRECON_REMOTE_BOTS_CONTROL, WAIT_FOR_REMOTE_DATA, VERIFY_RESULT_VAL, WRECON_REMOTE_BOTS_ADVERTISED
+    global BUFFER_CMD_VAL_ERR, BUFFER_CMD_VAL_REA, BUFFER_CMD_VAL_REP, WRECON_REMOTE_BOTS_CONTROL, WAIT_FOR_REMOTE_DATA, VERIFY_RESULT_VAL, WRECON_REMOTE_BOTS_ADVERTISED
     global ID_CALL_LOCAL, ID_CALL_REMOTE, WRECON_BOT_KEY, WRECON_BOT_ID, VERIFICATION_PROTOCOL, VERIFICATION_REPLY_EXPECT
     
     UNIQ_COMMAND_ID = SOURCE_BOT_ID + COMMAND_ID
     
+    
+    
     # ~ display_data('buffer_command_verify_2_result_received', WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST)
     
+    # CHECK WE REQUESTED VERIFICATION
+    ENCRYPT_LEVEL      = get_target_level_01_encryption(SOURCE_BOT_ID)
+    
+    ENCRYPT_KEY1       = WRECON_BOT_KEY
+    ENCRYPT_KEY2       = ''
+    SEND_DATA          = ''
+    L2_PROTOCOL        = ''
+    ERROR              = False
+    FINAL_VERIFICATION = True
+    
     # Check the result we received
-    # 
-    if COMMAND in [BUFFER_CMD_VAL_REA, BUFFER_CMD_VAL_ERR, BUFFER_CMD_VAL_REP]:
-      
-      if COMMAND == BUFFER_CMD_VAL_ERR:
-        OUT_MESSAGE = 'FAILED'
+    
+    SECRET_DATA   = COMMAND_ARGUMENTS_LIST[0]
+    
+    # Check verfication is new protocol with L2 verification
+    if ENCRYPT_LEVEL > 0:
+    # Check we expected L2 protocol
+      if not SECRET_DATA in VERIFICATION_PROTOCOL:
+        ENCRYPT_KEY2, REMOTE_SECRET_KEY = get_remote_secret(WRECON_REMOTE_BOTS_GRANTED_SECRET, SOURCE_BOT_ID)
       else:
-        OUT_MESSAGE = 'SUCCESSFUL'
+    # Also check L2 protocol is strictly followed
+        if SECRET_DATA in VERIFICATION_REPLY_EXPECT:
+          L2_PROTOCOL = SECRET_DATA
+          SECRET_DATA = COMMAND_ARGUMENTS_LIST[1]
+        else:
+          ERROR          = True
+          OUT_MESSAGE    = 'PROTOCOL VIOLATION'
+    
+    # Decrypt data and check HASH
+    if ERROR == False:
+      DECRYPT_DATA  = string_decrypt(ENCRYPT_LEVEL, SECRET_DATA, ENCRYPT_KEY1, ENCRYPT_KEY2).split(' ')
+    # Check HASH is correct
+      if not WAIT_FOR_REMOTE_DATA[UNIQ_COMMAND_ID] == DECRYPT_DATA[0]:
+        ERROR == True
+        OUT_MESSAGE    = 'VERIFICATION FAILED'
+      
+    # In case L2 protocol has been triggered, we need continue
+    if ERROR == False and L2_PROTOCOL:
+      pass
+    
+    # In case old verification method we only compare result
+    if ENCRYPT_LEVEL == 0:
+      pass
+    else:
+      pass
+    
+      if COMMAND == BUFFER_CMD_VAL_ERR:
+        display_message(BUFFER, '[%s] %s < VERIFICATION FAILED' % (COMMAND_ID, SOURCE_BOT_ID))
       
       # ~ if not SOURCE_BOT_ID == WRECON_BOT_ID:
         # ~ weechat.command(BUFFER, '%s %s %s %s EXECUTION ACCEPTED' % (BUFFER_CMD_VAL_REA, SOURCE_BOT_ID, TARGET_BOT_ID, COMMAND_ID))
-      # ~ display_message(BUFFER, '[%s] %s < VERIFICATION %s' % (COMMAND_ID, SOURCE_BOT_ID, OUT_MESSAGE))
-    else:
+    
+    if COMMAND in [BUFFER_CMD_VAL_REA, BUFFER_CMD_VAL_REP]:
     # Check we received result after timeout
-      if not UNIQ_COMMAND_ID in ID_CALL_LOCAL:
-        function_verify_refuse_data(BUFFER, COMMAND_ID, SOURCE_BOT_ID)
+     IK
       else:
     # PICK UP RESULT FROM REQUESTED REMOTE BOT
         ENCRYPT_LEVEL = get_target_level_01_encryption(SOURCE_BOT_ID)
