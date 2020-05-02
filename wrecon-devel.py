@@ -2658,7 +2658,8 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
     
     UNIQ_COMMAND_ID = SOURCE_BOT_ID + COMMAND_ID
     
-    
+    # Stop waiting for result, we received data
+    weechat.unhook(VERIFY_RESULT_VAL[UNIQ_COMMAND_ID])
     
     # ~ display_data('buffer_command_verify_2_result_received', WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST)
     
@@ -2684,28 +2685,42 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
       else:
     # Also check L2 protocol is strictly followed
         if SECRET_DATA in VERIFICATION_REPLY_EXPECT:
-          INITIAL_FUNCTION = SECRET_DATA
-          SECRET_DATA      = COMMAND_ARGUMENTS_LIST.pop(0)
-          initial_function = VERIFICATION_PROTOCOL[INITIAL_FUNCTION][2]
-          L2_PROTOCOL      = VERIFICATION_PROTOCOL[INITIAL_FUNCTION][0]
+          FINAL_VERIFICATION = False
+          INITIAL_FUNCTION   = SECRET_DATA
+          SECRET_DATA        = COMMAND_ARGUMENTS_LIST.pop(0)
+          initial_function   = VERIFICATION_PROTOCOL[INITIAL_FUNCTION][2]
+          L2_PROTOCOL        = VERIFICATION_PROTOCOL[INITIAL_FUNCTION][0]
           ERROR, ENCRYPT_LEVEL, ENCRYPT_KEY1, ENCRYPT_KEY2, SEND_DATA = initial_function(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST)
           if ERROR == True:
-            OUT_MESSAGE = SEND_DATA
+            OUT_MESSAGE        = SEND_DATA
+            FINAL_VERIFICATION = True
         else:
-          ERROR          = True
-          OUT_MESSAGE    = 'PROTOCOL VIOLATION'
+          ERROR              = True
+          OUT_MESSAGE        = 'PROTOCOL VIOLATION'
+          FINAL_VERIFICATION = True
     
     # Decrypt data and check HASH
     if ERROR == False:
       DECRYPT_DATA  = string_decrypt(ENCRYPT_LEVEL, SECRET_DATA, ENCRYPT_KEY1, ENCRYPT_KEY2).split(' ')
     # Check HASH is correct
       if not WAIT_FOR_REMOTE_DATA[UNIQ_COMMAND_ID] == DECRYPT_DATA[0]:
-        ERROR == True
-        OUT_MESSAGE    = 'VERIFICATION FAILED'
+        ERROR              = True
+        OUT_MESSAGE        = 'VERIFICATION FAILED'
+        FINAL_VERIFICATION = True
       
-    # In case L2 protocol has been triggered, we need continue
+    # We need finalize L0 protocol or continue with L2 protocol
     if ERROR == False:
-      if L2_PROTOCOL
+    # If it is final, we will (for Lx protocol)
+      if FINAL_VERIFICATION == False:
+        pass
+    # Here we continue witl L2 additional requests
+    # There was an error, we will end all requests
+    else:
+      pass
+    
+    # We will stop all
+    if FINAL_VERIFICATION == True:
+      pass
     
     # In case old verification method we only compare result
     if ENCRYPT_LEVEL == 0:
