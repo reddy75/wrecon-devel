@@ -2684,8 +2684,13 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
       else:
     # Also check L2 protocol is strictly followed
         if SECRET_DATA in VERIFICATION_REPLY_EXPECT:
-          L2_PROTOCOL = SECRET_DATA
-          SECRET_DATA = COMMAND_ARGUMENTS_LIST[1]
+          INITIAL_FUNCTION = SECRET_DATA
+          SECRET_DATA      = COMMAND_ARGUMENTS_LIST.pop(0)
+          initial_function = VERIFICATION_PROTOCOL[INITIAL_FUNCTION][2]
+          L2_PROTOCOL      = VERIFICATION_PROTOCOL[INITIAL_FUNCTION][0]
+          ERROR, ENCRYPT_LEVEL, ENCRYPT_KEY1, ENCRYPT_KEY2, SEND_DATA = initial_function(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST)
+          if ERROR == True:
+            OUT_MESSAGE = SEND_DATA
         else:
           ERROR          = True
           OUT_MESSAGE    = 'PROTOCOL VIOLATION'
@@ -2699,8 +2704,8 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
         OUT_MESSAGE    = 'VERIFICATION FAILED'
       
     # In case L2 protocol has been triggered, we need continue
-    if ERROR == False and L2_PROTOCOL:
-      pass
+    if ERROR == False:
+      if L2_PROTOCOL
     
     # In case old verification method we only compare result
     if ENCRYPT_LEVEL == 0:
