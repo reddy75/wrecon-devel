@@ -2653,7 +2653,7 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
   # Called from buffer, we are received data from remote BOT of our request
   
   def buffer_command_verify_2_result_received(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
-    global BUFFER_CMD_VAL_ERR, BUFFER_CMD_VAL_REA, BUFFER_CMD_VAL_REP, WRECON_REMOTE_BOTS_CONTROL, WAIT_FOR_REMOTE_DATA, VERIFY_RESULT_VAL, WRECON_REMOTE_BOTS_ADVERTISED
+    global BUFFER_CMD_VAL_ERR, BUFFER_CMD_VAL_REA, BUFFER_CMD_VAL_EXE, WRECON_REMOTE_BOTS_CONTROL, WAIT_FOR_REMOTE_DATA, VERIFY_RESULT_VAL, WRECON_REMOTE_BOTS_ADVERTISED
     global ID_CALL_LOCAL, ID_CALL_REMOTE, WRECON_BOT_KEY, WRECON_BOT_ID, VERIFICATION_PROTOCOL, VERIFICATION_REPLY_EXPECT
     
     UNIQ_COMMAND_ID = SOURCE_BOT_ID + COMMAND_ID
@@ -2672,6 +2672,7 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
     L2_PROTOCOL        = ''
     ERROR              = False
     FINAL_VERIFICATION = True
+    VERIFY_COMMAND     = BUFFER_CMD_VAL_REA
     
     # Check the result we received
     
@@ -2686,10 +2687,12 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
     # Also check L2 protocol is strictly followed
         if SECRET_DATA in VERIFICATION_REPLY_EXPECT:
           FINAL_VERIFICATION = False
+          VERIFY_COMMAND     = BUFFER_CMD_VAL_EXE
           INITIAL_FUNCTION   = SECRET_DATA
           SECRET_DATA        = COMMAND_ARGUMENTS_LIST.pop(0)
-          initial_function   = VERIFICATION_PROTOCOL[INITIAL_FUNCTION][2]
           L2_PROTOCOL        = VERIFICATION_PROTOCOL[INITIAL_FUNCTION][0]
+          L2_PROTOCOL_NEXT   = VERIFICATION_PROTOCOL[INITIAL_FUNCTION][1]
+          initial_function   = VERIFICATION_PROTOCOL[INITIAL_FUNCTION][2]
           ERROR, ENCRYPT_LEVEL, ENCRYPT_KEY1, ENCRYPT_KEY2, SEND_DATA = initial_function(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST)
           if ERROR == True:
             OUT_MESSAGE        = SEND_DATA
@@ -2707,127 +2710,31 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
         ERROR              = True
         OUT_MESSAGE        = 'VERIFICATION FAILED'
         FINAL_VERIFICATION = True
-      
-    # We need finalize L0 protocol or continue with L2 protocol
-    if ERROR == False:
-    # If it is final, we will (for Lx protocol)
-      if FINAL_VERIFICATION == False:
-        pass
-    # Here we continue witl L2 additional requests
-    # There was an error, we will end all requests
-    else:
-      pass
-    
-    # We will stop all
-    if FINAL_VERIFICATION == True:
-      pass
-    
-    # In case old verification method we only compare result
-    if ENCRYPT_LEVEL == 0:
-      pass
-    else:
-      pass
-    
-      if COMMAND == BUFFER_CMD_VAL_ERR:
-        display_message(BUFFER, '[%s] %s < VERIFICATION FAILED' % (COMMAND_ID, SOURCE_BOT_ID))
-      
-      # ~ if not SOURCE_BOT_ID == WRECON_BOT_ID:
-        # ~ weechat.command(BUFFER, '%s %s %s %s EXECUTION ACCEPTED' % (BUFFER_CMD_VAL_REA, SOURCE_BOT_ID, TARGET_BOT_ID, COMMAND_ID))
-    
-    if COMMAND in [BUFFER_CMD_VAL_REA, BUFFER_CMD_VAL_REP]:
-    # Check we received result after timeout
-     IK
+        VERIFY_COMMAND     = BUFFER_CMD_VAL_ERR
       else:
-    # PICK UP RESULT FROM REQUESTED REMOTE BOT
-        ENCRYPT_LEVEL = get_target_level_01_encryption(SOURCE_BOT_ID)
-        
-        # DEBUG
-        # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_2_result_received: ENCRYPT_LEVEL : %s' % ENCRYPT_LEVEL)
-        
-        SECRET_DATA   = COMMAND_ARGUMENTS_LIST[0]
-        ENCRYPT_KEY1  = WRECON_BOT_KEY
-        ENCRYPT_KEY2  = ''
-        SEND_DATA     = ''
-        L2_PROTOCOL   = ''
-        ERROR         = False
-
-        FINAL_VERIFICATION = True
-        
-        # PREPARE DATA IN CASE LEVEL IS HIGHER
-        if ENCRYPT_LEVEL > 0:
-        # AND IN CASE WE RECEIVED RESULT OF ADDITIONAL VERIFICATION,
-        # THEN WE PROCEED WITH ADDITIONAL VERIFICATION
-          if SECRET_DATA in VERIFICATION_PROTOCOL:
-            if not SECRET_DATA in VERIFICATION_REPLY_EXPECT:
-              ERROR          = True
-              VERIFY_COMMAND = BUFFER_CMD_VAL_ERR
-              display_message(BUFFER, '[%s] %s < PROTOCOL VIOLATION' % (COMMAND_ID, SOURCE_BOT_ID))
-            
-            else:
-              FINAL_VERIFICATION = False
-              INITIAL_FUNCTION   = SECRET_DATA
-              SECRET_DATA        = COMMAND_ARGUMENTS_LIST.pop(0)
-              initial_function   = VERIFICATION_PROTOCOL[INITIAL_FUNCTION][2]
-              L2_PROTOCOL        = VERIFICATION_PROTOCOL[INITIAL_FUNCTION][0]
-              # Call the function for prepare all necessary variables
-              ERROR, ENCRYPT_LEVEL, ENCRYPT_KEY1, ENCRYPT_KEY2, SEND_DATA = initial_function(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST)
-              # HERE WE HAVE PROBABLY ALL NECESSARY DATA OF REMOTE BOT OF HIGHER LEVEL OF ENCRYPTION
-
-          else:
-            REMOTE_SECRET_SYSINFO, REMOTE_SECRET_KEY = get_remote_secret(WRECON_REMOTE_BOTS_GRANTED_SECRET, TARGET_BOT_ID)
-            ENCRYPT_KEY2 = REMOTE_SECRET_SYSINFO
-        
-        # HERE WE ENSURE DATA WILL BE DECRYPTED FOR ALL LEVELS OF ENCRYPTION
-        if ERROR == False:
-          DECRYPT_DATA  = string_decrypt(ENCRYPT_LEVEL, SECRET_DATA, ENCRYPT_KEY1, ENCRYPT_KEY2)
-        else:
-          FINAL_VERIFICATION = True
-        
-        # NOW COMPARE DATA ARE EXPECTED RESULT
-        if FINAL_VERIFICATION == True:
-          weechat.unhook(VERIFY_RESULT_VAL[UNIQ_COMMAND_ID])
-          if DECRYPT_DATA == WAIT_FOR_REMOTE_DATA[UNIQ_COMMAND_ID]:
-            weechat.command(BUFFER, '%s %s %s %s VERIFICATION SUCCESSFUL' % (BUFFER_CMD_VAL_REA, SOURCE_BOT_ID, TARGET_BOT_ID, COMMAND_ID))
-            
-            # PREPERE DATA FOR SAVE
-            REMOTE_BOT_NAME    = WRECON_REMOTE_BOTS_ADVERTISED[SOURCE_BOT_ID].split('|')[0]
-            REMOTE_BOT_VERSION = WRECON_REMOTE_BOTS_ADVERTISED[SOURCE_BOT_ID].split('|')[1]
-            COMMAND_ARGUMENTS  = [REMOTE_BOT_NAME, '[v%s]' % REMOTE_BOT_VERSION]
-            function_verify_save_data(BUFFER, TAGS, PREFIX, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS)
-            
-            # Finally we can call back command after verification
-            if UNIQ_COMMAND_ID in WAIT_FOR_VERIFICATION:
-              RECALL_FUNCTION, WEECHAT_DATA, BUFFER, SOURCE, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS, UNIQ_COMMAND_ID = WAIT_FOR_VERIFICATION[UNIQ_COMMAND_ID]
-              RECALL_FUNCTION(WEECHAT_DATA, BUFFER, SOURCE, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS, UNIQ_COMMAND_ID)
-          else:
-            weechat.command(BUFFER, '%s %s %s %s VERIFICATION FAILED' % (BUFFER_CMD_VAL_ERR, SOURCE_BOT_ID, TARGET_BOT_ID, COMMAND_ID))
-        else:
-        # HERE WE CONTINUE WITH ADDITIONAL VERIFICATION
-          SECRET_DATA  = get_random_string(15)
-          SECRET_HASH  = get_hash(SECRET_DATA)
-          
-          if L2_PROTOCOL and SEND_DATA
-            PROTOCOL_KEYS  = list(VERIFICATION_PROTOCOL)
-            PROTOCOL_INDEX = PROTOCOL_KEYS.index(L2_PROTOCOL) + 1
-            
-            if PROTOCOL_INDEX <= len(PROTOCOL_KEYS):
-              SEND_DATX      = '%s %s' % (PROTOCOL_KEYS[PROTOCOL_INDEX], SEND_DATA)
-          
-          ENCRYPT_SEECRET_DATA                  = string_encrypt(ENCRYPT_LEVEL, SECRET_DATA, ENCRYPT_KEY1, ENCRYPT_KEY2)
-          WAIT_FOR_REMOTE_DATA[UNIQ_COMMAND_ID] = SECRET_HASH
-          
-          if L2_PROTOCOL and SEND_DATA:
-            SEND_DATX = '%s %s' % (PROTOCOL_KEYS[PROTOCOL_INDEX], ENCRYPT_SEECRET_DATA)
-          else:
-            
-            SEND_DATX = ENCRYPT_SEECRET_DATA
-          
-          weechat.command(BUFFER, '%s %s %s %s' % (BUFFER_CMD_VAL_EXE, SOURCE_BOT_ID, TARGET_BOT_ID, COMMAND_ID, SEND_DATAX))
-          
-          
-          if UNIQ_COMMAND_ID in VERIFY_RESULT_VAL:
-            weechat.unhook(VERIFY_RESULT_VAL[UNIQ_COMMAND_ID])
-            VERIFY_RESULT_VAL[UNIQ_COMMAND_ID] = weechat.hook_timer(TIMEOUT_COMMAND_SHORT*1000, 0, 1, 'function_verify_wait_result', UNIQ_COMMAND_ID)
+        OUT_MESSAGE        = 'VERIFICATION SUCCESSFUL'
+    else:
+      VERIFY_COMMAND = BUFFER_CMD_VAL_ERR
+      
+    # In case we need continue with verification, then we prepare next requests
+    if FINAL_VERIFICATION == False:
+      pass
+    # Here we have final verification, then we can stop all waiting tasks and requests
+    else:
+      display_message(BUFFER, '[%s] %s < %s' % (COMMAND_ID, SOURCE_BOT_ID, OUT_MESSAGE))
+      weechat.command(BUFFER, '%s %s %s %s' % (VERIFY_COMMAND, SOURCE_BOT_ID, TARGET_BOT_ID, COMMAND_ID, OUT_MESSAGE))
+      
+      # Cleanup all verification variables
+      if UNIQ_COMMAND_ID in WAIT_FOR_REMOTE_DATA:
+        del WAIT_FOR_REMOTE_DATA[UNIQ_COMMAND_ID]
+      
+      if UNIQ_COMMAND_ID in VERIFICATION_REPLY_EXPECT:
+        del VERIFICATION_REPLY_EXPECT[UNIQ_COMMAND_ID]
+      
+      # Here we call back command
+      if UNIQ_COMMAND_ID in WAIT_FOR_VERIFICATION:
+        recall_function, WEECHAT_DATA, BUFFER, SOURCE, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS, UNIQ_COMMAND_ID = WAIT_FOR_VERIFICATION[UNIQ_COMMAND_ID]
+        recall_function(WEECHAT_DATA, BUFFER, SOURCE, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS, UNIQ_COMMAND_ID)
     
     return weechat.WEECHAT_RC_OK
   
