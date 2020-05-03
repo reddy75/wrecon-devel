@@ -2546,7 +2546,8 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
         ENCRYPT_KEY2 = REMOTE_SECRET_SYSINFO
     
     if ERROR == False:
-      SECRET_DATA  = get_random_string(31)
+      RANDOM_NUMBER = random.randint(7,31)
+      SECRET_DATA  = get_random_string(RANDOM_NUMBER)
       SECRET_HASH  = get_hash(SECRET_DATA)
       
       if L2_PROTOCOL and SEND_DATA:
@@ -2659,7 +2660,9 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
     UNIQ_COMMAND_ID = SOURCE_BOT_ID + COMMAND_ID
     
     # Stop waiting for result, we received data
-    weechat.unhook(VERIFY_RESULT_VAL[UNIQ_COMMAND_ID])
+    if UNIQ_COMMAND_ID in VERIFY_RESULT_VAL:
+      weechat.unhook(VERIFY_RESULT_VAL[UNIQ_COMMAND_ID])
+      del VERIFY_RESULT_VAL[UNIQ_COMMAND_ID]
     
     # ~ display_data('buffer_command_verify_2_result_received', WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST)
     
@@ -2692,15 +2695,13 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
           SECRET_DATA        = COMMAND_ARGUMENTS_LIST.pop(0)
           L2_PROTOCOL        = VERIFICATION_PROTOCOL[INITIAL_FUNCTION][0]
           L2_PROTOCOL_NEXT   = VERIFICATION_PROTOCOL[INITIAL_FUNCTION][1]
-          initial_function   = VERIFICATION_PROTOCOL[INITIAL_FUNCTION][2]
-          ERROR, ENCRYPT_LEVEL, ENCRYPT_KEY1, ENCRYPT_KEY2, SEND_DATA = initial_function(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST)
+          protocol_function  = VERIFICATION_PROTOCOL[INITIAL_FUNCTION][2]
+          ERROR, ENCRYPT_LEVEL, ENCRYPT_KEY1, ENCRYPT_KEY2, SEND_DATA = protocol_function(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST)
           if ERROR == True:
             OUT_MESSAGE        = SEND_DATA
-            FINAL_VERIFICATION = True
         else:
           ERROR              = True
           OUT_MESSAGE        = 'PROTOCOL VIOLATION'
-          FINAL_VERIFICATION = True
     
     # Decrypt data and check HASH
     if ERROR == False:
@@ -2716,11 +2717,31 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
     else:
       VERIFY_COMMAND = BUFFER_CMD_VAL_ERR
       
-    # In case we need continue with verification, then we prepare next requests
+    # Here we continue in case we need follow L2 protocol for requesting next data
     if FINAL_VERIFICATION == False:
-      pass
+      # Here we will call again function with, but with DECRYPT_DATA
+      ERROR, ENCRYPT_LEVEL, ENCRYPT_KEY1, ENCRYPT_KEY2, SEND_DATA = protocol_function(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, DECRYPT_DATA)
+      # In case an error, we stop verifications
+      if ERROR == True:
+        FINAL_VERIFICATION = True
+        VERIFY_COMMAND     = BUFFER_CMD_VAL_ERR
+        OUT_MESSAGE        = SEND_DATA
+      # Request next verification
+      else:
+        RANDOM_NUMBER = random.randint(7,31)
+        SECRET_DATA  = get_random_string(RANDOM_NUMBER)
+        SECRET_HASH  = get_hash(SECRET_DATA)
+        
+        ENCRYPT_SEECRET_DATA                  = string_encrypt(ENCRYPT_LEVEL, SECRET_DATA, ENCRYPT_KEY1, ENCRYPT_KEY2)
+        WAIT_FOR_REMOTE_DATA[UNIQ_COMMAND_ID] = SECRET_HASH
+        
+        SEND_DATA = '%s %s' % (L2_PROTOCOL_NEXT, ENCRYPT_SEECRET_DATA)
+        
+        weechat.command(BUFFER, '%s %s %s %s' % (VERIFY_COMMAND, SOURCE_BOT_ID, TARGET_BOT_ID, COMMAND_ID, SEND_DATA))
+        VERIFY_RESULT_VAL[UNIQ_COMMAND_ID] = weechat.hook_timer(TIMEOUT_COMMAND_SHORT*1000, 0, 1, 'function_verify_wait_result', UNIQ_COMMAND_ID)
+    
     # Here we have final verification, then we can stop all waiting tasks and requests
-    else:
+    if FINAL_VERIFICATION == True:
       display_message(BUFFER, '[%s] %s < %s' % (COMMAND_ID, SOURCE_BOT_ID, OUT_MESSAGE))
       weechat.command(BUFFER, '%s %s %s %s' % (VERIFY_COMMAND, SOURCE_BOT_ID, TARGET_BOT_ID, COMMAND_ID, OUT_MESSAGE))
       
