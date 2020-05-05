@@ -2547,8 +2547,8 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
     
     if ERROR == False:
       RANDOM_NUMBER = random.randint(7,31)
-      SECRET_DATA  = get_random_string(RANDOM_NUMBER)
-      SECRET_HASH  = get_hash(SECRET_DATA)
+      SECRET_DATA   = get_random_string(RANDOM_NUMBER)
+      SECRET_HASH   = get_hash(SECRET_DATA)
       
       if L2_PROTOCOL and SEND_DATA:
         SECRET_DATA = '%s %s' % (SECRET_DATA, SEND_DATA)
@@ -2692,8 +2692,12 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
         if SECRET_DATA in VERIFICATION_REPLY_EXPECT:
           FINAL_VERIFICATION = False
           VERIFY_COMMAND     = BUFFER_CMD_VAL_EXE
-          INITIAL_FUNCTION   = SECRET_DATA
+          
+          # Pickup protocol function we need call for next request
+          INITIAL_FUNCTION   = VERIFICATION_PROTOCOL[SECRET_DATA][1]
+          
           SECRET_DATA        = COMMAND_ARGUMENTS_LIST.pop(0)
+          
           L2_PROTOCOL        = VERIFICATION_PROTOCOL[INITIAL_FUNCTION][0]
           L2_PROTOCOL_NEXT   = VERIFICATION_PROTOCOL[INITIAL_FUNCTION][1]
           protocol_function  = VERIFICATION_PROTOCOL[INITIAL_FUNCTION][2]
@@ -2712,13 +2716,13 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
       DECRYPT_DATA  = string_decrypt(ENCRYPT_LEVEL, SECRET_DATA, ENCRYPT_KEY1, ENCRYPT_KEY2)
     # Check HASH is correct of older version of remote client
       if ENCRYPT_LEVEL == 0:
-        if not WAIT_FOR_REMOTE_DATA[UNIQ_COMMAND_ID] == DECRYPT_DATA:
+        if WAIT_FOR_REMOTE_DATA[UNIQ_COMMAND_ID] == DECRYPT_DATA:
+          OUT_MESSAGE        = 'VERIFICATION SUCCESSFUL'
+        else:
           ERROR              = True
           OUT_MESSAGE        = 'VERIFICATION FAILED'
           FINAL_VERIFICATION = True
           VERIFY_COMMAND     = BUFFER_CMD_VAL_ERR
-        else:
-          OUT_MESSAGE        = 'VERIFICATION SUCCESSFUL'
     # Check HASH is correct of new version of remote client
       else:
         DECRYPT_DATA = DECRYPT_DATA.split(' ')
@@ -2728,13 +2732,13 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
         # In case this was first request and device of remote client has been changed,
         # then it always result verification failed
         # So we need request verification by additional secret key
-        # Here we start with L2 protocol by 6 function
+        # Here we start with L2 protocol by 6th of protocol function
           if not UNIQ_COMMAND_ID in VERIFICATION_REPLY_EXPECT:
             FINAL_VERIFICATION = False
             VERIFY_COMMAND     = BUFFER_CMD_VAL_EXE
             INITIAL_FUNCTION   = list(VERIFICATION_PROTOCOL)[6]
             L2_PROTOCOL        = VERIFICATION_PROTOCOL[INITIAL_FUNCTION][0]
-            L2_PROTOCOL_NEXT   = L2_PROTOCOL
+            L2_PROTOCOL_NEXT   = VERIFICATION_PROTOCOL[INITIAL_FUNCTION][1]
             protocol_function  = VERIFICATION_PROTOCOL[INITIAL_FUNCTION][2]
         # Here we know that additional verification has been triggered, but verification failed
           else:
@@ -2755,13 +2759,19 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
       # Request next verification
       else:
         RANDOM_NUMBER = random.randint(7,31)
-        SECRET_DATA  = get_random_string(RANDOM_NUMBER)
-        SECRET_HASH  = get_hash(SECRET_DATA)
+        SECRET_DATA   = get_random_string(RANDOM_NUMBER)
+        SECRET_HASH   = get_hash(SECRET_DATA)
+        
+        if L2_PROTOCOL_NEXT and SEND_DATA:
+          SECRET_DATA = '%s %s' % (SECRET_DATA, SEND_DATA)
         
         ENCRYPT_SEECRET_DATA                  = string_encrypt(ENCRYPT_LEVEL, SECRET_DATA, ENCRYPT_KEY1, ENCRYPT_KEY2)
         WAIT_FOR_REMOTE_DATA[UNIQ_COMMAND_ID] = SECRET_HASH
         
-        SEND_DATA = '%s %s' % (L2_PROTOCOL_NEXT, ENCRYPT_SEECRET_DATA)
+        if L2_PROTOCOL_NEXT:
+          SEND_DATA = '%s %s' % (L2_PROTOCOL, ENCRYPT_SEECRET_DATA)
+        else:
+          SEND_DATA = ENCRYPT_SEECRET_DATA
         
         weechat.command(BUFFER, '%s %s %s %s' % (VERIFY_COMMAND, SOURCE_BOT_ID, TARGET_BOT_ID, COMMAND_ID, SEND_DATA))
         VERIFY_RESULT_VAL[UNIQ_COMMAND_ID] = weechat.hook_timer(TIMEOUT_COMMAND_SHORT*1000, 0, 1, 'function_verify_wait_result', UNIQ_COMMAND_ID)
@@ -2858,7 +2868,7 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
   
   # 0 - ree (eer) - LOCAL -> REMOTE - verify KEY1
   def verify_protocol_0_ree(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
-    global VERIFICATION_PROTOCOL, VERIFICATION_REPLY_EXPECT, WRECON_BOT_KEY, WAIT_FOR_REMOTE_DATA
+    global VERIFICATION_PROTOCOL, VERIFICATION_REPLY_EXPECT, WRECON_BOT_KEY, WAIT_FOR_REMOTE_DATA, TEMPORARY_ENCRYPT_KEY1, TEMPORARY_ENCRYPT_KEY2
     
     UNIQ_COMMAND_ID = TARGET_BOT_ID + COMMAND_ID
     
@@ -2868,22 +2878,15 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
     ENCRYPT_LEVEL = VERIFICATION_PROTOCOL[L2_PROTOCOL][0]
     ENCRYPT_KEY1  = WRECON_BOT_KEY
     ENCRYPT_KEY2  = ''
+    SEND_DATA     = ''
     
-    SECRET_DATA  = get_random_string(31)
-    SECRET_HASH  = get_hash(SECRET_DATA)
-    
-    ENCRYPT_DATA = string_encrypt(ENCRYPT_LEVEL, SECRET_DATA, ENCRYPT_KEY1, ENCRYPT_KEY2)
-    
-    WAIT_FOR_REMOTE_DATA[UNIQ_COMMAND_ID]      = SECRET_HASH
     VERIFICATION_REPLY_EXPECT[UNIQ_COMMAND_ID] = VERIFICATION_PROTOCOL[L2_PROTOCOL][1]
-    
-    SEND_DATA = '%s %s' % (L2_PROTOCOL, ENCRYPT_DATA)
     
     return [ERROR, ENCRYPT_LEVEL, ENCRYPT_KEY1, ENCRYPT_KEY2, SEND_DATA]
   
   # 1 - eer (rre) - REMOTE -> LOCAL - verify KEY1
   def verify_protocol_1_eer(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
-    global VERIFICATION_PROTOCOL, VERIFICATION_REPLY_EXPECT, WRECON_REMOTE_BOTS_CONTROL
+    global VERIFICATION_PROTOCOL, VERIFICATION_REPLY_EXPECT, WRECON_REMOTE_BOTS_CONTROL, TEMPORARY_ENCRYPT_KEY1, TEMPORARY_ENCRYPT_KEY2
     
     UNIQ_COMMAND_ID = SOURCE_BOT_ID + COMMAND_ID
     
@@ -2893,6 +2896,7 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
     ENCRYPT_LEVEL = VERIFICATION_PROTOCOL[L2_PROTOCOL][0]
     ENCRYPT_KEY1  = WRECON_REMOTE_BOTS_CONTROL[SOURCE_BOT_ID]
     ENCRYPT_KEY2  = ''
+    SEND_DATA     = ''
     
     VERIFICATION_REPLY_EXPECT[UNIQ_COMMAND_ID] = VERIFICATION_PROTOCOL[L2_PROTOCOL][1]
     
@@ -2900,7 +2904,7 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
     
   # 2 - rre (ner) - LOCAL -> REMOTE - request for SYS
   def verify_protocol_2_rre(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
-    global VERIFICATION_PROTOCOL, VERIFICATION_REPLY_EXPECT, WRECON_BOT_KEY
+    global VERIFICATION_PROTOCOL, VERIFICATION_REPLY_EXPECT, WRECON_BOT_KEY, VERIFY_CALL_ORDER, TEMPORARY_ENCRYPT_KEY1, TEMPORARY_ENCRYPT_KEY2
     
     UNIQ_COMMAND_ID = SOURCE_BOT_ID + COMMAND_ID
     
@@ -2908,6 +2912,15 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
     ENCRYPT_LEVEL = VERIFICATION_PROTOCOL[L2_PROTOCOL][0]
     ENCRYPT_KEY1  = WRECON_BOT_KEY
     ENCRYPT_KEY2  = ''
+    SEND_DATA     = ''
+    
+    # First call
+    if not UNIQ_COMMAND_ID in VERIFY_CALL_ORDER:
+      VERIFY_CALL_ORDER[UNIQ_COMMAND_ID] = ''
+    # Second call
+    else:
+      # TODO
+      del VERIFY_CALL_ORDER[UNIQ_COMMAND_ID]
     
     VERIFICATION_REPLY_EXPECT[UNIQ_COMMAND_ID] = VERIFICATION_PROTOCOL[L2_PROTOCOL][1]
     
@@ -2915,25 +2928,51 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
   
   # 3 - ner (rnr) - REMOTE -> LOCAL - reply SYS
   def verify_protocol_3_ner(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
-    global VERIFICATION_PROTOCOL, VERIFICATION_REPLY_EXPECT
+    global VERIFICATION_PROTOCOL, VERIFICATION_REPLY_EXPECT, TEMPORARY_ENCRYPT_KEY1, TEMPORARY_ENCRYPT_KEY2
     
     UNIQ_COMMAND_ID = SOURCE_BOT_ID + COMMAND_ID
+    
+    L2_PROTOCOL   = list(VERIFICATION_PROTOCOL)[3]
+    ENCRYPT_LEVEL = VERIFICATION_PROTOCOL[L2_PROTOCOL][0]
+    ENCRYPT_KEY1  = WRECON_REMOTE_BOTS_CONTROL[SOURCE_BOT_ID]
+    ENCRYPT_KEY2  = ''
+    SEND_DATA     = ''
     
     return [ERROR, ENCRYPT_LEVEL, ENCRYPT_KEY1, ENCRYPT_KEY2, SEND_DATA]
   
   # 4 - rnr (nnr) - LOCAL -> REMOTE - request for BKEY
   def verify_protocol_4_rnr(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
-    global VERIFICATION_PROTOCOL, VERIFICATION_REPLY_EXPECT
+    global VERIFICATION_PROTOCOL, VERIFICATION_REPLY_EXPECT, VERIFY_CALL_ORDER, TEMPORARY_ENCRYPT_KEY1, TEMPORARY_ENCRYPT_KEY2
     
     UNIQ_COMMAND_ID = SOURCE_BOT_ID + COMMAND_ID
+    
+    L2_PROTOCOL   = list(VERIFICATION_PROTOCOL)[4]
+    ENCRYPT_LEVEL = VERIFICATION_PROTOCOL[L2_PROTOCOL][0]
+    ENCRYPT_KEY1  = WRECON_BOT_KEY
+    ENCRYPT_KEY2  = ''
+    SEND_DATA     = ''
+    
+    # First call
+    if not UNIQ_COMMAND_ID in VERIFY_CALL_ORDER:
+      VERIFY_CALL_ORDER[UNIQ_COMMAND_ID] = ''
+    # Second call
+    else:
+      # TODO
+      del VERIFY_CALL_ORDER[UNIQ_COMMAND_ID]
     
     return [ERROR, ENCRYPT_LEVEL, ENCRYPT_KEY1, ENCRYPT_KEY2, SEND_DATA]
   
-  # 5 - nnr ()    - REMOTE -> LOCAL - reply BKEY
+  # 5 - nnr (aaa) - REMOTE -> LOCAL - reply BKEY
   def verify_protocol_5_nnr(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
-    global VERIFICATION_PROTOCOL, VERIFICATION_REPLY_EXPECT
+    global VERIFICATION_PROTOCOL, VERIFICATION_REPLY_EXPECT, TEMPORARY_ENCRYPT_KEY1, TEMPORARY_ENCRYPT_KEY2
     
     UNIQ_COMMAND_ID = SOURCE_BOT_ID + COMMAND_ID
+    
+    L2_PROTOCOL   = list(VERIFICATION_PROTOCOL)[5]
+    ENCRYPT_LEVEL = VERIFICATION_PROTOCOL[L2_PROTOCOL][0]
+    ENCRYPT_KEY1  = WRECON_REMOTE_BOTS_CONTROL[SOURCE_BOT_ID]
+    ENCRYPT_KEY2  = ''
+    SEND_DATA     = ''
     
     return [ERROR, ENCRYPT_LEVEL, ENCRYPT_KEY1, ENCRYPT_KEY2, SEND_DATA]
   
@@ -2941,45 +2980,85 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
   
   # 6 - rvn (vnr) - LOCAL -> REMOTE
   def verify_protocol_6_rvn(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
-    global VERIFICATION_PROTOCOL, VERIFICATION_REPLY_EXPECT
+    global VERIFICATION_PROTOCOL, VERIFICATION_REPLY_EXPECT, TEMPORARY_ENCRYPT_KEY1, TEMPORARY_ENCRYPT_KEY2
     
     UNIQ_COMMAND_ID = TARGET_BOT_ID + COMMAND_ID
+    
+    L2_PROTOCOL   = list(VERIFICATION_PROTOCOL)[6]
+    ENCRYPT_LEVEL = VERIFICATION_PROTOCOL[L2_PROTOCOL][0]
+    ENCRYPT_KEY1  = WRECON_BOT_KEY
+    ENCRYPT_KEY2  = ''
+    SEND_DATA     = ''
     
     return [ERROR, ENCRYPT_LEVEL, ENCRYPT_KEY1, ENCRYPT_KEY2, SEND_DATA]
   
   # 7 - vnr (rsn) - REMOTE -> LOCAL
   def verify_protocol_7_vnr(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
-    global VERIFICATION_PROTOCOL, VERIFICATION_REPLY_EXPECT
+    global VERIFICATION_PROTOCOL, VERIFICATION_REPLY_EXPECT, TEMPORARY_ENCRYPT_KEY1, TEMPORARY_ENCRYPT_KEY2
     
     UNIQ_COMMAND_ID = SOURCE_BOT_ID + COMMAND_ID
     
+    L2_PROTOCOL   = list(VERIFICATION_PROTOCOL)[7]
+    ENCRYPT_LEVEL = VERIFICATION_PROTOCOL[L2_PROTOCOL][0]
+    ENCRYPT_KEY1  = WRECON_REMOTE_BOTS_CONTROL[SOURCE_BOT_ID]
+    ENCRYPT_KEY2  = ''
+    SEND_DATA     = ''
+    
     return [ERROR, ENCRYPT_LEVEL, ENCRYPT_KEY1, ENCRYPT_KEY2, SEND_DATA]
   
-  # 8 - rsn (Snr) - LOCAL -> REMOTE
+  # 8 - rsn (snr) - LOCAL -> REMOTE
   def verify_protocol_8_rsn(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
-    global VERIFICATION_PROTOCOL, VERIFICATION_REPLY_EXPECT
+    global VERIFICATION_PROTOCOL, VERIFICATION_REPLY_EXPECT, VERIFY_CALL_ORDER, TEMPORARY_ENCRYPT_KEY1, TEMPORARY_ENCRYPT_KEY2
     
     UNIQ_COMMAND_ID = SOURCE_BOT_ID + COMMAND_ID
+    ENCRYPT_LEVEL = VERIFICATION_PROTOCOL[L2_PROTOCOL][0]
+    ENCRYPT_KEY1  = WRECON_BOT_KEY
+    ENCRYPT_KEY2  = ''
+    SEND_DATA     = ''
+    
+    # First call
+    if not UNIQ_COMMAND_ID in VERIFY_CALL_ORDER:
+      VERIFY_CALL_ORDER[UNIQ_COMMAND_ID] = ''
+    # Second call
+    else:
+      # TODO
+      del VERIFY_CALL_ORDER[UNIQ_COMMAND_ID]
     
     return [ERROR, ENCRYPT_LEVEL, ENCRYPT_KEY1, ENCRYPT_KEY2, SEND_DATA]
   
-  # 9 - Snr ()    - REMOTE -> LOCAL
-  def verify_protocol_9_Snr(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
-    global VERIFICATION_PROTOCOL, VERIFICATION_REPLY_EXPECT
+  # 9 - snr (aaa) - REMOTE -> LOCAL
+  def verify_protocol_9_snr(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
+    global VERIFICATION_PROTOCOL, VERIFICATION_REPLY_EXPECT, TEMPORARY_ENCRYPT_KEY1, TEMPORARY_ENCRYPT_KEY2
     
     UNIQ_COMMAND_ID = SOURCE_BOT_ID + COMMAND_ID
+    
+    L2_PROTOCOL   = list(VERIFICATION_PROTOCOL)[8]
+    ENCRYPT_LEVEL = VERIFICATION_PROTOCOL[L2_PROTOCOL][0]
+    ENCRYPT_KEY1  = WRECON_REMOTE_BOTS_CONTROL[SOURCE_BOT_ID]
+    ENCRYPT_KEY2  = ''
+    SEND_DATA     = ''
     
     return [ERROR, ENCRYPT_LEVEL, ENCRYPT_KEY1, ENCRYPT_KEY2, SEND_DATA]
   
-  ### WHEN ALL VERIFICATIONS FAILED, WE END UP HERE
-  
-  # x - x (x)     - LOCAL -> REMOTE
-  def verify_protocol_X_x(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
-    global VERIFICATION_PROTOCOL, VERIFICATION_REPLY_EXPECT
+  # a -aaa ()     - LOCAL -> REMOTE (here we know we accepted all data after all verifications followed by protocol)
+  def verify_protocol_a_aee():
+    global VERIFICATION_PROTOCOL, VERIFICATION_REPLY_EXPECT, VERIFY_CALL_ORDER, TEMPORARY_ENCRYPT_KEY1, TEMPORARY_ENCRYPT_KEY2
     
     UNIQ_COMMAND_ID = SOURCE_BOT_ID + COMMAND_ID
+    ENCRYPT_LEVEL = VERIFICATION_PROTOCOL[L2_PROTOCOL][0]
+    ENCRYPT_KEY1  = WRECON_BOT_KEY
+    ENCRYPT_KEY2  = ''
+    SEND_DATA     = ''
     
-    return weechat.WEECHAT_RC_OK
+    # First call
+    if not UNIQ_COMMAND_ID in VERIFY_CALL_ORDER:
+      VERIFY_CALL_ORDER[UNIQ_COMMAND_ID] = ''
+    # Second call
+    else:
+      # TODO
+      del VERIFY_CALL_ORDER[UNIQ_COMMAND_ID]
+    
+    return [ERROR, ENCRYPT_LEVEL, ENCRYPT_KEY1, ENCRYPT_KEY2, SEND_DATA]
   
   #
   # VERIFY - SETUP VARIABLES
@@ -3015,7 +3094,12 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
     ARGUMENTS_REQUIRED_MINIMAL['VERIFY']           = 1
     ARGUMENTS_REQUIRED_MINIMAL[BUFFER_CMD_VAL_EXE] = 1
     
-    global VERIFICATION_PROTOCOL
+    global VERIFICATION_PROTOCOL, VERIFY_CALL_ORDER
+    VERIFY_CALL_ORDER = {}
+    
+    global TEMPORARY_ENCRYPT_KEY1, TEMPORARY_ENCRYPT_KEY2
+    TEMPORARY_ENCRYPT_KEY1 = {}
+    TEMPORARY_ENCRYPT_KEY2 = {}
     
     # Following variables are protocol for requesting information
     # There should be strict order of following IDs
@@ -3033,7 +3117,7 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
     VERIFICATION_PROTOCOL['rre'] = [1, 'ner', verify_protocol_2_rre]     # 2 Request SYS     - reDATA     - 1st initialisation - from local for SYS
     VERIFICATION_PROTOCOL['ner'] = [1, 'rnr', verify_protocol_3_ner]     # 3 Reply SYS       - neDATA     - 1st initialisation - from remote with SYS
     VERIFICATION_PROTOCOL['rnr'] = [2, 'nnr', verify_protocol_4_rnr]     # 4 Request BKEY    - nrDATA     - 1st initialisation - from local for BKEY
-    VERIFICATION_PROTOCOL['nnr'] = [2,  '',   verify_protocol_5_nnr]     # 5 Reply BKEY      - nnDATA     - 1st initialisation - from remote with BKEY
+    VERIFICATION_PROTOCOL['nnr'] = [2, 'aaa', verify_protocol_5_nnr]     # 5 Reply BKEY      - nnDATA     - 1st initialisation - from remote with BKEY
     
     # After 1st initialisation and transfer SYS and BKEY we have all data needed
     # Then we can verify with SYS automatically
@@ -3044,11 +3128,12 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
     # This we verify now
     VERIFICATION_PROTOCOL['rvn'] = [2, 'vnr', verify_protocol_6_rvn]     # 6 Request         - DATA       - verify with BKEY - from local
     VERIFICATION_PROTOCOL['vnr'] = [2, 'rsn', verify_protocol_7_vnr]     # 7 Reply           - DATA       - verify with BKEY - reply from remote
-    VERIFICATION_PROTOCOL['rsn'] = [2, 'Snr', verify_protocol_8_rsn]     # 6 Request new SYS - DATA       - from local for new SYS
-    VERIFICATION_PROTOCOL['Snr'] = [2,  '',   verify_protocol_9_Snr]     # 7 Reply new SYS   - SnDATA     - from remote with new SYS
+    VERIFICATION_PROTOCOL['rsn'] = [2, 'snr', verify_protocol_8_rsn]     # 8 Request new SYS - DATA       - from local for new SYS
+    VERIFICATION_PROTOCOL['snr'] = [2, 'aaa', verify_protocol_9_snr]     # 9 Reply new SYS   - snDATA     - from remote with new SYS
     
-    # In case all verifications failed again, then all is refused
-    VERIFICATION_PROTOCOL['x']   = [2,  'x',  verify_protocol_X_x]       # 8 Request/Reply   - DATA       - from local to remote
+    # Latest function is called when all verifications were successful, we save new data
+    VERIFICATION_PROTOCOL['aaa'] = [2, '',    verify_protocol_a_aee]     # a Accepted BKEY or SYS
+    
     
     global VERIFICATION_INITIAL
     VERIFICATION_INITIAL = [list(VERIFICATION_PROTOCOL)[0], list(VERIFICATION_PROTOCOL)[6]]
