@@ -2688,7 +2688,7 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
       if not SECRET_DATA in VERIFICATION_PROTOCOL:
         ENCRYPT_KEY2, REMOTE_SECRET_KEY = get_remote_secret(WRECON_REMOTE_BOTS_GRANTED_SECRET, SOURCE_BOT_ID)
       else:
-    # Also check L2 protocol is strictly followed
+    # If yes, we check L2 protocol is strictly followed
         if SECRET_DATA in VERIFICATION_REPLY_EXPECT:
           FINAL_VERIFICATION = False
           VERIFY_COMMAND     = BUFFER_CMD_VAL_EXE
@@ -2697,7 +2697,7 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
           L2_PROTOCOL        = VERIFICATION_PROTOCOL[INITIAL_FUNCTION][0]
           L2_PROTOCOL_NEXT   = VERIFICATION_PROTOCOL[INITIAL_FUNCTION][1]
           protocol_function  = VERIFICATION_PROTOCOL[INITIAL_FUNCTION][2]
-          ERROR, ENCRYPT_LEVEL, ENCRYPT_KEY1, ENCRYPT_KEY2, SEND_DATA = protocol_function(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST)
+          ERROR, ENCRYPT_LEVEL, ENCRYPT_KEY1, ENCRYPT_KEY2, SEND_DATA = protocol_function(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, SECRET_DATA)
           if ERROR == True:
             OUT_MESSAGE      = SEND_DATA
         else:
@@ -2709,10 +2709,10 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
       VERIFY_COMMAND = BUFFER_CMD_VAL_ERR
     else:
     # If not ERROR occured, then decrypt data and check HASH
-      DECRYPT_DATA  = string_decrypt(ENCRYPT_LEVEL, SECRET_DATA, ENCRYPT_KEY1, ENCRYPT_KEY2).split(' ')
+      DECRYPT_DATA  = string_decrypt(ENCRYPT_LEVEL, SECRET_DATA, ENCRYPT_KEY1, ENCRYPT_KEY2)
     # Check HASH is correct of older version of remote client
       if ENCRYPT_LEVEL == 0:
-        if not WAIT_FOR_REMOTE_DATA[UNIQ_COMMAND_ID] == DECRYPT_DATA[0]:
+        if not WAIT_FOR_REMOTE_DATA[UNIQ_COMMAND_ID] == DECRYPT_DATA:
           ERROR              = True
           OUT_MESSAGE        = 'VERIFICATION FAILED'
           FINAL_VERIFICATION = True
@@ -2721,12 +2721,14 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
           OUT_MESSAGE        = 'VERIFICATION SUCCESSFUL'
     # Check HASH is correct of new version of remote client
       else:
+        DECRYPT_DATA = DECRYPT_DATA.split(' ')
         if WAIT_FOR_REMOTE_DATA[UNIQ_COMMAND_ID] == DECRYPT_DATA[0]:
           OUT_MESSAGE        = 'VERIFICATION SUCCESSFUL'
         else:
         # In case this was first request and device of remote client has been changed,
         # then it always result verification failed
         # So we need request verification by additional secret key
+        # Here we start with L2 protocol by 6 function
           if not UNIQ_COMMAND_ID in VERIFICATION_REPLY_EXPECT:
             FINAL_VERIFICATION = False
             VERIFY_COMMAND     = BUFFER_CMD_VAL_EXE
@@ -2734,12 +2736,6 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
             L2_PROTOCOL        = VERIFICATION_PROTOCOL[INITIAL_FUNCTION][0]
             L2_PROTOCOL_NEXT   = L2_PROTOCOL
             protocol_function  = VERIFICATION_PROTOCOL[INITIAL_FUNCTION][2]
-            # Call the function for prepare all necessary variables
-            ERROR, ENCRYPT_LEVEL, ENCRYPT_KEY1, ENCRYPT_KEY2, SEND_DATA = protocol_function(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST)
-            if ERROR == True:
-              FINAL_VERIFICATION = True
-              VERIFY_COMMAND     = BUFFER_CMD_VAL_ERR
-              OUT_MESSAGE        = SEND_DATA
         # Here we know that additional verification has been triggered, but verification failed
           else:
             ERROR              = True
