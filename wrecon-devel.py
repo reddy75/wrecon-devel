@@ -2535,8 +2535,8 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
       # If we have no DATA of REMOTE bot, then it is first initialisation
       if REMOTE_SECRET_SYSINFO == '':
         INITIAL_FUNCTION  = list(VERIFICATION_PROTOCOL)[0]
-        protocol_function = VERIFICATION_PROTOCOL[INITIAL_FUNCTION][2]
         L2_PROTOCOL       = VERIFICATION_PROTOCOL[INITIAL_FUNCTION][0]
+        protocol_function = VERIFICATION_PROTOCOL[INITIAL_FUNCTION][2]
         # Call the function for prepare all necessary variables
         ERROR, ENCRYPT_LEVEL, ENCRYPT_KEY1, ENCRYPT_KEY2, SEND_DATA = protocol_function(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST)
         if ERROR == True:
@@ -2610,9 +2610,9 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
         
         else:
           INITIAL_FUNCTION = SECRET_DATA
-          SECRET_DATA      = COMMAND_ARGUMENTS_LIST.pop(0)
-          initial_function = VERIFICATION_PROTOCOL[INITIAL_FUNCTION][2]
+          SECRET_DATA      = COMMAND_ARGUMENTS_LIST.pop(0)[0]
           L2_PROTOCOL      = VERIFICATION_PROTOCOL[INITIAL_FUNCTION][0]
+          initial_function = VERIFICATION_PROTOCOL[INITIAL_FUNCTION][2]
           # Call the function for prepare all necessary variables
           ERROR, ENCRYPT_LEVEL, ENCRYPT_KEY1, ENCRYPT_KEY2, SEND_DATA = initial_function(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST)
       # Here we have DATA of REMOTE bot, we try verify by usual way with enhanced encryption
@@ -2880,6 +2880,17 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
     ENCRYPT_KEY2  = ''
     SEND_DATA     = ''
     
+    # Prepare temporary random keys
+    RANDOM_NUMBER = random.randint(7,15)
+    TEMPORARY_ENCRYPT_KEY1[UNIQ_COMMAND_ID] = get_random_string(RANDOM_NUMBER)
+    RANDOM_NUMBER = random.randint(7,15)
+    TEMPORARY_ENCRYPT_KEY2[UNIQ_COMMAND_ID] = get_random_string(RANDOM_NUMBER)
+    
+    # Prepare keys as data
+    OUT_DATA = '%s %s' % (TEMPORARY_ENCRYPT_KEY1[UNIQ_COMMAND_ID], TEMPORARY_ENCRYPT_KEY2[UNIQ_COMMAND_ID])
+    # And encrypt it
+    SEND_DATA = string_encrypt(1, OUT_DATA, ENCRYPT_KEY1, ENCRYPT_KEY2)
+    
     VERIFICATION_REPLY_EXPECT[UNIQ_COMMAND_ID] = VERIFICATION_PROTOCOL[L2_PROTOCOL][1]
     
     return [ERROR, ENCRYPT_LEVEL, ENCRYPT_KEY1, ENCRYPT_KEY2, SEND_DATA]
@@ -2898,6 +2909,13 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
     ENCRYPT_KEY2  = ''
     SEND_DATA     = ''
     
+    # We received new keys (in encrypted form), we need decrypt, and save them for later use
+    SECRET_DATA = COMMAND_ARGUMENTS_LIST.pop(0)[0]
+    OUT_DATA = string_decrypt(1, SECRET_DATA, ENCRYPT_KEY1, ENCRYPT_KEY2)
+    KEY_DATA = SECRET_DATA.split(' ')
+    TEMPORARY_ENCRYPT_KEY1 = KEY_DATA[0]
+    TEMPORARY_ENCRYPT_KEY2 = KEY_DATA[1]
+    
     VERIFICATION_REPLY_EXPECT[UNIQ_COMMAND_ID] = VERIFICATION_PROTOCOL[L2_PROTOCOL][1]
     
     return [ERROR, ENCRYPT_LEVEL, ENCRYPT_KEY1, ENCRYPT_KEY2, SEND_DATA]
@@ -2905,6 +2923,7 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
   # 2 - rre (ner) - LOCAL -> REMOTE - request for SYS
   def verify_protocol_2_rre(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
     global VERIFICATION_PROTOCOL, VERIFICATION_REPLY_EXPECT, WRECON_BOT_KEY, VERIFY_CALL_ORDER, TEMPORARY_ENCRYPT_KEY1, TEMPORARY_ENCRYPT_KEY2
+    global WRECON_REMOTE_BOTS_GRANTED_SEECRET
     
     UNIQ_COMMAND_ID = SOURCE_BOT_ID + COMMAND_ID
     
@@ -2919,7 +2938,20 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
       VERIFY_CALL_ORDER[UNIQ_COMMAND_ID] = ''
     # Second call
     else:
-      # TODO
+      # Now we use our temporary keys, we sent by first request to remote PC
+      # Keys will be used for next requests now
+      # Also this is the way how to ensure symetric encryption more secure
+      ENCRYPT_KEY1 = TEMPORARY_ENCRYPT_KEY1[UNIQ_COMMAND_ID]
+      ENCRYPT_KEY2 = TEMPORARY_ENCRYPT_KEY2[UNIQ_COMMAND_ID]
+      
+      # Also prepare BKEY and send to remote PC
+      
+      SYS_DATA, BKEY_DATA = get_remote_secret(WRECON_REMOTE_BOTS_GRANTED_SEECRET, SOURCE_BOT_ID)
+      
+      RANDOM_NUMBER = random.randint(7,15)
+      BKEY_DATA     = get_random_string(RANDOM_NUMBER)
+      WRECON_REMOTE_BOTS_GRANTED_SEECRET[SOURCE_BOT_ID] = [SYS_DATA, BKEY_DATA]
+      
       del VERIFY_CALL_ORDER[UNIQ_COMMAND_ID]
     
     VERIFICATION_REPLY_EXPECT[UNIQ_COMMAND_ID] = VERIFICATION_PROTOCOL[L2_PROTOCOL][1]
@@ -3060,6 +3092,19 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
     
     return [ERROR, ENCRYPT_LEVEL, ENCRYPT_KEY1, ENCRYPT_KEY2, SEND_DATA]
   
+  # GET REMOTE SECRET
+  
+  def get_remote_secret(REMOTE_SECRET_LIST, REMOTE_ID):
+    
+    SYS_DATA  = ''
+    BKEY_DATA = ''
+    
+    if REMOTE_ID in REMOTE_SECRET_LIST:
+      SYS_DATA  = REMOTE_SECRET_LIST[REMOTE_ID][0]
+      BKEY_DATA = REMOTE_SECRET_LIST[REMOTE_ID][1]
+      
+    return [BKEY_DATA, SYS_DATA]
+  
   #
   # VERIFY - SETUP VARIABLES
   #
@@ -3114,8 +3159,8 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
     #                               |    |           | 
     VERIFICATION_PROTOCOL['ree'] = [1, 'eer', verify_protocol_0_ree]     # 0 Request         - DATA       - 1st initialisation - from local
     VERIFICATION_PROTOCOL['eer'] = [1, 'rre', verify_protocol_1_eer]     # 1 Reply           - DATA       - 1st initialisation - reply from remote
-    VERIFICATION_PROTOCOL['rre'] = [1, 'ner', verify_protocol_2_rre]     # 2 Request SYS     - reDATA     - 1st initialisation - from local for SYS
-    VERIFICATION_PROTOCOL['ner'] = [1, 'rnr', verify_protocol_3_ner]     # 3 Reply SYS       - neDATA     - 1st initialisation - from remote with SYS
+    VERIFICATION_PROTOCOL['rre'] = [2, 'ner', verify_protocol_2_rre]     # 2 Request SYS     - reDATA     - 1st initialisation - from local for SYS
+    VERIFICATION_PROTOCOL['ner'] = [2, 'rnr', verify_protocol_3_ner]     # 3 Reply SYS       - neDATA     - 1st initialisation - from remote with SYS
     VERIFICATION_PROTOCOL['rnr'] = [2, 'nnr', verify_protocol_4_rnr]     # 4 Request BKEY    - nrDATA     - 1st initialisation - from local for BKEY
     VERIFICATION_PROTOCOL['nnr'] = [2, 'aaa', verify_protocol_5_nnr]     # 5 Reply BKEY      - nnDATA     - 1st initialisation - from remote with BKEY
     
