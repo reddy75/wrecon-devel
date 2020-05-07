@@ -2626,7 +2626,10 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
       # 1. DATA ARE DECRYPTED
       DECRYPT_SEECRET_DATA = string_decrypt(ENCRYPT_LEVEL, SECRET_DATA, ENCRYPT_KEY1, ENCRYPT_KEY2)
       # 2. GET HASH OF DECRYPTED DATA
-      HASH_DATA            = get_hash(DECRYPT_SEECRET_DATA)
+      if L2_PROTOCOL:
+        HASH_DATA          = get_hash(DECRYPT_SEECRET_DATA.split(' ')[0])
+      else:
+        HASH_DATA          = get_hash(DECRYPT_SEECRET_DATA)
       # DEBUG
       # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_1_requested: SEECRET : %s : %s' % (HASH_DATA, DECRYPT_SEECRET_DATA))
       # 3. ENCRYPT HASH
@@ -2889,7 +2892,7 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
     # Prepare keys as data
     OUT_DATA = '%s %s' % (TEMPORARY_ENCRYPT_KEY1[UNIQ_COMMAND_ID], TEMPORARY_ENCRYPT_KEY2[UNIQ_COMMAND_ID])
     # And encrypt it
-    SEND_DATA = string_encrypt(1, OUT_DATA, ENCRYPT_KEY1, ENCRYPT_KEY2)
+    SEND_DATA = string_encrypt(ENCRYPT_LEVEL, OUT_DATA, ENCRYPT_KEY1, ENCRYPT_KEY2)
     
     VERIFICATION_REPLY_EXPECT[UNIQ_COMMAND_ID] = VERIFICATION_PROTOCOL[L2_PROTOCOL][1]
     
@@ -2911,7 +2914,7 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
     
     # We received new keys (in encrypted form), we need decrypt, and save them for later use
     SECRET_DATA = COMMAND_ARGUMENTS_LIST.pop(0)[0]
-    OUT_DATA = string_decrypt(1, SECRET_DATA, ENCRYPT_KEY1, ENCRYPT_KEY2)
+    OUT_DATA = string_decrypt(ENCRYPT_LEVEL, SECRET_DATA, ENCRYPT_KEY1, ENCRYPT_KEY2)
     KEY_DATA = SECRET_DATA.split(' ')
     TEMPORARY_ENCRYPT_KEY1 = KEY_DATA[0]
     TEMPORARY_ENCRYPT_KEY2 = KEY_DATA[1]
@@ -2951,7 +2954,7 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
       BKEY_DATA     = get_random_string(RANDOM_NUMBER)
       WRECON_REMOTE_BOTS_GRANTED_SEECRET[SOURCE_BOT_ID] = [SYS_DATA, BKEY_DATA]
       
-      SEND_DATA = string_encrypt(2, BKEY_DATA, ENCRYPT_KEY1, ENCRYPT_KEY2)
+      SEND_DATA = string_encrypt(ENCRYPT_LEVEL, BKEY_DATA, ENCRYPT_KEY1, ENCRYPT_KEY2)
       
       del VERIFY_CALL_ORDER[UNIQ_COMMAND_ID]
     
@@ -2973,6 +2976,15 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
     SEND_DATA     = ''
     
     # We also received new BKEY in encrypted form
+    RECEIVED_DATA  = COMMAND_ARGUMENTS_LIST.pop(0)[0]
+    DECRYPTED_DATA = string_decrypt(ENCRYPT_LEVEL, RECEIVED_DATA, ENCRYPT_KEY1, ENCRYPT_KEY2)
+    
+    BKEY_DATA      = DECRYPTED_DATA.split(' ')[1]
+    SYS_DATA       = get_device_seecrets()
+    
+    WRECON_REMOTE_BOTS_CONTROL_SECRET[SOURCE_BOT_ID] = BKEY_DATA
+    
+    SEND_DATA      = string_encrypt(ENCRYPT_LEVEL, SYS_DATA, ENCRYPT_KEY1, ENCRYPT_KEY2)
     
     return [ERROR, ENCRYPT_LEVEL, ENCRYPT_KEY1, ENCRYPT_KEY2, SEND_DATA]
   
