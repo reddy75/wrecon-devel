@@ -2988,45 +2988,9 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
     
     return [ERROR, ENCRYPT_LEVEL, ENCRYPT_KEY1, ENCRYPT_KEY2, SEND_DATA]
   
-  # 4 - rnr (nnr) - LOCAL -> REMOTE - request for BKEY
-  def verify_protocol_4_rnr(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
-    global VERIFICATION_PROTOCOL, VERIFICATION_REPLY_EXPECT, VERIFY_CALL_ORDER, TEMPORARY_ENCRYPT_KEY1, TEMPORARY_ENCRYPT_KEY2
-    
-    UNIQ_COMMAND_ID = SOURCE_BOT_ID + COMMAND_ID
-    
-    L2_PROTOCOL   = list(VERIFICATION_PROTOCOL)[4]
-    ENCRYPT_LEVEL = VERIFICATION_PROTOCOL[L2_PROTOCOL][0]
-    ENCRYPT_KEY1  = WRECON_BOT_KEY
-    ENCRYPT_KEY2  = ''
-    SEND_DATA     = ''
-    
-    # First call
-    if not UNIQ_COMMAND_ID in VERIFY_CALL_ORDER:
-      VERIFY_CALL_ORDER[UNIQ_COMMAND_ID] = ''
-    # Second call
-    else:
-      # TODO
-      del VERIFY_CALL_ORDER[UNIQ_COMMAND_ID]
-    
-    return [ERROR, ENCRYPT_LEVEL, ENCRYPT_KEY1, ENCRYPT_KEY2, SEND_DATA]
-  
-  # 5 - nnr (aaa) - REMOTE -> LOCAL - reply BKEY
-  def verify_protocol_5_nnr(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
-    global VERIFICATION_PROTOCOL, VERIFICATION_REPLY_EXPECT, TEMPORARY_ENCRYPT_KEY1, TEMPORARY_ENCRYPT_KEY2
-    
-    UNIQ_COMMAND_ID = SOURCE_BOT_ID + COMMAND_ID
-    
-    L2_PROTOCOL   = list(VERIFICATION_PROTOCOL)[5]
-    ENCRYPT_LEVEL = VERIFICATION_PROTOCOL[L2_PROTOCOL][0]
-    ENCRYPT_KEY1  = WRECON_REMOTE_BOTS_CONTROL[SOURCE_BOT_ID]
-    ENCRYPT_KEY2  = ''
-    SEND_DATA     = ''
-    
-    return [ERROR, ENCRYPT_LEVEL, ENCRYPT_KEY1, ENCRYPT_KEY2, SEND_DATA]
-  
   #### FOLLOWING VERIFICATION IS FOR EXISTING DATA ABOUT REMOTE BOT, BUT DEVICE HAS BEEN CHANGED
   
-  # 6 - rvn (vnr) - LOCAL -> REMOTE
+  # 4 - rvn (vnr) - LOCAL -> REMOTE
   def verify_protocol_4_rvn(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
     global VERIFICATION_PROTOCOL, VERIFICATION_REPLY_EXPECT, TEMPORARY_ENCRYPT_KEY1, TEMPORARY_ENCRYPT_KEY2
     
@@ -3040,7 +3004,7 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
     
     return [ERROR, ENCRYPT_LEVEL, ENCRYPT_KEY1, ENCRYPT_KEY2, SEND_DATA]
   
-  # 7 - vnr (rsn) - REMOTE -> LOCAL
+  # 5 - vnr (rsn) - REMOTE -> LOCAL
   def verify_protocol_5_vnr(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
     global VERIFICATION_PROTOCOL, VERIFICATION_REPLY_EXPECT, TEMPORARY_ENCRYPT_KEY1, TEMPORARY_ENCRYPT_KEY2
     
@@ -3054,7 +3018,7 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
     
     return [ERROR, ENCRYPT_LEVEL, ENCRYPT_KEY1, ENCRYPT_KEY2, SEND_DATA]
   
-  # 8 - rsn (snr) - LOCAL -> REMOTE
+  # 6 - rsn (snr) - LOCAL -> REMOTE
   def verify_protocol_6_rsn(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
     global VERIFICATION_PROTOCOL, VERIFICATION_REPLY_EXPECT, VERIFY_CALL_ORDER, TEMPORARY_ENCRYPT_KEY1, TEMPORARY_ENCRYPT_KEY2
     
@@ -3074,7 +3038,7 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
     
     return [ERROR, ENCRYPT_LEVEL, ENCRYPT_KEY1, ENCRYPT_KEY2, SEND_DATA]
   
-  # 9 - snr (aaa) - REMOTE -> LOCAL
+  # 7 - snr (aaa) - REMOTE -> LOCAL
   def verify_protocol_7_snr(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
     global VERIFICATION_PROTOCOL, VERIFICATION_REPLY_EXPECT, TEMPORARY_ENCRYPT_KEY1, TEMPORARY_ENCRYPT_KEY2
     
@@ -3089,7 +3053,7 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
     return [ERROR, ENCRYPT_LEVEL, ENCRYPT_KEY1, ENCRYPT_KEY2, SEND_DATA]
   
   # a -aaa ()     - LOCAL -> REMOTE (here we know we accepted all data after all verifications followed by protocol)
-  def verify_protocol_a_aee():
+  def verify_protocol_a_aee(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
     global VERIFICATION_PROTOCOL, VERIFICATION_REPLY_EXPECT, VERIFY_CALL_ORDER, TEMPORARY_ENCRYPT_KEY1, TEMPORARY_ENCRYPT_KEY2
     
     UNIQ_COMMAND_ID = SOURCE_BOT_ID + COMMAND_ID
@@ -3119,7 +3083,7 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
       SYS_DATA  = REMOTE_SECRET_LIST[REMOTE_ID][0]
       BKEY_DATA = REMOTE_SECRET_LIST[REMOTE_ID][1]
       
-    return [BKEY_DATA, SYS_DATA]
+    return [SYS_DATA, BKEY_DATA, ]
   
   #
   # VERIFY - SETUP VARIABLES
@@ -3173,31 +3137,25 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
     #                               |    |
     #                               |    |           +- Call function
     #                               |    |           | 
-    VERIFICATION_PROTOCOL['ree'] = [1, 'eer', verify_protocol_0_ree]     # 0 Request         - DATA       - 1st initialisation - from local
-    VERIFICATION_PROTOCOL['eer'] = [1, 'rre', verify_protocol_1_eer]     # 1 Reply           - DATA       - 1st initialisation - reply from remote
+    VERIFICATION_PROTOCOL['ree'] = [1, 'eer', verify_protocol_0_ree]     # 0 Request         - DATA       - 1st initialisation - from local           + new TEMPKEYS send
+    VERIFICATION_PROTOCOL['eer'] = [1, 'rre', verify_protocol_1_eer]     # 1 Reply           - DATA       - 1st initialisation - reply from remote    + new TEMPKEYS received
     VERIFICATION_PROTOCOL['rre'] = [2, 'ner', verify_protocol_2_rre]     # 2 Request SYS     - reDATA     - 1st initialisation - from local for SYS   + new BKEY send
     VERIFICATION_PROTOCOL['ner'] = [2, 'aaa', verify_protocol_3_ner]     # 3 Reply SYS       - neDATA     - 1st initialisation - from remote with SYS + new BKEY received
-    # ~ VERIFICATION_PROTOCOL['rnr'] = [2, 'nnr', verify_protocol_4_rnr]     # 4 Request BKEY    - nrDATA     - 1st initialisation - from local for BKEY
-    # ~ VERIFICATION_PROTOCOL['nnr'] = [2, 'aaa', verify_protocol_5_nnr]     # 5 Reply BKEY      - nnDATA     - 1st initialisation - from remote with BKEY
-    
-    # After 1st initialisation and transfer SYS and BKEY we have all data needed
-    # Then we can verify with SYS automatically
-    #VERIFICATION_PROTOCOL['']    = [2,  '', 'rvn', verify_protocol_6]         # 6 Request/Reply   - DATA      - from local and remote
-    
+
     # In case verification failed, then we try BKEY as backup verification
     # It is possible that remote system can by running on flashdisk and was changed to different hardware
     # This we verify now
-    VERIFICATION_PROTOCOL['rvn'] = [2, 'vnr', verify_protocol_4_rvn]     # 6 Request         - DATA       - verify with BKEY - from local
-    VERIFICATION_PROTOCOL['vnr'] = [2, 'rsn', verify_protocol_5_vnr]     # 7 Reply           - DATA       - verify with BKEY - reply from remote
-    VERIFICATION_PROTOCOL['rsn'] = [2, 'snr', verify_protocol_6_rsn]     # 8 Request new SYS - DATA       - from local for new SYS   + new BKEY send
-    VERIFICATION_PROTOCOL['snr'] = [2, 'aaa', verify_protocol_7_snr]     # 9 Reply new SYS   - snDATA     - from remote with new SYS + new BKEY received
+    VERIFICATION_PROTOCOL['rvn'] = [2, 'vnr', verify_protocol_4_rvn]     # 6 Request         - DATA       - verify with BKEY - from local             + new TEMPKEYS send
+    VERIFICATION_PROTOCOL['vnr'] = [2, 'rsn', verify_protocol_5_vnr]     # 7 Reply           - DATA       - verify with BKEY - reply from remote      + new TEMPKEYS received
+    VERIFICATION_PROTOCOL['rsn'] = [2, 'snr', verify_protocol_6_rsn]     # 8 Request new SYS - DATA       - from local for new SYS                    + new BKEY send
+    VERIFICATION_PROTOCOL['snr'] = [2, 'aaa', verify_protocol_7_snr]     # 9 Reply new SYS   - snDATA     - from remote with new SYS                  + new BKEY received
     
     # Latest function is called when all verifications were successful, we save new data
     VERIFICATION_PROTOCOL['aaa'] = [2, '',    verify_protocol_a_aee]     # a Accepted BKEY or SYS
     
     
     global VERIFICATION_INITIAL
-    VERIFICATION_INITIAL = [list(VERIFICATION_PROTOCOL)[0], list(VERIFICATION_PROTOCOL)[6]]
+    VERIFICATION_INITIAL = [list(VERIFICATION_PROTOCOL)[0], list(VERIFICATION_PROTOCOL)[4]]
     
     return
   
