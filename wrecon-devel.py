@@ -2624,7 +2624,7 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
         
         else:
           INITIAL_FUNCTION = VERIFICATION_PROTOCOL[SECRET_DATA][1]
-          SECRET_DATA      = COMMAND_ARGUMENTS_LIST.pop(0)
+          SECRET_DATA      = COMMAND_ARGUMENTS_LIST[1]
           L2_PROTOCOL      = VERIFICATION_PROTOCOL[INITIAL_FUNCTION][0]
           initial_function = VERIFICATION_PROTOCOL[INITIAL_FUNCTION][2]
           # Call the function for prepare all necessary variables
@@ -2642,23 +2642,34 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
       # WE RECEIVED ENCRYPTED DATA
       # DECRYPTED DATA WILL RETURN HASH BACK IN ENCRYPTED FORM
       # 1. DATA ARE DECRYPTED
+      
+      # DEUG
+      # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_1_requested: SEECRET : %s' % (SECRET_DATA))
+      
       DECRYPT_SEECRET_DATA = string_decrypt(ENCRYPT_LEVEL, SECRET_DATA, ENCRYPT_KEY1, ENCRYPT_KEY2)
+      
+      # DEBUG
+      # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_1_requested: SEECRET : %s' % (DECRYPT_SEECRET_DATA))
+      
       # 2. GET HASH OF DECRYPTED DATA
       if L2_PROTOCOL:
         HASH_DATA          = get_hash(DECRYPT_SEECRET_DATA.split(' ')[0])
       else:
         HASH_DATA          = get_hash(DECRYPT_SEECRET_DATA)
-      # DEBUG
-      # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_1_requested: SEECRET : %s : %s' % (HASH_DATA, DECRYPT_SEECRET_DATA))
       # 3. ENCRYPT HASH
       
+      # DEBUG
+      # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_1_requested: HASH : %s' % (HASH_DATA))
+      # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_1_requested: DATA : %s' % (SEND_DATA))
       if L2_PROTOCOL and SEND_DATA:
         HASH_DATA = '%s %s' % (HASH_DATA, SEND_DATA)
-        
+      
+      # DEBUG
+      # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_1_requested: HASH DATA : %s' % HASH_DATA)
       ENCRYPT_SEECRET_DATA = string_encrypt(ENCRYPT_LEVEL, HASH_DATA, ENCRYPT_KEY1, ENCRYPT_KEY2)
       # 4. SEND BACK ENCRYPTED HASH TO REQUESTOR
       
-      if L2_PROTOCOL and SEND_DATA:
+      if L2_PROTOCOL:
         ENCRYPT_SEECRET_DATA = '%s %s' % (VERIFICATION_PROTOCOL[INITIAL_FUNCTION][1], ENCRYPT_SEECRET_DATA)
       weechat.command(BUFFER, '%s %s %s %s %s' % (VERIFY_COMMAND, SOURCE_BOT_ID, TARGET_BOT_ID, COMMAND_ID, ENCRYPT_SEECRET_DATA))
     else:
@@ -2953,7 +2964,7 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
     
     
     # We received new temporary keys (in encrypted form), we need decrypt, and save them for later use
-    SECRET_DATA = COMMAND_ARGUMENTS_LIST[0]
+    SECRET_DATA = COMMAND_ARGUMENTS_LIST[1]
     
     # DEBUG
     # ~ display_message(BUFFER, 'DEBUG - verify_protocol_1_eer: SECRET_DATA  : %s' % SECRET_DATA)
@@ -2969,7 +2980,7 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
     XKEY_DATA = DECRYPT_DATA.split(' ')
     
     if len(XKEY_DATA) == 2:
-      XKEY_DATA = string_decrypt(ENCRYPT_LEVEL, XKEY_DATA, ENCRYPT_KEY1, ENCRYPT_KEY2)
+      XKEY_DATA = string_decrypt(ENCRYPT_LEVEL, XKEY_DATA[1], ENCRYPT_KEY1, ENCRYPT_KEY2)
       KEY_DATA  = XKEY_DATA.split(' ')
       
       # DEBUG
@@ -2978,6 +2989,8 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
       if len(KEY_DATA) == 2:
         TEMPORARY_ENCRYPT_KEY1[UNIQ_COMMAND_ID] = KEY_DATA[0]
         TEMPORARY_ENCRYPT_KEY2[UNIQ_COMMAND_ID] = KEY_DATA[1]
+        
+        VERIFICATION_REPLY_EXPECT[UNIQ_COMMAND_ID] = VERIFICATION_PROTOCOL[L2_PROTOCOL][1]
         
         # DEBUG
         # ~ display_message(BUFFER, 'DEBUG - verify_protocol_1_eer: KEYS : %s %s' % (TEMPORARY_ENCRYPT_KEY1[UNIQ_COMMAND_ID], TEMPORARY_ENCRYPT_KEY2[UNIQ_COMMAND_ID]))
@@ -2990,8 +3003,6 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
     if ERROR == True:
       SEND_DATA = 'DECRYPTION ERROR (function EER)'
       del VERIFICATION_REPLY_EXPECT[UNIQ_COMMAND_ID]
-    else:
-      VERIFICATION_REPLY_EXPECT[UNIQ_COMMAND_ID] = VERIFICATION_PROTOCOL[L2_PROTOCOL][1]
     
     return [ERROR, ENCRYPT_LEVEL, ENCRYPT_KEY1, ENCRYPT_KEY2, SEND_DATA]
     
