@@ -2531,7 +2531,7 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
     
     # We need determine which verification will be used
     if ENCRYPT_LEVEL > 0:
-      REMOTE_SECRET_SYSINFO, REMOTE_SECRET_KEY = get_remote_secret(WRECON_REMOTE_BOTS_GRANTED_SECRET, TARGET_BOT_ID)
+      REMOTE_SECRET_SYSINFO, REMOTE_SECRET_KEY = get_remote_secret(TARGET_BOT_ID)
       # If we have no DATA of REMOTE bot, then it is first initialisation
       if REMOTE_SECRET_SYSINFO == '':
         INITIAL_FUNCTION  = list(VERIFICATION_PROTOCOL)[0]
@@ -2689,7 +2689,7 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
     if ENCRYPT_LEVEL > 0:
     # Check we expected L2 protocol
       if not SECRET_DATA in VERIFICATION_PROTOCOL:
-        ENCRYPT_KEY2, REMOTE_SECRET_KEY = get_remote_secret(WRECON_REMOTE_BOTS_GRANTED_SECRET, SOURCE_BOT_ID)
+        ENCRYPT_KEY2, REMOTE_SECRET_KEY = get_remote_secret(SOURCE_BOT_ID)
       else:
     # If yes, we check L2 protocol is strictly followed
         if SECRET_DATA in VERIFICATION_REPLY_EXPECT:
@@ -2948,7 +2948,7 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
       ENCRYPT_KEY2 = TEMPORARY_ENCRYPT_KEY2[UNIQ_COMMAND_ID]
       
       # Also prepare BKEY and send to remote PC      
-      SYS_DATA, BKEY_DATA = get_remote_secret(WRECON_REMOTE_BOTS_GRANTED_SEECRET, SOURCE_BOT_ID)
+      SYS_DATA, BKEY_DATA = get_remote_secret(SOURCE_BOT_ID)
       
       RANDOM_NUMBER = random.randint(7,15)
       BKEY_DATA     = get_random_string(RANDOM_NUMBER)
@@ -3066,7 +3066,7 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
       ENCRYPT_KEY2 = TEMPORARY_ENCRYPT_KEY2[UNIQ_COMMAND_ID]
       
       # Also prepare BKEY and send to remote PC      
-      SYS_DATA, BKEY_DATA = get_remote_secret(WRECON_REMOTE_BOTS_GRANTED_SEECRET, SOURCE_BOT_ID)
+      SYS_DATA, BKEY_DATA = get_remote_secret(SOURCE_BOT_ID)
       
       RANDOM_NUMBER = random.randint(7,15)
       BKEY_DATA     = get_random_string(RANDOM_NUMBER)
@@ -3126,7 +3126,7 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
     if not UNIQ_COMMAND_ID in VERIFY_CALL_ORDER:
       VERIFY_CALL_ORDER[UNIQ_COMMAND_ID] = ''
       
-      SYS_DATA, BKEY_DATA = get_remote_secret(WRECON_REMOTE_BOTS_GRANTED_SEECRET, SOURCE_BOT_ID)
+      SYS_DATA, BKEY_DATA = get_remote_secret(SOURCE_BOT_ID)
       
       # We received SYS_DATA in encrypted form from remote PC
       # This we save
@@ -3137,7 +3137,7 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
       
     # Second call, also final one, we prepare standard verification
     else:
-      SYS_DATA, BKEY_DATA = get_remote_secret(WRECON_REMOTE_BOTS_GRANTED_SEECRET, SOURCE_BOT_ID)
+      SYS_DATA, BKEY_DATA = get_remote_secret(SOURCE_BOT_ID)
       
       ENCRYPT_KEY1  = WRECON_BOT_KEY
       ENCRYPT_KEY2  = SYS_DATA
@@ -3151,16 +3151,17 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
   
   # GET REMOTE SECRET
   
-  def get_remote_secret(REMOTE_SECRET_LIST, REMOTE_ID):
+  def get_remote_secret(REMOTE_ID):
+    global WRECON_REMOTE_BOTS_GRANTED_SEECRET
     
     SYS_DATA  = ''
     BKEY_DATA = ''
     
-    if REMOTE_ID in REMOTE_SECRET_LIST:
-      SYS_DATA  = REMOTE_SECRET_LIST[REMOTE_ID][0]
-      BKEY_DATA = REMOTE_SECRET_LIST[REMOTE_ID][1]
+    if REMOTE_ID in WRECON_REMOTE_BOTS_GRANTED_SEECRET:
+      SYS_DATA  = WRECON_REMOTE_BOTS_GRANTED_SEECRET[REMOTE_ID][0]
+      BKEY_DATA = WRECON_REMOTE_BOTS_GRANTED_SEECRET[REMOTE_ID][1]
       
-    return [SYS_DATA, BKEY_DATA, ]
+    return [SYS_DATA, BKEY_DATA]
   
   #
   # VERIFY - SETUP VARIABLES
