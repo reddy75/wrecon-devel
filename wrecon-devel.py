@@ -3274,7 +3274,7 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
       
       # We received SYS_DATA in encrypted form from remote PC
       # This we save
-      RECEIVED_DATA  = COMMAND_ARGUMENTS_LIST.pop(0)
+      RECEIVED_DATA  = COMMAND_ARGUMENTS_LIST[1]
       SYS_DATA       = string_decrypt(ENCRYPT_LEVEL, RECEIVED_DATA[0], ENCRYPT_KEY1, ENCRYPT_KEY2)
       
       WRECON_REMOTE_BOTS_GRANTED_SECRET[SOURCE_BOT_ID] = [SYS_DATA, BKEY_DATA]
