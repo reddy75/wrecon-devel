@@ -127,7 +127,7 @@ SCRIPT_UNLOAD    = 'wrecon_unload'
 
 SCRIPT_CONTINUE  = True
 import importlib
-for IMPORT_MOD in ['ast', 'base64', 'contextlib', 'datetime', 'gnupg', 'hashlib', 'json', 'os', 'random', 'shutil', 'string', 'sys', 'tarfile', 'time', 'urllib', 'uuid', 'weechat']:
+for IMPORT_MOD in ['ast', 'base64', 'contextlib', 'datetime', 'gnupg', 'hashlib', 'json', 'os', 'platform', 'random', 'shutil', 'string', 'sys', 'tarfile', 'time', 'urllib', 'uuid', 'weechat']:
   try:
     IMPORT_OBJECT = importlib.import_module(IMPORT_MOD, package=None)
     globals()[IMPORT_MOD] = IMPORT_OBJECT
@@ -579,15 +579,15 @@ else:
   #              table contain BOT IDs and BOT NAMEs only
   
   def setup_wrecon_variables_of_remote_bots():
-    global WRECON_REMOTE_BOTS_CONTROL, WRECON_REMOTE_BOTS_GRANTED, WRECON_REMOTE_BOTS_VERIFIED, WRECON_REMOTE_BOTS_ADVERTISED, WRECON_REMOTE_BOTS_GRANTED_SEECRET
+    global WRECON_REMOTE_BOTS_CONTROL, WRECON_REMOTE_BOTS_GRANTED, WRECON_REMOTE_BOTS_VERIFIED, WRECON_REMOTE_BOTS_ADVERTISED, WRECON_REMOTE_BOTS_GRANTED_SECRET
     
     WRECON_REMOTE_BOTS_CONTROL    = weechat.string_eval_expression("${sec.data.wrecon_remote_bots_control}",{},{},{})
     WRECON_REMOTE_BOTS_GRANTED    = weechat.string_eval_expression("${sec.data.wrecon_remote_bots_granted}",{},{},{})
     WRECON_REMOTE_BOTS_VERIFIED   = {}
     WRECON_REMOTE_BOTS_ADVERTISED = {}
     
-    WRECON_REMOTE_BOTS_CONTROL_SEECRET = weechat.string_eval_expression("${sec.data.wrecon_remote_bots_control_seecret}",{},{},{})
-    WRECON_REMOTE_BOTS_GRANTED_SEECRET = weechat.string_eval_expression("${sec.data.wrecon_remote_bots_granted_seecret}",{},{},{})
+    WRECON_REMOTE_BOTS_CONTROL_SECRET = weechat.string_eval_expression("${sec.data.wrecon_remote_bots_control_secret}",{},{},{})
+    WRECON_REMOTE_BOTS_GRANTED_SECRET = weechat.string_eval_expression("${sec.data.wrecon_remote_bots_granted_secret}",{},{},{})
     
     if WRECON_REMOTE_BOTS_CONTROL:
       WRECON_REMOTE_BOTS_CONTROL = ast.literal_eval(WRECON_REMOTE_BOTS_CONTROL)
@@ -599,15 +599,15 @@ else:
     else:
       WRECON_REMOTE_BOTS_GRANTED = {}
     
-    if WRECON_REMOTE_BOTS_CONTROL_SEECRET:
-      WRECON_REMOTE_BOTS_CONTROL_SEECRET = ast.literal_eval(WRECON_REMOTE_BOTS_CONTROL_SEECRET)
+    if WRECON_REMOTE_BOTS_CONTROL_SECRET:
+      WRECON_REMOTE_BOTS_CONTROL_SECRET = ast.literal_eval(WRECON_REMOTE_BOTS_CONTROL_SECRET)
     else:
-      WRECON_REMOTE_BOTS_CONTROL_SEECRET = {}
+      WRECON_REMOTE_BOTS_CONTROL_SECRET = {}
     
-    if WRECON_REMOTE_BOTS_GRANTED_SEECRET:
-      WRECON_REMOTE_BOTS_GRANTED_SEECRET = ast.literal_eval(WRECON_REMOTE_BOTS_GRANTED_SEECRET)
+    if WRECON_REMOTE_BOTS_GRANTED_SECRET:
+      WRECON_REMOTE_BOTS_GRANTED_SECRET = ast.literal_eval(WRECON_REMOTE_BOTS_GRANTED_SECRET)
     else:
-      WRECON_REMOTE_BOTS_GRANTED_SEECRET = {}
+      WRECON_REMOTE_BOTS_GRANTED_SECRET = {}
   
     #
     # SETUP VARIABLES OF COUNTER COMMAND AND AUTO ADVERTISE
@@ -1367,11 +1367,13 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
   def get_device_seecrets():
     SECRET1 = str(os.path.expanduser('~'))
     SECRET2 = str(SECRET1.split('/')[-1])
-    SECRET3 = str(uuid.uuid1(uuid.getnode(),0)[24:])
-    SECRETS = get_hash(SECRET2 + SECRET3 + SECRET1)
+    SECRET3 = str(uuid.uuid1(uuid.getnode(),0))
+    SECRET4 = str(platform.node())
+    SECRETS = get_hash(SECRET2 + SECRET4 + SECRET3 + SECRET1)
     del SECRET1
     del SECRET2
     del SECRET3
+    del SECRET4
     return str(SECRETS)
   
   #
@@ -2643,12 +2645,12 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
       # 1. DATA ARE DECRYPTED
       
       # DEUG
-      display_message(BUFFER, 'DEBUG - buffer_command_verify_1_requested: SEECRET : %s' % (SECRET_DATA))
+      # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_1_requested: SEECRET : %s' % (SECRET_DATA))
       
       DECRYPT_SEECRET_DATA = string_decrypt(ENCRYPT_LEVEL, SECRET_DATA, ENCRYPT_KEY1, ENCRYPT_KEY2)
       
       # DEBUG
-      display_message(BUFFER, 'DEBUG - buffer_command_verify_1_requested: SEECRET : %s' % (DECRYPT_SEECRET_DATA))
+      # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_1_requested: SEECRET : %s' % (DECRYPT_SEECRET_DATA))
       
       # 2. GET HASH OF DECRYPTED DATA
       if L2_PROTOCOL:
@@ -2664,7 +2666,7 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
         HASH_DATA = '%s %s' % (HASH_DATA, SEND_DATA)
       
       # DEBUG
-      display_message(BUFFER, 'DEBUG - buffer_command_verify_1_requested: HASH DATA : %s' % HASH_DATA)
+      # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_1_requested: HASH DATA : %s' % HASH_DATA)
       
       ENCRYPT_SEECRET_DATA = string_encrypt(ENCRYPT_LEVEL, HASH_DATA, ENCRYPT_KEY1, ENCRYPT_KEY2)
       # 4. SEND BACK ENCRYPTED HASH TO REQUESTOR
@@ -2734,20 +2736,19 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
             VERIFY_COMMAND     = BUFFER_CMD_VAL_EXE
             
             # Pickup protocol function we need call for next request
-            INITIAL_FUNCTION   = VERIFICATION_PROTOCOL[SECRET_DATA][1]
+            L2_PROTOCOL   = VERIFICATION_PROTOCOL[SECRET_DATA][1]
             
             # DEBUG
-            display_message(BUFFER, 'DEBUG - buffer_command_verify_2_result_received: INI FUNC : %s' % INITIAL_FUNCTION)
+            # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_2_result_received: INI FUNC : %s' % INITIAL_FUNCTION)
             
             SECRET_DATA        = COMMAND_ARGUMENTS_LIST[1]
             
             # DEBUG
-            display_message(BUFFER, 'DEBUG - buffer_command_verify_2_result_received: SECRET_DATA            : %s' % SECRET_DATA)
-            display_message(BUFFER, 'DEBUG - buffer_command_verify_2_result_received: COMMAND_ARGUMENTS_LIST : %s' % COMMAND_ARGUMENTS_LIST)
+            # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_2_result_received: SECRET_DATA            : %s' % SECRET_DATA)
+            # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_2_result_received: COMMAND_ARGUMENTS_LIST : %s' % COMMAND_ARGUMENTS_LIST)
             
-            L2_PROTOCOL        = INITIAL_FUNCTION
-            L2_PROTOCOL_NEXT   = VERIFICATION_PROTOCOL[INITIAL_FUNCTION][1]
-            protocol_function  = VERIFICATION_PROTOCOL[INITIAL_FUNCTION][2]
+            L2_PROTOCOL_NEXT   = VERIFICATION_PROTOCOL[L2_PROTOCOL][1]
+            protocol_function  = VERIFICATION_PROTOCOL[L2_PROTOCOL][2]
             ERROR, ENCRYPT_LEVEL, ENCRYPT_KEY1, ENCRYPT_KEY2, SEND_DATA = protocol_function(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, SECRET_DATA)
             if ERROR == True:
               OUT_MESSAGE      = SEND_DATA
@@ -2762,12 +2763,12 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
       # If not ERROR occured, then decrypt data and check HASH
       
         # DEBUG
-        display_message(BUFFER, 'DEBUG - buffer_command_verify_2_result_received: L KEYS : %s %s %s' % (ENCRYPT_LEVEL, ENCRYPT_KEY1, ENCRYPT_KEY2))
+        # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_2_result_received: L KEYS : %s %s %s' % (ENCRYPT_LEVEL, ENCRYPT_KEY1, ENCRYPT_KEY2))
         
         DECRYPT_DATA  = string_decrypt(ENCRYPT_LEVEL, SECRET_DATA, ENCRYPT_KEY1, ENCRYPT_KEY2)
         
         # DEBUG
-        display_message(BUFFER, 'DEBUG - buffer_command_verify_2_result_received: DECRYPT_DATA         : %s' % DECRYPT_DATA)
+        # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_2_result_received: DECRYPT_DATA         : %s' % DECRYPT_DATA)
         
       # Check HASH is correct of older version of remote client
         if ENCRYPT_LEVEL == 0:
@@ -2783,7 +2784,7 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
           DECRYPT_DATA = DECRYPT_DATA.split(' ')
           
           # DEBUG
-          display_message(BUFFER, 'DEBUG - buffer_command_verify_2_result_received: WAIT_FOR_REMOTE_DATA : %s' % WAIT_FOR_REMOTE_DATA)
+          # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_2_result_received: WAIT_FOR_REMOTE_DATA : %s' % WAIT_FOR_REMOTE_DATA)
           
           if WAIT_FOR_REMOTE_DATA[UNIQ_COMMAND_ID] == DECRYPT_DATA[0]:
             OUT_MESSAGE        = 'VERIFICATION SUCCESSFUL'
@@ -2795,10 +2796,9 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
             if not UNIQ_COMMAND_ID in VERIFICATION_REPLY_EXPECT:
               FINAL_VERIFICATION = False
               VERIFY_COMMAND     = BUFFER_CMD_VAL_EXE
-              INITIAL_FUNCTION   = list(VERIFICATION_PROTOCOL)[4]
-              L2_PROTOCOL        = VERIFICATION_PROTOCOL[INITIAL_FUNCTION][0]
-              L2_PROTOCOL_NEXT   = VERIFICATION_PROTOCOL[INITIAL_FUNCTION][1]
-              protocol_function  = VERIFICATION_PROTOCOL[INITIAL_FUNCTION][2]
+              L2_PROTOCOL        = list(VERIFICATION_PROTOCOL)[4]
+              L2_PROTOCOL_NEXT   = VERIFICATION_PROTOCOL[L2_PROTOCOL][1]
+              protocol_function  = VERIFICATION_PROTOCOL[L2_PROTOCOL][2]
           # Here we know that additional verification has been triggered, but verification failed
             else:
               ERROR              = True
@@ -2822,8 +2822,8 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
           SECRET_HASH   = get_hash(SECRET_DATA)
           
           # DEBUG
-          display_message(BUFFER, 'DEBUG - buffer_command_verify_2_result_received : NEW DATA : %s %s' % (SECRET_DATA, SECRET_HASH))
-          display_message(BUFFER, 'DEBUG - buffer_command_verify_2_result_received : PROTOCOL : %s' % L2_PROTOCOL_NEXT)
+          # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_2_result_received : NEW DATA : %s %s' % (SECRET_DATA, SECRET_HASH))
+          # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_2_result_received : PROTOCOL : %s' % L2_PROTOCOL)
           
           if L2_PROTOCOL and SEND_DATA:
             SECRET_DATA = '%s %s' % (SECRET_DATA, SEND_DATA)
@@ -2937,7 +2937,7 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
     UNIQ_COMMAND_ID = TARGET_BOT_ID + COMMAND_ID
     
     # DEBUG
-    display_message(BUFFER, '[%s] %s < L2 PROTOCOL - 0 REE' % (COMMAND_ID, TARGET_BOT_ID))
+    # ~ display_message(BUFFER, '[%s] %s < L2 PROTOCOL - 0 REE' % (COMMAND_ID, TARGET_BOT_ID))
     
     ERROR         = False
     
@@ -2961,7 +2961,7 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
     VERIFICATION_REPLY_EXPECT[UNIQ_COMMAND_ID] = VERIFICATION_PROTOCOL[L2_PROTOCOL][1]
     
     # DEBUG
-    display_message(BUFFER, 'DEBUG - verify_protocol_0_ree: TKEYS  : %s %s' % (TEMPORARY_ENCRYPT_KEY1[UNIQ_COMMAND_ID], TEMPORARY_ENCRYPT_KEY2[UNIQ_COMMAND_ID]))
+    # ~ display_message(BUFFER, 'DEBUG - verify_protocol_0_ree: TKEYS  : %s %s' % (TEMPORARY_ENCRYPT_KEY1[UNIQ_COMMAND_ID], TEMPORARY_ENCRYPT_KEY2[UNIQ_COMMAND_ID]))
     # ~ display_message(BUFFER, 'DEBUG - verify_protocol_0_ree: DATA   : %s' % SEND_DATA)
     # ~ display_message(BUFFER, 'DEBUG - verify_protocol_0_ree: ELEVEL : %s' % ENCRYPT_LEVEL)
     # ~ display_message(BUFFER, 'DEBUG - verify_protocol_0_ree: EKEY 1 : %s' % ENCRYPT_KEY1)
@@ -2999,7 +2999,7 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
     DECRYPT_DATA = string_decrypt(ENCRYPT_LEVEL, SECRET_DATA, ENCRYPT_KEY1, ENCRYPT_KEY2)
     
     # DEBUG
-    display_message(BUFFER, 'DEBUG - verify_protocol_1_eer: DECRYPT_DATA : %s' % DECRYPT_DATA)
+    # ~ display_message(BUFFER, 'DEBUG - verify_protocol_1_eer: DECRYPT_DATA : %s' % DECRYPT_DATA)
     
     XKEY_DATA = DECRYPT_DATA.split(' ')
     
@@ -3017,7 +3017,7 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
         VERIFICATION_REPLY_EXPECT[UNIQ_COMMAND_ID] = VERIFICATION_PROTOCOL[L2_PROTOCOL][1]
         
         # DEBUG
-        display_message(BUFFER, 'DEBUG - verify_protocol_1_eer: TKEYS : %s %s' % (TEMPORARY_ENCRYPT_KEY1[UNIQ_COMMAND_ID], TEMPORARY_ENCRYPT_KEY2[UNIQ_COMMAND_ID]))
+        # ~ display_message(BUFFER, 'DEBUG - verify_protocol_1_eer: TKEYS : %s %s' % (TEMPORARY_ENCRYPT_KEY1[UNIQ_COMMAND_ID], TEMPORARY_ENCRYPT_KEY2[UNIQ_COMMAND_ID]))
       else:
         ERROR = True
         
@@ -3033,7 +3033,7 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
   # 2 - rre (ner) - LOCAL -> REMOTE - request for SYS
   def verify_protocol_2_rre(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
     global VERIFICATION_PROTOCOL, VERIFICATION_REPLY_EXPECT, WRECON_BOT_KEY, VERIFY_CALL_ORDER, TEMPORARY_ENCRYPT_KEY1, TEMPORARY_ENCRYPT_KEY2
-    global WRECON_REMOTE_BOTS_GRANTED_SEECRET
+    global WRECON_REMOTE_BOTS_GRANTED_SECRET
     
     UNIQ_COMMAND_ID = SOURCE_BOT_ID + COMMAND_ID
     
@@ -3064,15 +3064,15 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
       
       RANDOM_NUMBER = random.randint(7,15)
       BKEY_DATA     = get_random_string(RANDOM_NUMBER)
-      WRECON_REMOTE_BOTS_GRANTED_SEECRET[SOURCE_BOT_ID] = [SYS_DATA, BKEY_DATA]
+      WRECON_REMOTE_BOTS_GRANTED_SECRET[SOURCE_BOT_ID] = [SYS_DATA, BKEY_DATA]
       
       SEND_DATA = string_encrypt(ENCRYPT_LEVEL, BKEY_DATA, ENCRYPT_KEY1, ENCRYPT_KEY2)
       
       del VERIFY_CALL_ORDER[UNIQ_COMMAND_ID]
     
     # DEBUG
-    display_message(BUFFER, 'DEBUG - verify_protocol_2_rre : L KEYS : %s %s %s' % (ENCRYPT_LEVEL, ENCRYPT_KEY1, ENCRYPT_KEY2))
-    display_message(BUFFER, 'DEBUG - verify_protocol_2_rre : S DATA : %s' % SEND_DATA)
+    # ~ display_message(BUFFER, 'DEBUG - verify_protocol_2_rre : L KEYS : %s %s %s' % (ENCRYPT_LEVEL, ENCRYPT_KEY1, ENCRYPT_KEY2))
+    # ~ display_message(BUFFER, 'DEBUG - verify_protocol_2_rre : S DATA : %s' % SEND_DATA)
     
     VERIFICATION_REPLY_EXPECT[UNIQ_COMMAND_ID] = VERIFICATION_PROTOCOL[L2_PROTOCOL][1]
     
@@ -3086,7 +3086,7 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
     UNIQ_COMMAND_ID = SOURCE_BOT_ID + COMMAND_ID
     
     # DEBUG
-    display_message(BUFFER, '[%s] %s < L2 PROTOCOL - 3 RNR' % (COMMAND_ID, SOURCE_BOT_ID))
+    display_message(BUFFER, '[%s] %s < L2 PROTOCOL - 3 NER' % (COMMAND_ID, SOURCE_BOT_ID))
     
     L2_PROTOCOL   = list(VERIFICATION_PROTOCOL)[3]
     ENCRYPT_LEVEL = VERIFICATION_PROTOCOL[L2_PROTOCOL][0]
@@ -3096,7 +3096,7 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
     ERROR         = False
     
     # We also received new BKEY in encrypted form
-    RECEIVED_DATA  = COMMAND_ARGUMENTS_LIST.pop(0)[0]
+    RECEIVED_DATA  = COMMAND_ARGUMENTS_LIST[1]
     DECRYPTED_DATA = string_decrypt(ENCRYPT_LEVEL, RECEIVED_DATA, ENCRYPT_KEY1, ENCRYPT_KEY2)
     
     BKEY_DATA      = DECRYPTED_DATA.split(' ')[1]
@@ -3117,7 +3117,7 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
   # 4 - rvn (vnr) - LOCAL -> REMOTE - verify BKEY
   def verify_protocol_4_rvn(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
     global VERIFICATION_PROTOCOL, VERIFICATION_REPLY_EXPECT, TEMPORARY_ENCRYPT_KEY1, TEMPORARY_ENCRYPT_KEY2
-    global WRECON_REMOTE_BOTS_GRANTED_SEECRET
+    global WRECON_REMOTE_BOTS_GRANTED_SECRET
     
     UNIQ_COMMAND_ID = TARGET_BOT_ID + COMMAND_ID
     
@@ -3127,7 +3127,7 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
     L2_PROTOCOL   = list(VERIFICATION_PROTOCOL)[4]
     ENCRYPT_LEVEL = VERIFICATION_PROTOCOL[L2_PROTOCOL][0]
     ENCRYPT_KEY1  = WRECON_BOT_KEY
-    ENCRYPT_KEY2  = WRECON_REMOTE_BOTS_GRANTED_SEECRET[TARGET_BOT_ID][1]
+    ENCRYPT_KEY2  = WRECON_REMOTE_BOTS_GRANTED_SECRET[TARGET_BOT_ID][1]
     SEND_DATA     = ''
     ERROR         = False
     
@@ -3177,7 +3177,7 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
   # 6 - rsn (snr) - LOCAL -> REMOTE - request SYS
   def verify_protocol_6_rsn(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
     global VERIFICATION_PROTOCOL, VERIFICATION_REPLY_EXPECT, VERIFY_CALL_ORDER, TEMPORARY_ENCRYPT_KEY1, TEMPORARY_ENCRYPT_KEY2
-    global WRECON_REMOTE_BOTS_GRANTED_SEECRET
+    global WRECON_REMOTE_BOTS_GRANTED_SECRET
     
     UNIQ_COMMAND_ID = SOURCE_BOT_ID + COMMAND_ID
     
@@ -3187,7 +3187,7 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
     L2_PROTOCOL   = list(VERIFICATION_PROTOCOL)[6]
     ENCRYPT_LEVEL = VERIFICATION_PROTOCOL[L2_PROTOCOL][0]
     ENCRYPT_KEY1  = WRECON_BOT_KEY
-    ENCRYPT_KEY2  = WRECON_REMOTE_BOTS_GRANTED_SEECRET[TARGET_BOT_ID][1]
+    ENCRYPT_KEY2  = WRECON_REMOTE_BOTS_GRANTED_SECRET[TARGET_BOT_ID][1]
     SEND_DATA     = ''
     ERROR         = False
     
@@ -3204,7 +3204,7 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
       
       RANDOM_NUMBER = random.randint(7,15)
       BKEY_DATA     = get_random_string(RANDOM_NUMBER)
-      WRECON_REMOTE_BOTS_GRANTED_SEECRET[SOURCE_BOT_ID] = [SYS_DATA, BKEY_DATA]
+      WRECON_REMOTE_BOTS_GRANTED_SECRET[SOURCE_BOT_ID] = [SYS_DATA, BKEY_DATA]
       
       SEND_DATA = string_encrypt(ENCRYPT_LEVEL, BKEY_DATA, ENCRYPT_KEY1, ENCRYPT_KEY2)
       
@@ -3252,7 +3252,7 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
   # This ensure we call back function
   def verify_protocol_a_aee(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
     global VERIFICATION_PROTOCOL, VERIFICATION_REPLY_EXPECT, VERIFY_CALL_ORDER, TEMPORARY_ENCRYPT_KEY1, TEMPORARY_ENCRYPT_KEY2
-    global WRECON_BOT_KEY, WRECON_REMOTE_BOTS_GRANTED_SEECRET
+    global WRECON_BOT_KEY, WRECON_REMOTE_BOTS_GRANTED_SECRET
     
     UNIQ_COMMAND_ID = SOURCE_BOT_ID + COMMAND_ID
     
@@ -3277,7 +3277,7 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
       RECEIVED_DATA  = COMMAND_ARGUMENTS_LIST.pop(0)
       SYS_DATA       = string_decrypt(ENCRYPT_LEVEL, RECEIVED_DATA[0], ENCRYPT_KEY1, ENCRYPT_KEY2)
       
-      WRECON_REMOTE_BOTS_GRANTED_SEECRET[SOURCE_BOT_ID] = [SYS_DATA, BKEY_DATA]
+      WRECON_REMOTE_BOTS_GRANTED_SECRET[SOURCE_BOT_ID] = [SYS_DATA, BKEY_DATA]
       
     # Second call, also final one, we prepare standard verification
     else:
@@ -3296,14 +3296,14 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
   # GET REMOTE SECRET
   
   def get_remote_secret(REMOTE_ID):
-    global WRECON_REMOTE_BOTS_GRANTED_SEECRET
+    global WRECON_REMOTE_BOTS_GRANTED_SECRET
     
     SYS_DATA  = ''
     BKEY_DATA = ''
     
-    if REMOTE_ID in WRECON_REMOTE_BOTS_GRANTED_SEECRET:
-      SYS_DATA  = WRECON_REMOTE_BOTS_GRANTED_SEECRET[REMOTE_ID][0]
-      BKEY_DATA = WRECON_REMOTE_BOTS_GRANTED_SEECRET[REMOTE_ID][1]
+    if REMOTE_ID in WRECON_REMOTE_BOTS_GRANTED_SECRET:
+      SYS_DATA  = WRECON_REMOTE_BOTS_GRANTED_SECRET[REMOTE_ID][0]
+      BKEY_DATA = WRECON_REMOTE_BOTS_GRANTED_SECRET[REMOTE_ID][1]
       
     return [SYS_DATA, BKEY_DATA]
   
@@ -4091,7 +4091,7 @@ UNREGISTER         UN[REGISTER]'''
   #
   
   def user_command_add(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
-    global ID_CALL_LOCAL, WRECON_REMOTE_BOTS_CONTROL, WRECON_REMOTE_BOTS_CONTROL_SEECRET
+    global ID_CALL_LOCAL, WRECON_REMOTE_BOTS_CONTROL, WRECON_REMOTE_BOTS_CONTROL_SECRET
     
     OUT_MESSAGE = []
     
@@ -4118,10 +4118,10 @@ UNREGISTER         UN[REGISTER]'''
       OUT_MESSAGE_TAG = 'ADD INFO'
       OUT_MESSAGE.append('NEW BOT ID %s (%s) HAS BEEN SUCCESSFULLY ADDED.' % (NEW_BOT_ID, WRECON_REMOTE_BOTS_CONTROL[WRECON_REMOTE_BOTS_CONTROL][1]))
       WRECON_REMOTE_BOTS_CONTROL[NEW_BOT_ID]         = [NEW_BOT_KEY, NEW_BOT_INFO]
-      WRECON_REMOTE_BOTS_CONTROL_SEECRET[NEW_BOT_ID] = []
+      WRECON_REMOTE_BOTS_CONTROL_SECRET[NEW_BOT_ID] = []
       OUT_MESSAGE.append('%s (%s)' % (NEW_BOT_ID, WRECON_REMOTE_BOTS_CONTROL[NEW_BOT_ID][1]))
       weechat.command(BUFFER, '/secure set wrecon_remote_bots_control %s' % (WRECON_REMOTE_BOTS_CONTROL))
-      weechat.command(BUFFER, '/secure set wrecon_remote_bots_control_seecret %s' % (WRECON_REMOTE_BOTS_CONTROL_SEECRET))
+      weechat.command(BUFFER, '/secure set wrecon_remote_bots_control_secret %s' % (WRECON_REMOTE_BOTS_CONTROL_SECRET))
     
     OUT_MESSAGE.append('')
     
@@ -4178,7 +4178,7 @@ ADD                ADD <BotID> <BotKEY> [a note]'''
   #
   
   def prepare_command_del(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
-    global WRECON_REMOTE_BOTS_CONTROL, WRECON_BOT_ID, WRECON_REMOTE_BOTS_CONTROL_SEECRET
+    global WRECON_REMOTE_BOTS_CONTROL, WRECON_BOT_ID, WRECON_REMOTE_BOTS_CONTROL_SECRET
     
     COMMAND = 'DELETE'
     
@@ -4191,7 +4191,7 @@ ADD                ADD <BotID> <BotKEY> [a note]'''
   #
   
   def user_command_del(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
-    global ID_CALL_LOCAL, WRECON_REMOTE_BOTS_CONTROL, WRECON_REMOTE_BOTS_CONTROL_SEECRET
+    global ID_CALL_LOCAL, WRECON_REMOTE_BOTS_CONTROL, WRECON_REMOTE_BOTS_CONTROL_SECRET
     
     OUT_MESSAGE = []
     
@@ -4214,10 +4214,10 @@ ADD                ADD <BotID> <BotKEY> [a note]'''
       OUT_MESSAGE.append('DELETE : %s (%s)' % (DEL_BOT_ID, WRECON_REMOTE_BOTS_CONTROL[DEL_BOT_ID][1]))
       OUT_MESSAGE.append('BOT ID %s HAS BEEN SUCCESSFULLY DELETED.' % DEL_BOT_ID)
       del WRECON_REMOTE_BOTS_CONTROL[DEL_BOT_ID]
-      if DEL_BOT_ID in WRECON_REMOTE_BOTS_CONTROL_SEECRET:
-        del WRECON_REMOTE_BOTS_CONTROL_SEECRET[DEL_BOT_ID]
+      if DEL_BOT_ID in WRECON_REMOTE_BOTS_CONTROL_SECRET:
+        del WRECON_REMOTE_BOTS_CONTROL_SECRET[DEL_BOT_ID]
       weechat.command(BUFFER, '/secure set wrecon_remote_bots_control %s' % (WRECON_REMOTE_BOTS_CONTROL))
-      weechat.command(BUFFER, '/secure set wrecon_remote_bots_control_seecret %s' % (WRECON_REMOTE_BOTS_CONTROL_SEECRET))
+      weechat.command(BUFFER, '/secure set wrecon_remote_bots_control_secret %s' % (WRECON_REMOTE_BOTS_CONTROL_SECRET))
     
     OUT_MESSAGE.append('')
     
@@ -4287,7 +4287,7 @@ DELETE             DEL[ETE] <BotID>|<INDEX>'''
   #
   
   def user_command_grant(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
-    global WRECON_REMOTE_BOTS_GRANTED, WRECON_REMOTE_BOTS_GRANTED_SEECRET
+    global WRECON_REMOTE_BOTS_GRANTED, WRECON_REMOTE_BOTS_GRANTED_SECRET
     
     OUT_MESSAGE = []
     
@@ -4302,11 +4302,11 @@ DELETE             DEL[ETE] <BotID>|<INDEX>'''
       OUT_MESSAEG.append('BOT ID %s ALREADY EXIST IN YOUR LIST.' % ADD_GRANTED)
     else:
       WRECON_REMOTE_BOTS_GRANTED[ADD_GRANTED]         = ADD_GRANTED_INFO
-      WRECON_REMOTE_BOTS_GRANTED_SEECRET[ADD_GRANTED] = []
+      WRECON_REMOTE_BOTS_GRANTED_SECRET[ADD_GRANTED] = []
       OUT_MESSAGE_TAG = 'GRANT INFO'
       OUT_MESSAGE.append('NEW BOT ID %s (%s) HAS BEEN SUCCESSFULLY GRANTED.' % (ADD_GRANTED, WRECON_REMOTE_BOTS_GRANTED[ADD_GRANTED]))
       weechat.command(BUFFER, '/secure set wrecon_remote_bots_granted %s' % (WRECON_REMOTE_BOTS_GRANTED))
-      weechat.command(BUFFER, '/secure set wrecon_remote_bots_granted_seecret %s' % (WRECON_REMOTE_BOTS_GRANTED_SEECRET))
+      weechat.command(BUFFER, '/secure set wrecon_remote_bots_granted_secret %s' % (WRECON_REMOTE_BOTS_GRANTED_SECRET))
     
     OUT_MESSAGE.append('')
     
@@ -4376,7 +4376,7 @@ GRANT              G[RANT] <BotID> [a note]'''
   #
   
   def user_command_revoke(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
-    global WRECON_REMOTE_BOTS_GRANTED, WRECON_REMOTE_BOTS_GRANTED_SEECRET
+    global WRECON_REMOTE_BOTS_GRANTED, WRECON_REMOTE_BOTS_GRANTED_SECRET
     
     OUT_MESSAGE = []
     
@@ -4399,10 +4399,10 @@ GRANT              G[RANT] <BotID> [a note]'''
       OUT_MESSAGE.append('REVOKE : %s (%s)' % (REVOKE_BOT_ID, WRECON_REMOTE_BOTS_GRANTED[REVOKE_BOT_ID]))
       OUT_MESSAGE.append('BOT ID %s HAS BEEN SUCCESSFULLY REVOKED.' % REVOKE_BOT_ID)
       del WRECON_REMOTE_BOTS_GRANTED[REVOKE_BOT_ID]
-      if REVOKE_BOT_ID in WRECON_REMOTE_BOTS_GRANTED_SEECRET:
-        del WRECON_REMOTE_BOTS_GRANTED_SEECRET[REVOKE_BOT_ID]
+      if REVOKE_BOT_ID in WRECON_REMOTE_BOTS_GRANTED_SECRET:
+        del WRECON_REMOTE_BOTS_GRANTED_SECRET[REVOKE_BOT_ID]
       weechat.command(BUFFER, '/secure set wrecon_remote_bots_granted %s' % (WRECON_REMOTE_BOTS_GRANTED))
-      weechat.command(BUFFER, '/secure set wrecon_remote_bots_granted_seecret %s' % (WRECON_REMOTE_BOTS_GRANTED_SEECRET))
+      weechat.command(BUFFER, '/secure set wrecon_remote_bots_granted_secret %s' % (WRECON_REMOTE_BOTS_GRANTED_SECRET))
     
     OUT_MESSAGE.append('')
     
