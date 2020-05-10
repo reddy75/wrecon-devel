@@ -2668,20 +2668,19 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
         HASH_DATA          = get_hash(DECRYPT_SEECRET_DATA.split(' ')[0])
       else:
         HASH_DATA          = get_hash(DECRYPT_SEECRET_DATA)
-      # 3. ENCRYPT HASH
-      
-      # DEBUG
-      display_message(BUFFER, 'DEBUG - buffer_command_verify_1_requested: SEC  : %s' % get_device_seecrets())
-      display_message(BUFFER, 'DEBUG - buffer_command_verify_1_requested: KEY1 : %s' % ENCRYPT_KEY1)
-      display_message(BUFFER, 'DEBUG - buffer_command_verify_1_requested: KEY2 : %s' % ENCRYPT_KEY2)
-      display_message(BUFFER, 'DEBUG - buffer_command_verify_1_requested: DATA : %s' % DECRYPT_SEECRET_DATA)
-      display_message(BUFFER, 'DEBUG - buffer_command_verify_1_requested: HASH : %s' % HASH_DATA)
       
       if L2_PROTOCOL and SEND_DATA:
         HASH_DATA = '%s %s' % (HASH_DATA, SEND_DATA)
       
+      # 3. ENCRYPT HASH
+      
       # DEBUG
-      # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_1_requested: HASH DATA : %s' % HASH_DATA)
+      # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_1_requested: SEC  : %s' % get_device_seecrets())
+      # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_1_requested: KEY1 : %s' % ENCRYPT_KEY1)
+      # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_1_requested: KEY2 : %s' % ENCRYPT_KEY2)
+      display_message(BUFFER, 'DEBUG - buffer_command_verify_1_requested: DATA : %s' % DECRYPT_SEECRET_DATA)
+      display_message(BUFFER, 'DEBUG - buffer_command_verify_1_requested: HASH : %s' % HASH_DATA)
+      display_message(BUFFER, 'DEBUG - buffer_command_verify_1_requested: LVL  : %s' % ENCRYPT_LEVEL)
       
       ENCRYPT_SEECRET_DATA = string_encrypt(ENCRYPT_LEVEL, HASH_DATA, ENCRYPT_KEY1, ENCRYPT_KEY2)
       # 4. SEND BACK ENCRYPTED HASH TO REQUESTOR
@@ -2836,12 +2835,6 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
           SECRET_DATA   = get_random_string(RANDOM_NUMBER)
           SECRET_HASH   = get_hash(SECRET_DATA)
           
-          # DEBUG
-          display_message(BUFFER, 'DEBUG - buffer_command_verify_2_result_received : SEC  : %s' % get_device_seecrets())
-          display_message(BUFFER, 'DEBUG - buffer_command_verify_2_result_received : KEY1 : %s' % ENCRYPT_KEY1)
-          display_message(BUFFER, 'DEBUG - buffer_command_verify_2_result_received : KEY2 : %s' % ENCRYPT_KEY2)
-          display_message(BUFFER, 'DEBUG - buffer_command_verify_2_result_received : DATA : %s' % SECRET_DATA)
-          display_message(BUFFER, 'DEBUG - buffer_command_verify_2_result_received : HASH : %s' % SECRET_HASH)
           # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_2_result_received : PROTOCOL : %s' % L2_PROTOCOL)
           
           # ~ if L2_PROTOCOL == VERIFICATION_LAST_L2:
@@ -2849,6 +2842,14 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
           
           if L2_PROTOCOL and SEND_DATA:
             SECRET_DATA = '%s %s' % (SECRET_DATA, SEND_DATA)
+          
+          # DEBUG
+          # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_2_result_received : SEC  : %s' % get_device_seecrets())
+          # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_2_result_received : KEY1 : %s' % ENCRYPT_KEY1)
+          # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_2_result_received : KEY2 : %s' % ENCRYPT_KEY2)
+          display_message(BUFFER, 'DEBUG - buffer_command_verify_2_result_received : DATA : %s' % SECRET_DATA)
+          display_message(BUFFER, 'DEBUG - buffer_command_verify_2_result_received : HASH : %s' % SECRET_HASH)
+          display_message(BUFFER, 'DEBUG - buffer_command_verify_2_result_received : LVL  : %s' % ENCRYPT_LEVEL)
           
           ENCRYPT_SEECRET_DATA                  = string_encrypt(ENCRYPT_LEVEL, SECRET_DATA, ENCRYPT_KEY1, ENCRYPT_KEY2)
           WAIT_FOR_REMOTE_DATA[UNIQ_COMMAND_ID] = SECRET_HASH
