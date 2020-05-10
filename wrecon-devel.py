@@ -2736,13 +2736,16 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
             # Pickup protocol function we need call for next request
             INITIAL_FUNCTION   = VERIFICATION_PROTOCOL[SECRET_DATA][1]
             
+            # DEBUG
+            display_message(BUFFER, 'DEBUG - buffer_command_verify_2_result_received: INI FUNC : %s' % INITIAL_FUNCTION)
+            
             SECRET_DATA        = COMMAND_ARGUMENTS_LIST[1]
             
             # DEBUG
             display_message(BUFFER, 'DEBUG - buffer_command_verify_2_result_received: SECRET_DATA            : %s' % SECRET_DATA)
             display_message(BUFFER, 'DEBUG - buffer_command_verify_2_result_received: COMMAND_ARGUMENTS_LIST : %s' % COMMAND_ARGUMENTS_LIST)
             
-            L2_PROTOCOL        = VERIFICATION_PROTOCOL[INITIAL_FUNCTION][0]
+            L2_PROTOCOL        = INITIAL_FUNCTION
             L2_PROTOCOL_NEXT   = VERIFICATION_PROTOCOL[INITIAL_FUNCTION][1]
             protocol_function  = VERIFICATION_PROTOCOL[INITIAL_FUNCTION][2]
             ERROR, ENCRYPT_LEVEL, ENCRYPT_KEY1, ENCRYPT_KEY2, SEND_DATA = protocol_function(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, SECRET_DATA)
@@ -2820,7 +2823,7 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
           
           # DEBUG
           display_message(BUFFER, 'DEBUG - buffer_command_verify_2_result_received : NEW DATA : %s %s' % (SECRET_DATA, SECRET_HASH))
-          display_message(BUFFER, 'DEBUG - buffer_command_verify_2_result_received : PROTOCOL : %s' % L2_PROTOCOL)
+          display_message(BUFFER, 'DEBUG - buffer_command_verify_2_result_received : PROTOCOL : %s' % L2_PROTOCOL_NEXT)
           
           if L2_PROTOCOL and SEND_DATA:
             SECRET_DATA = '%s %s' % (SECRET_DATA, SEND_DATA)
