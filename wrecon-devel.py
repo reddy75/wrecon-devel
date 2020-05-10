@@ -2689,7 +2689,7 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
   
   def buffer_command_verify_2_result_received(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
     global BUFFER_CMD_VAL_ERR, BUFFER_CMD_VAL_REA, BUFFER_CMD_VAL_EXE, WRECON_REMOTE_BOTS_CONTROL, WAIT_FOR_REMOTE_DATA, VERIFY_RESULT_VAL, WRECON_REMOTE_BOTS_ADVERTISED
-    global ID_CALL_LOCAL, ID_CALL_REMOTE, WRECON_BOT_KEY, WRECON_BOT_ID, VERIFICATION_PROTOCOL, VERIFICATION_REPLY_EXPECT
+    global ID_CALL_LOCAL, ID_CALL_REMOTE, WRECON_BOT_KEY, WRECON_BOT_ID, VERIFICATION_PROTOCOL, VERIFICATION_REPLY_EXPECT, VERIFICATION_LAST_L2
     
     UNIQ_COMMAND_ID = SOURCE_BOT_ID + COMMAND_ID
     
@@ -2824,6 +2824,9 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
           # DEBUG
           # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_2_result_received : NEW DATA : %s %s' % (SECRET_DATA, SECRET_HASH))
           # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_2_result_received : PROTOCOL : %s' % L2_PROTOCOL)
+          
+          if L2_PROTOCOL == VERIFICATION_LAST_L2:
+            L2_PROTOCOL = ''
           
           if L2_PROTOCOL and SEND_DATA:
             SECRET_DATA = '%s %s' % (SECRET_DATA, SEND_DATA)
@@ -3250,7 +3253,7 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
   
   # a -aaa ()     - LOCAL -> REMOTE (here we know we accepted all data after all verifications followed by protocol)
   # This ensure we call back function
-  def verify_protocol_a_aee(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
+  def verify_protocol_a_aaa(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
     global VERIFICATION_PROTOCOL, VERIFICATION_REPLY_EXPECT, VERIFY_CALL_ORDER, TEMPORARY_ENCRYPT_KEY1, TEMPORARY_ENCRYPT_KEY2
     global WRECON_BOT_KEY, WRECON_REMOTE_BOTS_GRANTED_SECRET
     
@@ -3373,8 +3376,10 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
     VERIFICATION_PROTOCOL['snr'] = [2, 'aaa', verify_protocol_7_snr]     # 9 Reply new SYS   - snDATA     - from remote with new SYS                  + new BKEY received
     
     # Latest function is called when all verifications were successful, we save new data
-    VERIFICATION_PROTOCOL['aaa'] = [2, '',    verify_protocol_a_aee]     # a Accepted BKEY or SYS
+    VERIFICATION_PROTOCOL['aaa'] = [2, '',    verify_protocol_a_aaa]     # a Accepted BKEY or SYS
     
+    global VERIFICATION_LAST_L2
+    VERIFICATION_LAST_L2 = list(VERIFICATION_PROTOCOL)[8]
     
     global VERIFICATION_INITIAL
     VERIFICATION_INITIAL = [list(VERIFICATION_PROTOCOL)[0], list(VERIFICATION_PROTOCOL)[4]]
