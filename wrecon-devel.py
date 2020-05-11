@@ -3066,7 +3066,7 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
     # DEBUG
     # ~ display_message(BUFFER, 'DEBUG - verify_protocol_1_eer: DECRYPT_DATA : %s' % DECRYPT_DATA)
     
-    if ERROR == False
+    if ERROR == False:
       XKEY_DATA = DECRYPT_DATA.split(' ')
       if len(XKEY_DATA) != 2:
         ERROR     = True
@@ -3208,8 +3208,6 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
         # ~ display_message(BUFFER, 'DEBUG - verify_protocol_3_ner: BKEY_DATA              : %s' % BKEY_DATA)
         
         SEND_DATA      = string_encrypt(ENCRYPT_LEVEL, SYS_DATA, ENCRYPT_KEY1, ENCRYPT_KEY2)
-      
-      
     
     return [ERROR, ENCRYPT_LEVEL, ENCRYPT_KEY1, ENCRYPT_KEY2, SEND_DATA]
   
