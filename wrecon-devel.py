@@ -3399,7 +3399,7 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
     if not UNIQ_COMMAND_ID in VERIFY_CALL_ORDER:
       VERIFY_CALL_ORDER[UNIQ_COMMAND_ID] = ''
       
-      SYS_DATA, BKEY_DATA = get_granted_secret(SOURCE_BOT_ID)
+      NULL, SYS_DATA, BKEY_DATA = get_granted_secret(SOURCE_BOT_ID)
       
       # We received SYS_DATA in encrypted form from remote PC
       # This we save
@@ -3408,21 +3408,38 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
       # DEBUG
       # ~ display_message(BUFFER, 'DEBUG - verify_protocol_a_aaa: COMMAND_ARGUMENTS_LIST : %s' % COMMAND_ARGUMENTS_LIST)
       
-      XSYS_DATA       = string_decrypt(ENCRYPT_LEVEL, RECEIVED_DATA, ENCRYPT_KEY1, ENCRYPT_KEY2).split(' ')
-      SYS_DATA        = string_decrypt(ENCRYPT_LEVEL, XSYS_DATA[1], ENCRYPT_KEY1, ENCRYPT_KEY2)
+      XSYS_DATA       = string_decrypt(ENCRYPT_LEVEL, RECEIVED_DATA, ENCRYPT_KEY1, ENCRYPT_KEY2)
       
-      WRECON_REMOTE_BOTS_GRANTED_SECRET[SOURCE_BOT_ID] = [SYS_DATA, BKEY_DATA]
+      if XSYS_DATA == 'ERROR':
+        ERROR     = True
+        SEND_DATA = 'DECRYPTION ERROR (function AAA / S1)'
       
-      # DEBUG
-      # ~ display_message(BUFFER, 'DEBUG - verify_protocol_a_aaa: TEMPORARY_ENCRYPT_KEY1 : %s' % (TEMPORARY_ENCRYPT_KEY1[UNIQ_COMMAND_ID]))
-      # ~ display_message(BUFFER, 'DEBUG - verify_protocol_a_aaa: TEMPORARY_ENCRYPT_KEY2 : %s' % (TEMPORARY_ENCRYPT_KEY2[UNIQ_COMMAND_ID]))
-      # ~ display_message(BUFFER, 'DEBUG - verify_protocol_a_aaa: ENCRYPT_KEY1           : %s' % ENCRYPT_KEY1)
-      # ~ display_message(BUFFER, 'DEBUG - verify_protocol_a_aaa: ENCRYPT_KEY2           : %s' % ENCRYPT_KEY2)
-      # ~ display_message(BUFFER, 'DEBUG - verify_protocol_a_aaa: SYS_DATA               : %s' % SYS_DATA)
-      # ~ display_message(BUFFER, 'DEBUG - verify_protocol_a_aaa: BKEY_DATA              : %s' % BKEY_DATA)
+      else:
+        XSYS_DATA = XSYS_DATA.split(' ')
+        
+        if len(XSYS_DATA) != 2:
+          ERROR     = True
+          SEND_DATA = 'DECRYPTION ERROR (function AAA / S2)'
+        else:
+          SYS_DATA  = string_decrypt(ENCRYPT_LEVEL, XSYS_DATA[1], ENCRYPT_KEY1, ENCRYPT_KEY2)
+          
+          if SYS_DATA == 'ERROR':
+            ERROR     = True
+            SEND_DATA = 'DECRYPTION ERROR (function AAA / S3)'
+          else:
+            WRECON_REMOTE_BOTS_GRANTED_SECRET[SOURCE_BOT_ID] = [SYS_DATA, BKEY_DATA]
+            
+            # DEBUG
+            # ~ display_message(BUFFER, 'DEBUG - verify_protocol_a_aaa: TEMPORARY_ENCRYPT_KEY1 : %s' % (TEMPORARY_ENCRYPT_KEY1[UNIQ_COMMAND_ID]))
+            # ~ display_message(BUFFER, 'DEBUG - verify_protocol_a_aaa: TEMPORARY_ENCRYPT_KEY2 : %s' % (TEMPORARY_ENCRYPT_KEY2[UNIQ_COMMAND_ID]))
+            # ~ display_message(BUFFER, 'DEBUG - verify_protocol_a_aaa: ENCRYPT_KEY1           : %s' % ENCRYPT_KEY1)
+            # ~ display_message(BUFFER, 'DEBUG - verify_protocol_a_aaa: ENCRYPT_KEY2           : %s' % ENCRYPT_KEY2)
+            # ~ display_message(BUFFER, 'DEBUG - verify_protocol_a_aaa: SYS_DATA               : %s' % SYS_DATA)
+            # ~ display_message(BUFFER, 'DEBUG - verify_protocol_a_aaa: BKEY_DATA              : %s' % BKEY_DATA)
+            
     # Second call, also final one, we prepare standard verification
     else:
-      SYS_DATA, BKEY_DATA = get_granted_secret(SOURCE_BOT_ID)
+      ENCRYPT_LEVEL, SYS_DATA, BKEY_DATA = get_granted_secret(SOURCE_BOT_ID)
       
       ENCRYPT_KEY1  = WRECON_BOT_KEY
       ENCRYPT_KEY2  = SYS_DATA
