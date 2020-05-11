@@ -3322,38 +3322,43 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
     # DEBUG
     # ~ display_message(BUFFER, '[%s] %s < L2 PROTOCOL - 4 RVN' % (COMMAND_ID, SOURCE_BOT_ID))
     
-    L2_PROTOCOL   = list(VERIFICATION_PROTOCOL)[4]
-    ENCRYPT_LEVEL = VERIFICATION_PROTOCOL[L2_PROTOCOL][0]
-    ENCRYPT_KEY1  = WRECON_BOT_KEY
-    ENCRYPT_KEY2  = WRECON_REMOTE_BOTS_GRANTED_SECRET[SOURCE_BOT_ID][1]
     SEND_DATA     = ''
     ERROR         = False
     
-    PREVIOUS_VERIFY[UNIQ_COMMAND_ID] = ''
-    
-    # Prepare temporary random keys
-    RANDOM_NUMBER = random.randint(7,15)
-    TEMPORARY_ENCRYPT_KEY1[UNIQ_COMMAND_ID] = get_random_string(RANDOM_NUMBER)
-    RANDOM_NUMBER = random.randint(7,15)
-    TEMPORARY_ENCRYPT_KEY2[UNIQ_COMMAND_ID] = get_random_string(RANDOM_NUMBER)
-    
-    # Prepare keys as data
-    OUT_DATA = '%s %s' % (TEMPORARY_ENCRYPT_KEY1[UNIQ_COMMAND_ID], TEMPORARY_ENCRYPT_KEY2[UNIQ_COMMAND_ID])
-    
-    # DEBUG
-    # ~ display_message(BUFFER, 'DEBUG - verify_protocol_4_rvn: DATA   : %s' % OUT_DATA)
-    # ~ display_message(BUFFER, 'DEBUG - verify_protocol_4_rvn: ELEVEL : %s' % ENCRYPT_LEVEL)
-    # ~ display_message(BUFFER, 'DEBUG - verify_protocol_4_rvn: EKEY 1 : %s' % ENCRYPT_KEY1)
-    # ~ display_message(BUFFER, 'DEBUG - verify_protocol_4_rvn: EKEY 2 : %s' % ENCRYPT_KEY2)
-    
-    # And encrypt it
-    ERROR, SEND_DATA = string_encrypt(ENCRYPT_LEVEL, OUT_DATA, ENCRYPT_KEY1, ENCRYPT_KEY2)
-    
-    if ERROR == True:
-      SEND_DATA = 'ENCRYPTION ERROR (function RVN)'
-      del PREVIOUS_VERIFY[UNIQ_COMMAND_ID]
+    if not SOURCE_BOT_ID in WRECON_REMOTE_BOTS_GRANTED_SECRET:
+      ERROR     = True
+      SEND_DATA = 'ERROR - MISSING DATA OF REMOTE BOT > %s' % SOURCE_BOT_ID
     else:
-      VERIFICATION_REPLY_EXPECT[UNIQ_COMMAND_ID] = VERIFICATION_PROTOCOL[L2_PROTOCOL][1]
+      L2_PROTOCOL   = list(VERIFICATION_PROTOCOL)[4]
+      ENCRYPT_LEVEL = VERIFICATION_PROTOCOL[L2_PROTOCOL][0]
+      ENCRYPT_KEY1  = WRECON_BOT_KEY
+      ENCRYPT_KEY2  = WRECON_REMOTE_BOTS_GRANTED_SECRET[SOURCE_BOT_ID][1]
+      
+      PREVIOUS_VERIFY[UNIQ_COMMAND_ID] = ''
+      
+      # Prepare temporary random keys
+      RANDOM_NUMBER = random.randint(7,15)
+      TEMPORARY_ENCRYPT_KEY1[UNIQ_COMMAND_ID] = get_random_string(RANDOM_NUMBER)
+      RANDOM_NUMBER = random.randint(7,15)
+      TEMPORARY_ENCRYPT_KEY2[UNIQ_COMMAND_ID] = get_random_string(RANDOM_NUMBER)
+      
+      # Prepare keys as data
+      OUT_DATA = '%s %s' % (TEMPORARY_ENCRYPT_KEY1[UNIQ_COMMAND_ID], TEMPORARY_ENCRYPT_KEY2[UNIQ_COMMAND_ID])
+      
+      # DEBUG
+      # ~ display_message(BUFFER, 'DEBUG - verify_protocol_4_rvn: DATA   : %s' % OUT_DATA)
+      # ~ display_message(BUFFER, 'DEBUG - verify_protocol_4_rvn: ELEVEL : %s' % ENCRYPT_LEVEL)
+      # ~ display_message(BUFFER, 'DEBUG - verify_protocol_4_rvn: EKEY 1 : %s' % ENCRYPT_KEY1)
+      # ~ display_message(BUFFER, 'DEBUG - verify_protocol_4_rvn: EKEY 2 : %s' % ENCRYPT_KEY2)
+      
+      # And encrypt it
+      ERROR, SEND_DATA = string_encrypt(ENCRYPT_LEVEL, OUT_DATA, ENCRYPT_KEY1, ENCRYPT_KEY2)
+      
+      if ERROR == True:
+        SEND_DATA = 'ENCRYPTION ERROR (function RVN)'
+        del PREVIOUS_VERIFY[UNIQ_COMMAND_ID]
+      else:
+        VERIFICATION_REPLY_EXPECT[UNIQ_COMMAND_ID] = VERIFICATION_PROTOCOL[L2_PROTOCOL][1]
     
     return [ERROR, ENCRYPT_LEVEL, ENCRYPT_KEY1, ENCRYPT_KEY2, SEND_DATA]
   
