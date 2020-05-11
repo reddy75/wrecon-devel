@@ -347,33 +347,45 @@ else:
     return OUTPUT_LIST
     
   def string_encrypt_level_0(INPUT_STRING, INPUT_KEY, NULL):
-    OUTPUT_LIST = string_encrypt_function(INPUT_STRING, INPUT_KEY)
+    ERROR = False
+    try:
+      OUTPUT_LIST   = string_encrypt_function(INPUT_STRING, INPUT_KEY)
+      OUTPUT_RESULT = base64.urlsafe_b64encode(OUTPUT_LIST.encode()).decode()
+    except:
+      ERROR         = True
+      OUTPUT_RESULT = 'ERROR'
     
-    OUTPUT_RESULT = base64.urlsafe_b64encode(OUTPUT_LIST.encode()).decode()
-    
-    return OUTPUT_RESULT
+    return [ERROR, OUTPUT_RESULT]
   
   def string_encrypt_level_1(INPUT_STRING, INPUT_KEY, NULL):
-    NEW_INPUT_KEY         = get_hash(INPUT_KEY)
-    SALT_STRING           = get_random_string(8)
-    OUTPUT_RESULT_LEVEL_1 = str(string_encrypt_function(INPUT_STRING, SALT_STRING + INPUT_KEY))
-    OUTPUT_RESULT_LEVEL_2 = string_encrypt_function(SALT_STRING + OUTPUT_RESULT_LEVEL_1, NEW_INPUT_KEY)
+    ERROR = False
+    try:
+      NEW_INPUT_KEY         = get_hash(INPUT_KEY)
+      SALT_STRING           = get_random_string(8)
+      OUTPUT_RESULT_LEVEL_1 = str(string_encrypt_function(INPUT_STRING, SALT_STRING + INPUT_KEY))
+      OUTPUT_RESULT_LEVEL_2 = string_encrypt_function(SALT_STRING + OUTPUT_RESULT_LEVEL_1, NEW_INPUT_KEY)
+      OUTPUT_RESULT         = base64.urlsafe_b64encode(OUTPUT_RESULT_LEVEL_2.encode()).decode()
+    except:
+      ERROR                 = True
+      OUTPUT_RESULT         = 'ERROR'
     
-    OUTPUT_RESULT         = base64.urlsafe_b64encode(OUTPUT_RESULT_LEVEL_2.encode()).decode()
-    
-    return OUTPUT_RESULT
+    return [ERROR, OUTPUT_RESULT]
   
   def string_encrypt_level_2(INPUT_STRING, INPUT_KEY, INPUT_KEY2):
-    INPUT_STRING          = string_reverse(INPUT_STRING)
-    INPUT_KEY             = string_join_keys(INPUT_KEY2, INPUT_KEY)
-    NEW_INPUT_KEY         = get_hash(INPUT_KEY)
-    SALT_STRING           = get_random_string(8)
-    OUTPUT_RESULT_LEVEL_1 = str(string_encrypt_function(INPUT_STRING, SALT_STRING + INPUT_KEY))
-    OUTPUT_RESULT_LEVEL_2 = string_encrypt_function(SALT_STRING + OUTPUT_RESULT_LEVEL_1, NEW_INPUT_KEY)
+    ERROR = False
+    try:
+      INPUT_STRING          = string_reverse(INPUT_STRING)
+      INPUT_KEY             = string_join_keys(INPUT_KEY2, INPUT_KEY)
+      NEW_INPUT_KEY         = get_hash(INPUT_KEY)
+      SALT_STRING           = get_random_string(8)
+      OUTPUT_RESULT_LEVEL_1 = str(string_encrypt_function(INPUT_STRING, SALT_STRING + INPUT_KEY))
+      OUTPUT_RESULT_LEVEL_2 = string_encrypt_function(SALT_STRING + OUTPUT_RESULT_LEVEL_1, NEW_INPUT_KEY)
+      OUTPUT_RESULT         = base64.urlsafe_b64encode(OUTPUT_RESULT_LEVEL_2.encode()).decode()
+    except:
+      ERROR                 = True
+      OUTPUT_RESULT         = 'ERROR'
     
-    OUTPUT_RESULT         = base64.urlsafe_b64encode(OUTPUT_RESULT_LEVEL_2.encode()).decode()
-    
-    return OUTPUT_RESULT
+    return [ERROR, OUTPUT_RESULT]
   
   ENCRYPT_LEVEL[0] = string_encrypt_level_0
   ENCRYPT_LEVEL[1] = string_encrypt_level_1
@@ -405,15 +417,18 @@ else:
     return OUTPUT_LIST
   
   def string_decrypt_level_0(INPUT_STRING, INPUT_KEY, NULL):
+    ERROR = False
     try:
       DECODE_STRING = base64.urlsafe_b64decode(INPUT_STRING).decode()
       OUTPUT_RESULT = string_decrypt_function(DECODE_STRING, INPUT_KEY)
     except:
+      ERROR         = True
       OUTPUT_RESULT = 'ERROR'
     
-    return OUTPUT_RESULT
+    return [ERROR, OUTPUT_RESULT]
   
   def string_decrypt_level_1(INPUT_STRING, INPUT_KEY, NULL):
+    ERROR = False
     try:
       DECODE_STRING         = base64.urlsafe_b64decode(INPUT_STRING).decode()
       NEW_INPUT_KEY         = get_hash(INPUT_KEY)
@@ -421,11 +436,13 @@ else:
       SALT_STRING           = OUTPUT_RESULT_LEVEL_2[:8]
       OUTPUT_RESULT_LEVEL_1 = string_decrypt_function(OUTPUT_RESULT_LEVEL_2[8:], SALT_STRING + INPUT_KEY)
     except:
+      ERROR                 = True
       OUTPUT_RESULT_LEVEL_1 = 'ERROR'
     
-    return OUTPUT_RESULT_LEVEL_1
+    return [ERROR, OUTPUT_RESULT_LEVEL_1]
   
   def string_decrypt_level_2(INPUT_STRING, INPUT_KEY, INPUT_KEY2):
+    ERROR = False
     try:
       DECODE_STRING         = base64.urlsafe_b64decode(INPUT_STRING).decode()
       
@@ -439,9 +456,10 @@ else:
       
       DECODE_STRING         = string_reverse(OUTPUT_RESULT_LEVEL_1)
     except:
+      ERROR                 = True
       DECODE_STRING         = 'ERROR'
       
-    return DECODE_STRING
+    return [ERROR, DECODE_STRING]
     
   DECRYPT_LEVEL[0] = string_decrypt_level_0
   DECRYPT_LEVEL[1] = string_decrypt_level_1
@@ -2565,16 +2583,20 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
       if L2_PROTOCOL and SEND_DATA:
         SECRET_DATA = '%s %s' % (SECRET_DATA, SEND_DATA)
       
-      ENCRYPT_SEECRET_DATA                  = string_encrypt(ENCRYPT_LEVEL, SECRET_DATA, ENCRYPT_KEY1, ENCRYPT_KEY2)
-      WAIT_FOR_REMOTE_DATA[UNIQ_COMMAND_ID] = SECRET_HASH
-      
-      # SEND INITIAL REQUEST FOR VERIFICATION TO REMOTE BOT
-      if L2_PROTOCOL and SEND_DATA:
-        ENCRYPT_SEECRET_DATA = '%s %s' % (INITIAL_FUNCTION, ENCRYPT_SEECRET_DATA)
+      ERROR, ENCRYPT_SEECRET_DATA           = string_encrypt(ENCRYPT_LEVEL, SECRET_DATA, ENCRYPT_KEY1, ENCRYPT_KEY2)
+      if ERROR == True:
+        VERIFY_COMMAND = BUFFER_CMD_VAL_ERR
+      else:
+        WAIT_FOR_REMOTE_DATA[UNIQ_COMMAND_ID] = SECRET_HASH
         
-      weechat.command(BUFFER, '%s %s %s %s %s' % (VERIFY_COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, ENCRYPT_SEECRET_DATA))
-      VERIFY_RESULT_VAL[UNIQ_COMMAND_ID] = weechat.hook_timer(TIMEOUT_COMMAND_L2*1000, 0, 1, 'function_verify_wait_result', UNIQ_COMMAND_ID)
-    else:
+        # SEND INITIAL REQUEST FOR VERIFICATION TO REMOTE BOT
+        if L2_PROTOCOL and SEND_DATA:
+          ENCRYPT_SEECRET_DATA = '%s %s' % (INITIAL_FUNCTION, ENCRYPT_SEECRET_DATA)
+          
+        weechat.command(BUFFER, '%s %s %s %s %s' % (VERIFY_COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, ENCRYPT_SEECRET_DATA))
+        VERIFY_RESULT_VAL[UNIQ_COMMAND_ID] = weechat.hook_timer(TIMEOUT_COMMAND_L2*1000, 0, 1, 'function_verify_wait_result', UNIQ_COMMAND_ID)
+    
+    if ERROR == True:
       weechat.command(BUFFER, '%s %s %s %s ERROR IN INITIALIZATION VERIFICATION' % (VERIFY_COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID))
       if UNIQ_COMMAND_ID in VERIFICATION_REPLY_EXPECT:
         del VERIFICATION_REPLY_EXPECT[UNIQ_COMMAND_ID]
@@ -2658,37 +2680,46 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
       # DEUG
       # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_1_requested: SEECRET : %s' % (SECRET_DATA))
       
-      DECRYPT_SEECRET_DATA = string_decrypt(ENCRYPT_LEVEL, SECRET_DATA, ENCRYPT_KEY1, ENCRYPT_KEY2)
+      ERROR, DECRYPT_SEECRET_DATA = string_decrypt(ENCRYPT_LEVEL, SECRET_DATA, ENCRYPT_KEY1, ENCRYPT_KEY2)
       
       # DEBUG
       # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_1_requested: SEECRET : %s' % (DECRYPT_SEECRET_DATA))
       
       # 2. GET HASH OF DECRYPTED DATA
-      if L2_PROTOCOL:
-        HASH_DATA          = get_hash(DECRYPT_SEECRET_DATA.split(' ')[0])
+      if ERROR == True:
+        VERIFY_COMMAND = BUFFER_CMD_VAL_ERR
+        OUT_MESSAGE    = 'DECRYPTION ERROR (function REQUESTED)' 
       else:
-        HASH_DATA          = get_hash(DECRYPT_SEECRET_DATA)
-      
-      if L2_PROTOCOL and SEND_DATA:
-        HASH_DATA = '%s %s' % (HASH_DATA, SEND_DATA)
-      
-      # 3. ENCRYPT HASH
-      
-      # DEBUG
-      # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_1_requested: SEC  : %s' % get_device_secrets())
-      # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_1_requested: KEY1 : %s' % ENCRYPT_KEY1)
-      # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_1_requested: KEY2 : %s' % ENCRYPT_KEY2)
-      # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_1_requested: DATA : %s' % DECRYPT_SEECRET_DATA)
-      # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_1_requested: HASH : %s' % HASH_DATA)
-      # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_1_requested: LVL  : %s' % ENCRYPT_LEVEL)
-      
-      ENCRYPT_SEECRET_DATA = string_encrypt(ENCRYPT_LEVEL, HASH_DATA, ENCRYPT_KEY1, ENCRYPT_KEY2)
-      # 4. SEND BACK ENCRYPTED HASH TO REQUESTOR
-      
-      if L2_PROTOCOL:
-        ENCRYPT_SEECRET_DATA = '%s %s' % (L2_PROTOCOL, ENCRYPT_SEECRET_DATA)
-      weechat.command(BUFFER, '%s %s %s %s %s' % (VERIFY_COMMAND, SOURCE_BOT_ID, TARGET_BOT_ID, COMMAND_ID, ENCRYPT_SEECRET_DATA))
-    else:
+        if L2_PROTOCOL:
+          HASH_DATA          = get_hash(DECRYPT_SEECRET_DATA.split(' ')[0])
+        else:
+          HASH_DATA          = get_hash(DECRYPT_SEECRET_DATA)
+        
+        if L2_PROTOCOL and SEND_DATA:
+          HASH_DATA = '%s %s' % (HASH_DATA, SEND_DATA)
+        
+        # 3. ENCRYPT HASH
+        
+        # DEBUG
+        # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_1_requested: SEC  : %s' % get_device_secrets())
+        # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_1_requested: KEY1 : %s' % ENCRYPT_KEY1)
+        # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_1_requested: KEY2 : %s' % ENCRYPT_KEY2)
+        # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_1_requested: DATA : %s' % DECRYPT_SEECRET_DATA)
+        # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_1_requested: HASH : %s' % HASH_DATA)
+        # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_1_requested: LVL  : %s' % ENCRYPT_LEVEL)
+        
+        ERROR, ENCRYPT_SEECRET_DATA = string_encrypt(ENCRYPT_LEVEL, HASH_DATA, ENCRYPT_KEY1, ENCRYPT_KEY2)
+        # 4. SEND BACK ENCRYPTED HASH TO REQUESTOR
+        
+        if ERROR == True:
+          VERIFY_COMMAND = BUFFER_CMD_VAL_ERR
+          OUT_MESSAGE    = 'ENCRYPTION ERROR (function REQUESTED)' 
+        else:
+          if L2_PROTOCOL:
+            ENCRYPT_SEECRET_DATA = '%s %s' % (L2_PROTOCOL, ENCRYPT_SEECRET_DATA)
+          weechat.command(BUFFER, '%s %s %s %s %s' % (VERIFY_COMMAND, SOURCE_BOT_ID, TARGET_BOT_ID, COMMAND_ID, ENCRYPT_SEECRET_DATA))
+    
+    if ERROR == True:
       weechat.command(BUFFER, '%s %s %s %s %s' % (VERIFY_COMMAND, SOURCE_BOT_ID, TARGET_BOT_ID, COMMAND_ID, OUT_MESSAGE))
       if UNIQ_COMMAND_ID in VERIFICATION_REPLY_EXPECT:
         del VERIFICATION_REPLY_EXPECT[UNIQ_COMMAND_ID]
@@ -2702,7 +2733,7 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
   # Called from buffer, we are received data from remote BOT of our request
   
   def buffer_command_verify_2_result_received(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
-    global BUFFER_CMD_VAL_ERR, BUFFER_CMD_VAL_REA, BUFFER_CMD_VAL_EXE, WRECON_REMOTE_BOTS_CONTROL, WAIT_FOR_REMOTE_DATA, VERIFY_RESULT_VAL, WRECON_REMOTE_BOTS_ADVERTISED
+    global BUFFER_CMD_VAL_ERR, BUFFER_CMD_VAL_REA, BUFFER_CMD_VAL_EXE, WRECON_REMOTE_BOTS_CONTROL, WRECON_REMOTE_BOTS_CONTROL_SECRET, WAIT_FOR_REMOTE_DATA, VERIFY_RESULT_VAL, WRECON_REMOTE_BOTS_ADVERTISED
     global ID_CALL_LOCAL, ID_CALL_REMOTE, WRECON_BOT_KEY, WRECON_BOT_ID, VERIFICATION_PROTOCOL, VERIFICATION_REPLY_EXPECT, VERIFICATION_LAST_L2, TIMEOUT_COMMAND_L2
     
     UNIQ_COMMAND_ID = SOURCE_BOT_ID + COMMAND_ID
@@ -2786,46 +2817,51 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
         # DEBUG
         # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_2_result_received: L KEYS : %s %s %s' % (ENCRYPT_LEVEL, ENCRYPT_KEY1, ENCRYPT_KEY2))
         
-        DECRYPT_DATA  = string_decrypt(ENCRYPT_LEVEL, SECRET_DATA, ENCRYPT_KEY1, ENCRYPT_KEY2)
+        ERROR, DECRYPT_DATA  = string_decrypt(ENCRYPT_LEVEL, SECRET_DATA, ENCRYPT_KEY1, ENCRYPT_KEY2)
         
         # DEBUG
         # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_2_result_received: DECRYPT_DATA         : %s' % DECRYPT_DATA)
         
       # Check HASH is correct of older version of remote client
-        if ENCRYPT_LEVEL == 0:
-          if WAIT_FOR_REMOTE_DATA[UNIQ_COMMAND_ID] == DECRYPT_DATA:
-            OUT_MESSAGE        = 'VERIFICATION SUCCESSFUL'
-          else:
-            ERROR              = True
-            OUT_MESSAGE        = 'VERIFICATION FAILED'
-            FINAL_VERIFICATION = True
-            VERIFY_COMMAND     = BUFFER_CMD_VAL_ERR
-      # Check HASH is correct of new version of remote client
+        if ERROR == True:
+          VERIFY_COMMAND     = BUFFER_CMD_VAL_ERR
+          FINAL_VERIFICATION = True
+          OUT_MESSAGE        = 'DECRYPTION ERROR (function RESULT RECEIVED)'
         else:
-          DECRYPT_DATA = DECRYPT_DATA.split(' ')
-          
-          # DEBUG
-          # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_2_result_received: WAIT_FOR_REMOTE_DATA : %s' % WAIT_FOR_REMOTE_DATA)
-          
-          if WAIT_FOR_REMOTE_DATA[UNIQ_COMMAND_ID] == DECRYPT_DATA[0]:
-            OUT_MESSAGE        = 'VERIFICATION SUCCESSFUL'
-          else:
-          # In case this was first request and device of remote client has been changed,
-          # then it always result verification failed
-          # So we need request verification by additional secret key
-          # Here we start with L2 protocol by 6th of protocol function
-            if not UNIQ_COMMAND_ID in VERIFICATION_REPLY_EXPECT:
-              FINAL_VERIFICATION = False
-              VERIFY_COMMAND     = BUFFER_CMD_VAL_EXE
-              L2_PROTOCOL        = list(VERIFICATION_PROTOCOL)[4]
-              L2_PROTOCOL_NEXT   = VERIFICATION_PROTOCOL[L2_PROTOCOL][1]
-              protocol_function  = VERIFICATION_PROTOCOL[L2_PROTOCOL][2]
-          # Here we know that additional verification has been triggered, but verification failed
+          if ENCRYPT_LEVEL == 0:
+            if WAIT_FOR_REMOTE_DATA[UNIQ_COMMAND_ID] == DECRYPT_DATA:
+              OUT_MESSAGE        = 'VERIFICATION SUCCESSFUL'
             else:
               ERROR              = True
               OUT_MESSAGE        = 'VERIFICATION FAILED'
               FINAL_VERIFICATION = True
               VERIFY_COMMAND     = BUFFER_CMD_VAL_ERR
+          # Check HASH is correct of new version of remote client
+          else:
+            DECRYPT_DATA = DECRYPT_DATA.split(' ')
+            
+            # DEBUG
+            # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_2_result_received: WAIT_FOR_REMOTE_DATA : %s' % WAIT_FOR_REMOTE_DATA)
+            
+            if WAIT_FOR_REMOTE_DATA[UNIQ_COMMAND_ID] == DECRYPT_DATA[0]:
+              OUT_MESSAGE        = 'VERIFICATION SUCCESSFUL'
+            else:
+            # In case this was first request and device of remote client has been changed,
+            # then it always result verification failed
+            # So we need request verification by additional secret key
+            # Here we start with L2 protocol by 6th of protocol function
+              if not UNIQ_COMMAND_ID in VERIFICATION_REPLY_EXPECT:
+                FINAL_VERIFICATION = False
+                VERIFY_COMMAND     = BUFFER_CMD_VAL_EXE
+                L2_PROTOCOL        = list(VERIFICATION_PROTOCOL)[4]
+                L2_PROTOCOL_NEXT   = VERIFICATION_PROTOCOL[L2_PROTOCOL][1]
+                protocol_function  = VERIFICATION_PROTOCOL[L2_PROTOCOL][2]
+            # Here we know that additional verification has been triggered, but verification failed
+              else:
+                ERROR              = True
+                OUT_MESSAGE        = 'VERIFICATION FAILED'
+                FINAL_VERIFICATION = True
+                VERIFY_COMMAND     = BUFFER_CMD_VAL_ERR
         
       # Here we continue in case we need follow L2 protocol for requesting next data
       if FINAL_VERIFICATION == False:
@@ -2858,27 +2894,37 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
           # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_2_result_received : HASH : %s' % SECRET_HASH)
           # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_2_result_received : LVL  : %s' % ENCRYPT_LEVEL)
           
-          ENCRYPT_SEECRET_DATA                  = string_encrypt(ENCRYPT_LEVEL, SECRET_DATA, ENCRYPT_KEY1, ENCRYPT_KEY2)
-          WAIT_FOR_REMOTE_DATA[UNIQ_COMMAND_ID] = SECRET_HASH
+          ERROR, ENCRYPT_SEECRET_DATA = string_encrypt(ENCRYPT_LEVEL, SECRET_DATA, ENCRYPT_KEY1, ENCRYPT_KEY2)
           
-          if L2_PROTOCOL:
-            SEND_DATA = '%s %s' % (L2_PROTOCOL, ENCRYPT_SEECRET_DATA)
-          else:
-            SEND_DATA = ENCRYPT_SEECRET_DATA
-          
-          weechat.command(BUFFER, '%s %s %s %s %s' % (VERIFY_COMMAND, SOURCE_BOT_ID, TARGET_BOT_ID, COMMAND_ID, SEND_DATA))
-          VERIFY_RESULT_VAL[UNIQ_COMMAND_ID] = weechat.hook_timer(TIMEOUT_COMMAND_L2*1000, 0, 1, 'function_verify_wait_result', UNIQ_COMMAND_ID)
-          
-          if not L2_PROTOCOL:
+          if ERROR == True:
             FINAL_VERIFICATION = True
-            verify_remove_l2_temporary_data(UNIQ_COMMAND_ID)
+            OUT_MESSAGE        = 'ENCRYPTION ERROR (function RESULT RECEIVED)'
+          else:
+          
+            WAIT_FOR_REMOTE_DATA[UNIQ_COMMAND_ID] = SECRET_HASH
+            if L2_PROTOCOL:
+              SEND_DATA = '%s %s' % (L2_PROTOCOL, ENCRYPT_SEECRET_DATA)
+            else:
+              SEND_DATA = ENCRYPT_SEECRET_DATA
+            
+            weechat.command(BUFFER, '%s %s %s %s %s' % (VERIFY_COMMAND, SOURCE_BOT_ID, TARGET_BOT_ID, COMMAND_ID, SEND_DATA))
+            VERIFY_RESULT_VAL[UNIQ_COMMAND_ID] = weechat.hook_timer(TIMEOUT_COMMAND_L2*1000, 0, 1, 'function_verify_wait_result', UNIQ_COMMAND_ID)
+            
+            if not L2_PROTOCOL:
+              FINAL_VERIFICATION = True
+              verify_remove_l2_temporary_data(UNIQ_COMMAND_ID)
     
     # Here we have final verification, then we can stop all waiting tasks and requests
     if FINAL_VERIFICATION == True:
       if VERIFY_COMMAND == BUFFER_CMD_VAL_REA:
         display_message(BUFFER, '[%s] %s < REMOTE EXECUTION HAS BEEN ACCEPTED' % (COMMAND_ID, SOURCE_BOT_ID))
+        # Here we can save data of CONTROL bot after successful verification
+        if UNIQ_COMMAND_ID in ID_CALL_LOCAL:
+          weechat.command(BUFFER, '/secure set wrecon_remote_bots_control_secret %s' % (WRECON_REMOTE_BOTS_CONTROL_SECRET))
+          display_message(BUFFER, '[%s] %s < NEW DATA HAS BEEN SAVED' % (COMMAND_ID, SOURCE_BOT_ID))
       else:
         display_message(BUFFER, '[%s] %s < %s' % (COMMAND_ID, SOURCE_BOT_ID, OUT_MESSAGE))
+      
       if UNIQ_COMMAND_ID in ID_CALL_REMOTE and UNIQ_COMMAND_ID in WAIT_FOR_VERIFICATION:
         weechat.command(BUFFER, '%s %s %s %s %s' % (VERIFY_COMMAND, SOURCE_BOT_ID, TARGET_BOT_ID, COMMAND_ID, OUT_MESSAGE))
       
@@ -2976,7 +3022,7 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
   # 
   
   def function_verify_save_data(BUFFER, TAGS, PREFIX, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS):
-    global WRECON_REMOTE_BOTS_VERIFIED, WRECON_REMOTE_BOTS_ADVERTISED
+    global WRECON_REMOTE_BOTS_VERIFIED, WRECON_REMOTE_BOTS_ADVERTISED, WRECON_REMOTE_BOTS_GRANTED_SECRET
     
     # Save actual common data of ADVERTISED remote BOT and of VERIFIED remote BOT together
    
@@ -2985,7 +3031,10 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
     SOURCE_BOT_VERSION                           = WRECON_REMOTE_BOTS_ADVERTISED[SOURCE_BOT_ID].split('|')[1]
     WRECON_REMOTE_BOTS_VERIFIED[SOURCE_BOT_ID]   = WRECON_REMOTE_BOTS_ADVERTISED[SOURCE_BOT_ID]
     
-    display_message(BUFFER, '[%s] REMOTE BOT VERIFIED -> %s (%s) [v%s]' % (COMMAND_ID, SOURCE_BOT_ID, SOURCE_BOT_NAME, SOURCE_BOT_VERSION))
+    display_message(BUFFER, '[%s] REMOTE BOT VERIFIED     -> %s (%s) [v%s]' % (COMMAND_ID, SOURCE_BOT_ID, SOURCE_BOT_NAME, SOURCE_BOT_VERSION))
+    
+    # Here we have confirmed successful verification, we can save data also
+    wehat.command(BUFFER, '/secure set wrecon_remote_bots_granted_secret %s' % (WRECON_REMOTE_BOTS_GRANTED_SECRET))
     
     return weechat.WEECHAT_RC_OK
   
@@ -3047,9 +3096,12 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
     # Prepare keys as data
     OUT_DATA = '%s %s' % (TEMPORARY_ENCRYPT_KEY1[UNIQ_COMMAND_ID], TEMPORARY_ENCRYPT_KEY2[UNIQ_COMMAND_ID])
     # And encrypt it
-    SEND_DATA = string_encrypt(ENCRYPT_LEVEL, OUT_DATA, ENCRYPT_KEY1, ENCRYPT_KEY2)
+    ERROR, SEND_DATA = string_encrypt(ENCRYPT_LEVEL, OUT_DATA, ENCRYPT_KEY1, ENCRYPT_KEY2)
     
-    VERIFICATION_REPLY_EXPECT[UNIQ_COMMAND_ID] = VERIFICATION_PROTOCOL[L2_PROTOCOL][1]
+    if ERROR == True:
+      SEND_DATA = 'ENCRYPTION ERROR (function REE)'
+    else:
+      VERIFICATION_REPLY_EXPECT[UNIQ_COMMAND_ID] = VERIFICATION_PROTOCOL[L2_PROTOCOL][1]
     
     # DEBUG
     # ~ display_message(BUFFER, 'DEBUG - verify_protocol_0_ree: TKEYS  : %s %s' % (TEMPORARY_ENCRYPT_KEY1[UNIQ_COMMAND_ID], TEMPORARY_ENCRYPT_KEY2[UNIQ_COMMAND_ID]))
@@ -3086,10 +3138,9 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
     # ~ display_message(BUFFER, 'DEBUG - verify_protocol_1_eer: EKEY 1       : %s' % ENCRYPT_KEY1)
     # ~ display_message(BUFFER, 'DEBUG - verify_protocol_1_eer: EKEY 2       : %s' % ENCRYPT_KEY2)
     
-    DECRYPT_DATA = string_decrypt(ENCRYPT_LEVEL, SECRET_DATA, ENCRYPT_KEY1, ENCRYPT_KEY2)
+    ERROR, DECRYPT_DATA = string_decrypt(ENCRYPT_LEVEL, SECRET_DATA, ENCRYPT_KEY1, ENCRYPT_KEY2)
     
-    if DECRYPT_DATA == 'ERROR':
-      ERROR     = True
+    if ERROR == True:
       SEND_DATA = 'DECRYPTION ERROR (function EER / S1)'
     
     # DEBUG
@@ -3101,10 +3152,9 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
         ERROR     = True
         SEND_DATA = 'DECRYPTION ERROR (function EER / S2)'
       else:
-        XKEY_DATA = string_decrypt(ENCRYPT_LEVEL, XKEY_DATA[1], ENCRYPT_KEY1, ENCRYPT_KEY2)
+        ERROR, XKEY_DATA = string_decrypt(ENCRYPT_LEVEL, XKEY_DATA[1], ENCRYPT_KEY1, ENCRYPT_KEY2)
         
-        if XKEY_DATA == 'ERROR':
-          ERROR     = True
+        if ERROR == True:
           SEND_DATA = 'DECRYPTION ERROR (function EER / S3)'
         else:
           KEY_DATA  = XKEY_DATA.split(' ')
@@ -3178,7 +3228,10 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
       # ~ display_message(BUFFER, 'DEBUG - verify_protocol_2_rre: SYS_DATA               : %s' % SYS_DATA)
       # ~ display_message(BUFFER, 'DEBUG - verify_protocol_2_rre: BKEY_DATA              : %s' % BKEY_DATA)
       
-      SEND_DATA = string_encrypt(ENCRYPT_LEVEL, BKEY_DATA, ENCRYPT_KEY1, ENCRYPT_KEY2)
+      ERROR, SEND_DATA = string_encrypt(ENCRYPT_LEVEL, BKEY_DATA, ENCRYPT_KEY1, ENCRYPT_KEY2)
+      
+      if ERROR == True:
+        SEND_DATA = 'ENCRYPTION ERROR (function RRE)'
       
       del VERIFY_CALL_ORDER[UNIQ_COMMAND_ID]
     
@@ -3186,7 +3239,8 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
     # ~ display_message(BUFFER, 'DEBUG - verify_protocol_2_rre : L KEYS : %s %s %s' % (ENCRYPT_LEVEL, ENCRYPT_KEY1, ENCRYPT_KEY2))
     # ~ display_message(BUFFER, 'DEBUG - verify_protocol_2_rre : S DATA : %s' % SEND_DATA)
     
-    VERIFICATION_REPLY_EXPECT[UNIQ_COMMAND_ID] = VERIFICATION_PROTOCOL[L2_PROTOCOL][1]
+    if ERROR == False:
+      VERIFICATION_REPLY_EXPECT[UNIQ_COMMAND_ID] = VERIFICATION_PROTOCOL[L2_PROTOCOL][1]
     
     return [ERROR, ENCRYPT_LEVEL, ENCRYPT_KEY1, ENCRYPT_KEY2, SEND_DATA]
   
@@ -3209,18 +3263,15 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
     
     # We also received new BKEY in encrypted form
     RECEIVED_DATA  = COMMAND_ARGUMENTS_LIST[1]
-    DECRYPTED_DATA = string_decrypt(ENCRYPT_LEVEL, RECEIVED_DATA, ENCRYPT_KEY1, ENCRYPT_KEY2)
+    ERROR, DECRYPTED_DATA = string_decrypt(ENCRYPT_LEVEL, RECEIVED_DATA, ENCRYPT_KEY1, ENCRYPT_KEY2)
     
-    if DECRYPTED_DATA == 'ERROR':
-      ERROR     = True
+    if ERROR == True:
       SEND_DATA = 'DECRYPTION ERROR (function NER / S1)'
-    
-    if ERROR == False:
-      EBKEY_DATA     = DECRYPTED_DATA.split(' ')[1]
-      BKEY_DATA      = string_decrypt(ENCRYPT_LEVEL, EBKEY_DATA, ENCRYPT_KEY1, ENCRYPT_KEY2)
+    else:
+      EBKEY_DATA       = DECRYPTED_DATA.split(' ')[1]
+      ERROR, BKEY_DATA = string_decrypt(ENCRYPT_LEVEL, EBKEY_DATA, ENCRYPT_KEY1, ENCRYPT_KEY2)
       
-      if BKEY_DATA == 'ERROR':
-        ERROR     = True
+      if ERROR == True:
         SEND_DATA = 'DECRYPTION ERROR (function NER / S2)'
       else:
         SYS_DATA       = get_device_secrets()
@@ -3236,7 +3287,10 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
         # ~ display_message(BUFFER, 'DEBUG - verify_protocol_3_ner: SYS_DATA               : %s' % SYS_DATA)
         # ~ display_message(BUFFER, 'DEBUG - verify_protocol_3_ner: BKEY_DATA              : %s' % BKEY_DATA)
         
-        SEND_DATA      = string_encrypt(ENCRYPT_LEVEL, SYS_DATA, ENCRYPT_KEY1, ENCRYPT_KEY2)
+        ERROR, SEND_DATA      = string_encrypt(ENCRYPT_LEVEL, SYS_DATA, ENCRYPT_KEY1, ENCRYPT_KEY2)
+        
+        if ERROR == True:
+          SEND_DATA = 'ENCRYPTION ERROR (function NER)'
     
     return [ERROR, ENCRYPT_LEVEL, ENCRYPT_KEY1, ENCRYPT_KEY2, SEND_DATA]
   
@@ -3266,19 +3320,30 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
     TEMPORARY_ENCRYPT_KEY2[UNIQ_COMMAND_ID] = get_random_string(RANDOM_NUMBER)
     
     # DEBUG
-    display_message(BUFFER, 'DEBUG - verify_protocol_4_rvn: TEMPORARY_ENCRYPT_KEY1 : %s' % (TEMPORARY_ENCRYPT_KEY1[UNIQ_COMMAND_ID]))
-    display_message(BUFFER, 'DEBUG - verify_protocol_4_rvn: TEMPORARY_ENCRYPT_KEY2 : %s' % (TEMPORARY_ENCRYPT_KEY2[UNIQ_COMMAND_ID]))
-    display_message(BUFFER, 'DEBUG - verify_protocol_4_rvn: ENCRYPT_KEY1           : %s' % ENCRYPT_KEY1)
-    display_message(BUFFER, 'DEBUG - verify_protocol_4_rvn: ENCRYPT_KEY2           : %s' % ENCRYPT_KEY2)
-    display_message(BUFFER, 'DEBUG - verify_protocol_4_rvn: SYS_DATA               : %s' % SYS_DATA)
-    display_message(BUFFER, 'DEBUG - verify_protocol_4_rvn: BKEY_DATA              : %s' % BKEY_DATA)
+    # ~ display_message(BUFFER, 'DEBUG - verify_protocol_4_rvn: TEMPORARY_ENCRYPT_KEY1 : %s' % (TEMPORARY_ENCRYPT_KEY1[UNIQ_COMMAND_ID]))
+    # ~ display_message(BUFFER, 'DEBUG - verify_protocol_4_rvn: TEMPORARY_ENCRYPT_KEY2 : %s' % (TEMPORARY_ENCRYPT_KEY2[UNIQ_COMMAND_ID]))
+    # ~ display_message(BUFFER, 'DEBUG - verify_protocol_4_rvn: ENCRYPT_KEY1           : %s' % ENCRYPT_KEY1)
+    # ~ display_message(BUFFER, 'DEBUG - verify_protocol_4_rvn: ENCRYPT_KEY2           : %s' % ENCRYPT_KEY2)
+    # ~ display_message(BUFFER, 'DEBUG - verify_protocol_4_rvn: SYS_DATA               : %s' % SYS_DATA)
+    # ~ display_message(BUFFER, 'DEBUG - verify_protocol_4_rvn: BKEY_DATA              : %s' % BKEY_DATA)
+    
     
     # Prepare keys as data
     OUT_DATA = '%s %s' % (TEMPORARY_ENCRYPT_KEY1[UNIQ_COMMAND_ID], TEMPORARY_ENCRYPT_KEY2[UNIQ_COMMAND_ID])
     # And encrypt it
-    SEND_DATA = string_encrypt(ENCRYPT_LEVEL, OUT_DATA, ENCRYPT_KEY1, ENCRYPT_KEY2)
+    ERROR, SEND_DATA = string_encrypt(ENCRYPT_LEVEL, OUT_DATA, ENCRYPT_KEY1, ENCRYPT_KEY2)
     
-    VERIFICATION_REPLY_EXPECT[UNIQ_COMMAND_ID] = VERIFICATION_PROTOCOL[L2_PROTOCOL][1]
+    if ERROR == True:
+      SEND_DATA = 'ENCRYPTION ERROR (function RVN)'
+    else:
+      VERIFICATION_REPLY_EXPECT[UNIQ_COMMAND_ID] = VERIFICATION_PROTOCOL[L2_PROTOCOL][1]
+    
+    # DEBUG
+    # ~ display_message(BUFFER, 'DEBUG - verify_protocol_4_rvn: TKEYS  : %s %s' % (TEMPORARY_ENCRYPT_KEY1[UNIQ_COMMAND_ID], TEMPORARY_ENCRYPT_KEY2[UNIQ_COMMAND_ID]))
+    # ~ display_message(BUFFER, 'DEBUG - verify_protocol_4_rvn: DATA   : %s' % SEND_DATA)
+    # ~ display_message(BUFFER, 'DEBUG - verify_protocol_4_rvn: ELEVEL : %s' % ENCRYPT_LEVEL)
+    # ~ display_message(BUFFER, 'DEBUG - verify_protocol_4_rvn: EKEY 1 : %s' % ENCRYPT_KEY1)
+    # ~ display_message(BUFFER, 'DEBUG - verify_protocol_4_rvn: EKEY 2 : %s' % ENCRYPT_KEY2)
     
     return [ERROR, ENCRYPT_LEVEL, ENCRYPT_KEY1, ENCRYPT_KEY2, SEND_DATA]
   
@@ -3300,70 +3365,106 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
     ERROR         = False
     
     # We received new temporary keys (in encrypted form), we need decrypt, and save them for later use
-    SECRET_DATA = COMMAND_ARGUMENTS_LIST.pop(0)
-    OUT_DATA = string_decrypt(ENCRYPT_LEVEL, SECRET_DATA[0], ENCRYPT_KEY1, ENCRYPT_KEY2)
-    KEY_DATA = SECRET_DATA.split(' ')
-    TEMPORARY_ENCRYPT_KEY1 = KEY_DATA[0]
-    TEMPORARY_ENCRYPT_KEY2 = KEY_DATA[1]
+    SECRET_DATA = COMMAND_ARGUMENTS_LIST[1]
     
     # DEBUG
-    display_message(BUFFER, 'DEBUG - verify_protocol_5_vnr: TEMPORARY_ENCRYPT_KEY1 : %s' % (TEMPORARY_ENCRYPT_KEY1[UNIQ_COMMAND_ID]))
-    display_message(BUFFER, 'DEBUG - verify_protocol_5_vnr: TEMPORARY_ENCRYPT_KEY2 : %s' % (TEMPORARY_ENCRYPT_KEY2[UNIQ_COMMAND_ID]))
-    display_message(BUFFER, 'DEBUG - verify_protocol_5_vnr: ENCRYPT_KEY1           : %s' % ENCRYPT_KEY1)
-    display_message(BUFFER, 'DEBUG - verify_protocol_5_vnr: ENCRYPT_KEY2           : %s' % ENCRYPT_KEY2)
-    display_message(BUFFER, 'DEBUG - verify_protocol_5_vnr: SYS_DATA               : %s' % SYS_DATA)
-    display_message(BUFFER, 'DEBUG - verify_protocol_5_vnr: BKEY_DATA              : %s' % BKEY_DATA)
+    # ~ display_message(BUFFER, 'DEBUG - verify_protocol_5_vnr: SECRET_DATA  : %s' % SECRET_DATA)
+    # ~ display_message(BUFFER, 'DEBUG - verify_protocol_5_vnr: ELEVEL       : %s' % ENCRYPT_LEVEL)
+    # ~ display_message(BUFFER, 'DEBUG - verify_protocol_5_vnr: EKEY 1       : %s' % ENCRYPT_KEY1)
+    # ~ display_message(BUFFER, 'DEBUG - verify_protocol_5_vnr: EKEY 2       : %s' % ENCRYPT_KEY2)
     
-    VERIFICATION_REPLY_EXPECT[UNIQ_COMMAND_ID] = VERIFICATION_PROTOCOL[L2_PROTOCOL][1]
+    ERROR, DECRYPT_DATA = string_decrypt(ENCRYPT_LEVEL, SECRET_DATA, ENCRYPT_KEY1, ENCRYPT_KEY2)
+    
+    if ERROR == True:
+      SEND_DATA = 'DECRYPTION ERROR (function VNR / S1)'
+    
+    # DEBUG
+    # ~ display_message(BUFFER, 'DEBUG - verify_protocol_5_vnr: DECRYPT_DATA : %s' % DECRYPT_DATA)
+    
+    else:
+      XKEY_DATA = DECRYPT_DATA.split(' ')
+      if len(XKEY_DATA) != 2:
+        ERROR     = True
+        SEND_DATA = 'DECRYPTION ERROR (function VNR / S2)'
+      else:
+        ERROR, XKEY_DATA = string_decrypt(ENCRYPT_LEVEL, XKEY_DATA[1], ENCRYPT_KEY1, ENCRYPT_KEY2)
+        
+        if ERROR == True:
+          SEND_DATA = 'DECRYPTION ERROR (function VNR / S3)'
+        else:
+          KEY_DATA  = XKEY_DATA.split(' ')
+        
+          if len(KEY_DATA) != 2:
+            ERROR     = True
+            SEND_DATA = 'DECRYPTION ERROR (function VNR / S4)'
+          else:
+            TEMPORARY_ENCRYPT_KEY1[UNIQ_COMMAND_ID] = KEY_DATA[0]
+            TEMPORARY_ENCRYPT_KEY2[UNIQ_COMMAND_ID] = KEY_DATA[1]
+            
+            VERIFICATION_REPLY_EXPECT[UNIQ_COMMAND_ID] = VERIFICATION_PROTOCOL[L2_PROTOCOL][1]
+        
+        # DEBUG
+        # ~ display_message(BUFFER, 'DEBUG - verify_protocol_5_vnr: TKEYS : %s %s' % (TEMPORARY_ENCRYPT_KEY1[UNIQ_COMMAND_ID], TEMPORARY_ENCRYPT_KEY2[UNIQ_COMMAND_ID]))
+
+    # DEBUG
+    # ~ display_message(BUFFER, 'DEBUG - verify_protocol_5_vnr: TEMPORARY_ENCRYPT_KEY1 : %s' % (TEMPORARY_ENCRYPT_KEY1[UNIQ_COMMAND_ID]))
+    # ~ display_message(BUFFER, 'DEBUG - verify_protocol_5_vnr: TEMPORARY_ENCRYPT_KEY2 : %s' % (TEMPORARY_ENCRYPT_KEY2[UNIQ_COMMAND_ID]))
+    # ~ display_message(BUFFER, 'DEBUG - verify_protocol_5_vnr: ENCRYPT_KEY1           : %s' % ENCRYPT_KEY1)
+    # ~ display_message(BUFFER, 'DEBUG - verify_protocol_5_vnr: ENCRYPT_KEY2           : %s' % ENCRYPT_KEY2)
+    # ~ display_message(BUFFER, 'DEBUG - verify_protocol_5_vnr: SYS_DATA               : %s' % SYS_DATA)
+    # ~ display_message(BUFFER, 'DEBUG - verify_protocol_5_vnr: BKEY_DATA              : %s' % BKEY_DATA)
+    
+    if ERROR == True:
+      verify_remove_l2_temporary_data(UNIQ_COMMAND_ID)
     
     return [ERROR, ENCRYPT_LEVEL, ENCRYPT_KEY1, ENCRYPT_KEY2, SEND_DATA]
   
   # 6 - rsn (snr) - LOCAL -> REMOTE - request SYS
-  def verify_protocol_6_rsn(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
-    global VERIFICATION_PROTOCOL, VERIFICATION_REPLY_EXPECT, VERIFY_CALL_ORDER, TEMPORARY_ENCRYPT_KEY1, TEMPORARY_ENCRYPT_KEY2
-    global WRECON_REMOTE_BOTS_GRANTED_SECRET
+  # ~ def verify_protocol_6_rsn(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
+    # ~ global VERIFICATION_PROTOCOL, VERIFICATION_REPLY_EXPECT, VERIFY_CALL_ORDER, TEMPORARY_ENCRYPT_KEY1, TEMPORARY_ENCRYPT_KEY2
+    # ~ global WRECON_REMOTE_BOTS_GRANTED_SECRET
     
-    UNIQ_COMMAND_ID = SOURCE_BOT_ID + COMMAND_ID
+    # ~ UNIQ_COMMAND_ID = SOURCE_BOT_ID + COMMAND_ID
     
-    # DEBUG
-    display_message(BUFFER, '[%s] %s < L2 PROTOCOL - 6 RSN' % (COMMAND_ID, SOURCE_BOT_ID))
+    # ~ # DEBUG
+    # ~ display_message(BUFFER, '[%s] %s < L2 PROTOCOL - 6 RSN' % (COMMAND_ID, SOURCE_BOT_ID))
     
-    L2_PROTOCOL   = list(VERIFICATION_PROTOCOL)[6]
-    ENCRYPT_LEVEL = VERIFICATION_PROTOCOL[L2_PROTOCOL][0]
-    ENCRYPT_KEY1  = WRECON_BOT_KEY
-    ENCRYPT_KEY2  = WRECON_REMOTE_BOTS_GRANTED_SECRET[TARGET_BOT_ID][1]
-    SEND_DATA     = ''
-    ERROR         = False
+    # ~ L2_PROTOCOL   = list(VERIFICATION_PROTOCOL)[6]
+    # ~ ENCRYPT_LEVEL = VERIFICATION_PROTOCOL[L2_PROTOCOL][0]
+    # ~ ENCRYPT_KEY1  = WRECON_BOT_KEY
+    # ~ ENCRYPT_KEY2  = WRECON_REMOTE_BOTS_GRANTED_SECRET[TARGET_BOT_ID][1]
+    # ~ SEND_DATA     = ''
+    # ~ ERROR         = False
     
-    # First call
-    if not UNIQ_COMMAND_ID in VERIFY_CALL_ORDER:
-      VERIFY_CALL_ORDER[UNIQ_COMMAND_ID] = ''
-    # Second call
-    else:
-      ENCRYPT_KEY1 = TEMPORARY_ENCRYPT_KEY1[UNIQ_COMMAND_ID]
-      ENCRYPT_KEY2 = TEMPORARY_ENCRYPT_KEY2[UNIQ_COMMAND_ID]
+    # ~ # First call
+    # ~ if not UNIQ_COMMAND_ID in VERIFY_CALL_ORDER:
+      # ~ VERIFY_CALL_ORDER[UNIQ_COMMAND_ID] = ''
+    # ~ # Second call
+    # ~ else:
+      # ~ ENCRYPT_KEY1 = TEMPORARY_ENCRYPT_KEY1[UNIQ_COMMAND_ID]
+      # ~ ENCRYPT_KEY2 = TEMPORARY_ENCRYPT_KEY2[UNIQ_COMMAND_ID]
       
-      # Also prepare BKEY and send to remote PC      
-      SYS_DATA, BKEY_DATA = get_granted_secret(SOURCE_BOT_ID)
+      # ~ # Also prepare BKEY and send to remote PC      
+      # ~ SYS_DATA, BKEY_DATA = get_granted_secret(SOURCE_BOT_ID)
       
-      RANDOM_NUMBER = random.randint(7,15)
-      BKEY_DATA     = get_random_string(RANDOM_NUMBER)
-      WRECON_REMOTE_BOTS_GRANTED_SECRET[SOURCE_BOT_ID] = [SYS_DATA, BKEY_DATA]
+      # ~ RANDOM_NUMBER = random.randint(7,15)
+      # ~ BKEY_DATA     = get_random_string(RANDOM_NUMBER)
+      # ~ WRECON_REMOTE_BOTS_GRANTED_SECRET[SOURCE_BOT_ID] = [SYS_DATA, BKEY_DATA]
       
-      SEND_DATA = string_encrypt(ENCRYPT_LEVEL, BKEY_DATA, ENCRYPT_KEY1, ENCRYPT_KEY2)
+      # ~ SEND_DATA = string_encrypt(ENCRYPT_LEVEL, BKEY_DATA, ENCRYPT_KEY1, ENCRYPT_KEY2)
       
-      # DEBUG
-      display_message(BUFFER, 'DEBUG - verify_protocol_6_rsn: TEMPORARY_ENCRYPT_KEY1 : %s' % (TEMPORARY_ENCRYPT_KEY1[UNIQ_COMMAND_ID]))
-      display_message(BUFFER, 'DEBUG - verify_protocol_6_rsn: TEMPORARY_ENCRYPT_KEY2 : %s' % (TEMPORARY_ENCRYPT_KEY2[UNIQ_COMMAND_ID]))
-      display_message(BUFFER, 'DEBUG - verify_protocol_6_rsn: ENCRYPT_KEY1           : %s' % ENCRYPT_KEY1)
-      display_message(BUFFER, 'DEBUG - verify_protocol_6_rsn: ENCRYPT_KEY2           : %s' % ENCRYPT_KEY2)
-      display_message(BUFFER, 'DEBUG - verify_protocol_6_rsn: SYS_DATA               : %s' % SYS_DATA)
-      display_message(BUFFER, 'DEBUG - verify_protocol_6_rsn: BKEY_DATA              : %s' % BKEY_DATA)
-      del VERIFY_CALL_ORDER[UNIQ_COMMAND_ID]
+      # ~ # DEBUG
+      # ~ display_message(BUFFER, 'DEBUG - verify_protocol_6_rsn: TEMPORARY_ENCRYPT_KEY1 : %s' % (TEMPORARY_ENCRYPT_KEY1[UNIQ_COMMAND_ID]))
+      # ~ display_message(BUFFER, 'DEBUG - verify_protocol_6_rsn: TEMPORARY_ENCRYPT_KEY2 : %s' % (TEMPORARY_ENCRYPT_KEY2[UNIQ_COMMAND_ID]))
+      # ~ display_message(BUFFER, 'DEBUG - verify_protocol_6_rsn: ENCRYPT_KEY1           : %s' % ENCRYPT_KEY1)
+      # ~ display_message(BUFFER, 'DEBUG - verify_protocol_6_rsn: ENCRYPT_KEY2           : %s' % ENCRYPT_KEY2)
+      # ~ display_message(BUFFER, 'DEBUG - verify_protocol_6_rsn: SYS_DATA               : %s' % SYS_DATA)
+      # ~ display_message(BUFFER, 'DEBUG - verify_protocol_6_rsn: BKEY_DATA              : %s' % BKEY_DATA)
+      # ~ del VERIFY_CALL_ORDER[UNIQ_COMMAND_ID]
     
-    VERIFICATION_REPLY_EXPECT[UNIQ_COMMAND_ID] = VERIFICATION_PROTOCOL[L2_PROTOCOL][1]
+    # ~ VERIFICATION_REPLY_EXPECT[UNIQ_COMMAND_ID] = VERIFICATION_PROTOCOL[L2_PROTOCOL][1]
     
-    return [ERROR, ENCRYPT_LEVEL, ENCRYPT_KEY1, ENCRYPT_KEY2, SEND_DATA]
+    # ~ return [ERROR, ENCRYPT_LEVEL, ENCRYPT_KEY1, ENCRYPT_KEY2, SEND_DATA]
   
   # 7 - snr (aaa) - REMOTE -> LOCAL - reply SYS
   def verify_protocol_7_snr(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
@@ -3384,25 +3485,31 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
     
     # We also received new BKEY in encrypted form
     RECEIVED_DATA  = COMMAND_ARGUMENTS_LIST.pop(0)
-    DECRYPTED_DATA = string_decrypt(ENCRYPT_LEVEL, RECEIVED_DATA[0], ENCRYPT_KEY1, ENCRYPT_KEY2)
+    ERROR, DECRYPTED_DATA = string_decrypt(ENCRYPT_LEVEL, RECEIVED_DATA[0], ENCRYPT_KEY1, ENCRYPT_KEY2)
     
-    BKEY_DATA      = DECRYPTED_DATA.split(' ')[1]
-    SYS_DATA       = get_device_secrets()
-    
-    WRECON_REMOTE_BOTS_CONTROL_SECRET[SOURCE_BOT_ID] = BKEY_DATA
-    
-    SEND_DATA      = string_encrypt(ENCRYPT_LEVEL, SYS_DATA, ENCRYPT_KEY1, ENCRYPT_KEY2)
-    
-    # DEBUG
-    # ~ display_message(BUFFER, 'DEBUG - verify_protocol_7_snr: TEMPORARY_ENCRYPT_KEY1 : %s' % (TEMPORARY_ENCRYPT_KEY1[UNIQ_COMMAND_ID]))
-    # ~ display_message(BUFFER, 'DEBUG - verify_protocol_7_snr: TEMPORARY_ENCRYPT_KEY2 : %s' % (TEMPORARY_ENCRYPT_KEY2[UNIQ_COMMAND_ID]))
-    # ~ display_message(BUFFER, 'DEBUG - verify_protocol_7_snr: ENCRYPT_KEY1           : %s' % ENCRYPT_KEY1)
-    # ~ display_message(BUFFER, 'DEBUG - verify_protocol_7_snr: ENCRYPT_KEY2           : %s' % ENCRYPT_KEY2)
-    # ~ display_message(BUFFER, 'DEBUG - verify_protocol_7_snr: SYS_DATA               : %s' % SYS_DATA)
-    # ~ display_message(BUFFER, 'DEBUG - verify_protocol_7_snr: BKEY_DATA              : %s' % BKEY_DATA)
-    # ~ del VERIFICATION_REPLY_EXPECT[UNIQ_COMMAND_ID]
-    # ~ del TEMPORARY_ENCRYPT_KEY1[UNIQ_COMMAND_ID]
-    # ~ del TEMPORARY_ENCRYPT_KEY2[UNIQ_COMMAND_ID]
+    if ERROR == True:
+      SEND_DATA = 'DECRYPTION ERROR (function SNR)'
+    else:
+      BKEY_DATA      = DECRYPTED_DATA.split(' ')[1]
+      SYS_DATA       = get_device_secrets()
+      
+      WRECON_REMOTE_BOTS_CONTROL_SECRET[SOURCE_BOT_ID] = BKEY_DATA
+      
+      ERROR, SEND_DATA      = string_encrypt(ENCRYPT_LEVEL, SYS_DATA, ENCRYPT_KEY1, ENCRYPT_KEY2)
+      
+      if ERROR == True:
+        SEND_DATA = 'ENCRYPTION ERROR (function SNR)'
+      
+      # DEBUG
+      # ~ display_message(BUFFER, 'DEBUG - verify_protocol_7_snr: TEMPORARY_ENCRYPT_KEY1 : %s' % (TEMPORARY_ENCRYPT_KEY1[UNIQ_COMMAND_ID]))
+      # ~ display_message(BUFFER, 'DEBUG - verify_protocol_7_snr: TEMPORARY_ENCRYPT_KEY2 : %s' % (TEMPORARY_ENCRYPT_KEY2[UNIQ_COMMAND_ID]))
+      # ~ display_message(BUFFER, 'DEBUG - verify_protocol_7_snr: ENCRYPT_KEY1           : %s' % ENCRYPT_KEY1)
+      # ~ display_message(BUFFER, 'DEBUG - verify_protocol_7_snr: ENCRYPT_KEY2           : %s' % ENCRYPT_KEY2)
+      # ~ display_message(BUFFER, 'DEBUG - verify_protocol_7_snr: SYS_DATA               : %s' % SYS_DATA)
+      # ~ display_message(BUFFER, 'DEBUG - verify_protocol_7_snr: BKEY_DATA              : %s' % BKEY_DATA)
+      # ~ del VERIFICATION_REPLY_EXPECT[UNIQ_COMMAND_ID]
+      # ~ del TEMPORARY_ENCRYPT_KEY1[UNIQ_COMMAND_ID]
+      # ~ del TEMPORARY_ENCRYPT_KEY2[UNIQ_COMMAND_ID]
     
     return [ERROR, ENCRYPT_LEVEL, ENCRYPT_KEY1, ENCRYPT_KEY2, SEND_DATA]
   
@@ -3437,10 +3544,9 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
       # DEBUG
       # ~ display_message(BUFFER, 'DEBUG - verify_protocol_a_aaa: COMMAND_ARGUMENTS_LIST : %s' % COMMAND_ARGUMENTS_LIST)
       
-      XSYS_DATA       = string_decrypt(ENCRYPT_LEVEL, RECEIVED_DATA, ENCRYPT_KEY1, ENCRYPT_KEY2)
+      ERROR, XSYS_DATA       = string_decrypt(ENCRYPT_LEVEL, RECEIVED_DATA, ENCRYPT_KEY1, ENCRYPT_KEY2)
       
-      if XSYS_DATA == 'ERROR':
-        ERROR     = True
+      if ERROR == True:
         SEND_DATA = 'DECRYPTION ERROR (function AAA / S1)'
       
       else:
@@ -3450,10 +3556,9 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
           ERROR     = True
           SEND_DATA = 'DECRYPTION ERROR (function AAA / S2)'
         else:
-          SYS_DATA  = string_decrypt(ENCRYPT_LEVEL, XSYS_DATA[1], ENCRYPT_KEY1, ENCRYPT_KEY2)
+          ERROR, SYS_DATA  = string_decrypt(ENCRYPT_LEVEL, XSYS_DATA[1], ENCRYPT_KEY1, ENCRYPT_KEY2)
           
-          if SYS_DATA == 'ERROR':
-            ERROR     = True
+          if ERROR == True:
             SEND_DATA = 'DECRYPTION ERROR (function AAA / S3)'
           else:
             WRECON_REMOTE_BOTS_GRANTED_SECRET[SOURCE_BOT_ID] = [SYS_DATA, BKEY_DATA]
@@ -3577,9 +3682,9 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
     # It is possible that remote system can by running on flashdisk and was changed to different hardware
     # This we verify now
     VERIFICATION_PROTOCOL['rvn'] = [2, 'vnr', verify_protocol_4_rvn]     # 6 Request         - DATA       - verify with BKEY - from local             + new TEMPKEYS send
-    VERIFICATION_PROTOCOL['vnr'] = [2, 'rsn', verify_protocol_5_vnr]     # 7 Reply           - DATA       - verify with BKEY - reply from remote      + new TEMPKEYS received
-    VERIFICATION_PROTOCOL['rsn'] = [2, 'snr', verify_protocol_6_rsn]     # 8 Request new SYS - DATA       - from local for new SYS                    + new BKEY send
-    VERIFICATION_PROTOCOL['snr'] = [2, 'aaa', verify_protocol_7_snr]     # 9 Reply new SYS   - snDATA     - from remote with new SYS                  + new BKEY received
+    VERIFICATION_PROTOCOL['vnr'] = [2, 'rre', verify_protocol_5_vnr]     # 7 Reply           - DATA       - verify with BKEY - reply from remote      + new TEMPKEYS received
+    # ~ VERIFICATION_PROTOCOL['rsn'] = [2, 'snr', verify_protocol_6_rsn]     # 8 Request new SYS - DATA       - from local for new SYS                    + new BKEY send
+    # ~ VERIFICATION_PROTOCOL['snr'] = [2, 'aaa', verify_protocol_7_snr]     # 9 Reply new SYS   - snDATA     - from remote with new SYS                  + new BKEY received
     
     # Latest function is called when all verifications were successful, we save new data
     VERIFICATION_PROTOCOL['aaa'] = [2, '',    verify_protocol_a_aaa]     # a Accepted BKEY or SYS
@@ -4512,7 +4617,7 @@ DELETE             DEL[ETE] <BotID>|<INDEX>'''
       OUT_MESSAGE_TAG  = 'GRANT ERROR'
       OUT_MESSAEG.append('BOT ID %s ALREADY EXIST IN YOUR LIST.' % ADD_GRANTED)
     else:
-      WRECON_REMOTE_BOTS_GRANTED[ADD_GRANTED]         = ADD_GRANTED_INFO
+      WRECON_REMOTE_BOTS_GRANTED[ADD_GRANTED]        = ADD_GRANTED_INFO
       WRECON_REMOTE_BOTS_GRANTED_SECRET[ADD_GRANTED] = []
       OUT_MESSAGE_TAG = 'GRANT INFO'
       OUT_MESSAGE.append('NEW BOT ID %s (%s) HAS BEEN SUCCESSFULLY GRANTED.' % (ADD_GRANTED, WRECON_REMOTE_BOTS_GRANTED[ADD_GRANTED]))
