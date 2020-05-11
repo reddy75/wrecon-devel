@@ -2058,7 +2058,7 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
     else:
     # Prepare data for additional verification
       WAIT_FOR_VERIFICATION[UNIQ_COMMAND_ID] = [command_pre_validation, '', BUFFER, 'INTERNAL', '', '', '', '', '', COMMAND_VAL]
-      WAIT_FOR_VALIDATION[UNIQ_COMMAND_ID]      = COMMAND_VAL
+      WAIT_FOR_VALIDATION[UNIQ_COMMAND_ID]   = COMMAND_VAL
     # DEBUG
     # ~ display_message(BUFFER, 'DEBUG - verify_remote_bot_verified_after_advertise: WAIT_FOR_VERIFICATION   : %s' % WAIT_FOR_VERIFICATION)
     # ~ display_message(BUFFER, 'DEBUG - verify_remote_bot_verified_after_advertise: COMMAND_CAN_BE_EXECUTED : %s' % COMMAND_CAN_BE_EXECUTED)
@@ -2678,9 +2678,9 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
       # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_1_requested: SEC  : %s' % get_device_secrets())
       # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_1_requested: KEY1 : %s' % ENCRYPT_KEY1)
       # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_1_requested: KEY2 : %s' % ENCRYPT_KEY2)
-      display_message(BUFFER, 'DEBUG - buffer_command_verify_1_requested: DATA : %s' % DECRYPT_SEECRET_DATA)
-      display_message(BUFFER, 'DEBUG - buffer_command_verify_1_requested: HASH : %s' % HASH_DATA)
-      display_message(BUFFER, 'DEBUG - buffer_command_verify_1_requested: LVL  : %s' % ENCRYPT_LEVEL)
+      # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_1_requested: DATA : %s' % DECRYPT_SEECRET_DATA)
+      # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_1_requested: HASH : %s' % HASH_DATA)
+      # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_1_requested: LVL  : %s' % ENCRYPT_LEVEL)
       
       ENCRYPT_SEECRET_DATA = string_encrypt(ENCRYPT_LEVEL, HASH_DATA, ENCRYPT_KEY1, ENCRYPT_KEY2)
       # 4. SEND BACK ENCRYPTED HASH TO REQUESTOR
@@ -2733,7 +2733,7 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
       OUT_MESSAGE = 'ERROR'
       VERIFY_COMMAND = BUFFER_CMD_VAL_ERR
     
-    if ERROR == False:
+    if ERROR == False and COMMAND != BUFFER_CMD_VAL_REA:
       # Check the result we received
       
       SECRET_DATA   = COMMAND_ARGUMENTS_LIST[0]
@@ -2746,10 +2746,10 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
           if ENCRYPT_KEY2:
             ENCRYPT_LEVEL = 2
           # DEBUG
-          display_message(BUFFER, 'DEBUG - buffer_command_verify_2_result_received: ENCRYPT_KEY1 : %s' % ENCRYPT_KEY1)
-          display_message(BUFFER, 'DEBUG - buffer_command_verify_2_result_received: ENCRYPT_KEY2 : %s' % ENCRYPT_KEY2)
-          display_message(BUFFER, 'DEBUG - buffer_command_verify_2_result_received: LEVEL        : %s' % ENCRYPT_LEVEL)
-          display_message(BUFFER, 'DEBUG - buffer_command_verify_2_result_received: EDATA        : %s' % SECRET_DATA)
+          # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_2_result_received: ENCRYPT_KEY1 : %s' % ENCRYPT_KEY1)
+          # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_2_result_received: ENCRYPT_KEY2 : %s' % ENCRYPT_KEY2)
+          # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_2_result_received: LEVEL        : %s' % ENCRYPT_LEVEL)
+          # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_2_result_received: EDATA        : %s' % SECRET_DATA)
         else:
       # If yes, we check L2 protocol is strictly followed
           if SECRET_DATA in VERIFICATION_REPLY_EXPECT[UNIQ_COMMAND_ID]:
@@ -2854,9 +2854,9 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
           # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_2_result_received : SEC  : %s' % get_device_secrets())
           # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_2_result_received : KEY1 : %s' % ENCRYPT_KEY1)
           # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_2_result_received : KEY2 : %s' % ENCRYPT_KEY2)
-          display_message(BUFFER, 'DEBUG - buffer_command_verify_2_result_received : DATA : %s' % SECRET_DATA)
-          display_message(BUFFER, 'DEBUG - buffer_command_verify_2_result_received : HASH : %s' % SECRET_HASH)
-          display_message(BUFFER, 'DEBUG - buffer_command_verify_2_result_received : LVL  : %s' % ENCRYPT_LEVEL)
+          # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_2_result_received : DATA : %s' % SECRET_DATA)
+          # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_2_result_received : HASH : %s' % SECRET_HASH)
+          # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_2_result_received : LVL  : %s' % ENCRYPT_LEVEL)
           
           ENCRYPT_SEECRET_DATA                  = string_encrypt(ENCRYPT_LEVEL, SECRET_DATA, ENCRYPT_KEY1, ENCRYPT_KEY2)
           WAIT_FOR_REMOTE_DATA[UNIQ_COMMAND_ID] = SECRET_HASH
@@ -2870,13 +2870,42 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
           VERIFY_RESULT_VAL[UNIQ_COMMAND_ID] = weechat.hook_timer(TIMEOUT_COMMAND_L2*1000, 0, 1, 'function_verify_wait_result', UNIQ_COMMAND_ID)
           
           if not L2_PROTOCOL:
+            FINAL_VERIFICATION = True
             verify_remove_l2_temporary_data(UNIQ_COMMAND_ID)
     
     # Here we have final verification, then we can stop all waiting tasks and requests
     if FINAL_VERIFICATION == True:
-      display_message(BUFFER, '[%s] %s < %s' % (COMMAND_ID, SOURCE_BOT_ID, OUT_MESSAGE))
+      if VERIFY_COMMAND == BUFFER_CMD_VAL_REA:
+        display_message(BUFFER, '[%s] %s < REMOTE EXECUTION HAS BEEN ACCEPTED' % (COMMAND_ID, SOURCE_BOT_ID))
+      else:
+        display_message(BUFFER, '[%s] %s < %s' % (COMMAND_ID, SOURCE_BOT_ID, OUT_MESSAGE))
       if UNIQ_COMMAND_ID in ID_CALL_REMOTE and UNIQ_COMMAND_ID in WAIT_FOR_VERIFICATION:
         weechat.command(BUFFER, '%s %s %s %s %s' % (VERIFY_COMMAND, SOURCE_BOT_ID, TARGET_BOT_ID, COMMAND_ID, OUT_MESSAGE))
+      
+        # Here we save data of VERIFIED and ADVERTISED remote bot in case all was successful
+        if VERIFY_COMMAND == BUFFER_CMD_VAL_REA:
+
+          # DEBUG
+          # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_2_result_received: ADVERTISED : %s' % WRECON_REMOTE_BOTS_ADVERTISED)
+          # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_2_result_received: VERIFIED   : %s' % WRECON_REMOTE_BOTS_VERIFIED)
+          
+          RBOT_ADVDATA      = WRECON_REMOTE_BOTS_ADVERTISED[SOURCE_BOT_ID].split('|')
+          RBOT_NAME         = RBOT_ADVDATA[0]
+          RBOT_VERSION      = RBOT_ADVDATA[1]
+          RBOT_VERSION_TIME = RBOT_ADVDATA[2]
+          
+          if RBOT_VERSION_TIME:
+            RBOT_VERSION = '%s %s' % (RBOT_VERSION, RBOT_VERSION_TIME)
+          
+          ADVERTISE_ARGUMENTS = '%s [v%s]' % (RBOT_NAME, RBOT_VERSION)
+          
+          # DEBUG
+          # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_2_result_received: BOT : %s' % ADVERTISE_ARGUMENTS)          
+          
+          function_verify_save_data(BUFFER, TAGS, PREFIX, SOURCE_BOT_ID, COMMAND_ID, ADVERTISE_ARGUMENTS.split(' '))
+          
+          # ~ WRECON_REMOTE_BOTS_ADVERTISED[SOURCE_BOT_ID] = 
+          # ~ WRECON_REMOTE_BOTS_VERIFIED[SOURCE_BOT_ID] = 
       
       # Cleanup all verification variables
       if UNIQ_COMMAND_ID in WAIT_FOR_REMOTE_DATA:
