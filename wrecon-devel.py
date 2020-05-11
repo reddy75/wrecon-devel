@@ -2701,12 +2701,12 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
         # 3. ENCRYPT HASH
         
         # DEBUG
-        display_message(BUFFER, 'DEBUG - buffer_command_verify_1_requested: SEC  : %s' % get_device_secrets())
-        display_message(BUFFER, 'DEBUG - buffer_command_verify_1_requested: KEY1 : %s' % ENCRYPT_KEY1)
-        display_message(BUFFER, 'DEBUG - buffer_command_verify_1_requested: KEY2 : %s' % ENCRYPT_KEY2)
-        display_message(BUFFER, 'DEBUG - buffer_command_verify_1_requested: DATA : %s' % DECRYPT_SEECRET_DATA)
-        display_message(BUFFER, 'DEBUG - buffer_command_verify_1_requested: HASH : %s' % HASH_DATA)
-        display_message(BUFFER, 'DEBUG - buffer_command_verify_1_requested: LVL  : %s' % ENCRYPT_LEVEL)
+        # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_1_requested: SEC  : %s' % get_device_secrets())
+        # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_1_requested: KEY1 : %s' % ENCRYPT_KEY1)
+        # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_1_requested: KEY2 : %s' % ENCRYPT_KEY2)
+        # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_1_requested: DATA : %s' % DECRYPT_SEECRET_DATA)
+        # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_1_requested: HASH : %s' % HASH_DATA)
+        # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_1_requested: LVL  : %s' % ENCRYPT_LEVEL)
         
         ERROR, ENCRYPT_SEECRET_DATA = string_encrypt(ENCRYPT_LEVEL, HASH_DATA, ENCRYPT_KEY1, ENCRYPT_KEY2)
         # 4. SEND BACK ENCRYPTED HASH TO REQUESTOR
