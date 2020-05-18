@@ -2619,6 +2619,17 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
       del WRECON_REMOTE_BOTS_CONTROL_SECRET_TMP[BOT_ID]
     return
   
+  def cleanup_temp_keys(UNIQ_ID):
+    global TEMPORARY_ENCRYPT_KEY1, TEMPORARY_ENCRYPT_KEY2
+    
+    if UNIQ_ID in TEMPORARY_ENCRYPT_KEY1:
+      del TEMPORARY_ENCRYPT_KEY1[UNIQ_ID]
+    
+    if UNIQ_ID in TEMPORARY_ENCRYPT_KEY2:
+      del TEMPORARY_ENCRYPT_KEY2[UNIQ_ID]
+  
+    return
+  
   #
   # VERIFY - REQUESTED
   # Called from buffer, this is received from remote BOT as request
@@ -2999,6 +3010,8 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
       if SOURCE_BOT_ID in WRECON_REMOTE_BOTS_GRANTED_SECRET_TMP:
         cleanup_granted_tmp(SOURCE_BOT_ID)
       
+      cleanup_temp_keys(UNIQ_COMMAND_ID)
+      
       # Here we call back command
       if UNIQ_COMMAND_ID in WAIT_FOR_VERIFICATION:
         recall_function, WEECHAT_DATA, BUFFER, SOURCE, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS, UNIQ_COMMAND_ID = WAIT_FOR_VERIFICATION[UNIQ_COMMAND_ID]
@@ -3073,16 +3086,12 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
   #
   
   def verify_remove_l2_temporary_data(UNIQ_COMMAND_ID):
-    global VERIFICATION_REPLY_EXPECT, TEMPORARY_ENCRYPT_KEY1, TEMPORARY_ENCRYPT_KEY2
+    global VERIFICATION_REPLY_EXPECT
     
     if UNIQ_COMMAND_ID in VERIFICATION_REPLY_EXPECT:
       del VERIFICATION_REPLY_EXPECT[UNIQ_COMMAND_ID]
     
-    if UNIQ_COMMAND_ID in TEMPORARY_ENCRYPT_KEY1:
-      del TEMPORARY_ENCRYPT_KEY1[UNIQ_COMMAND_ID]
-    
-    if UNIQ_COMMAND_ID in TEMPORARY_ENCRYPT_KEY2:
-      del TEMPORARY_ENCRYPT_KEY2
+    cleanup_temp_keys(UNIQ_COMMAND_ID)
     
     return weechat.WEECHAT_RC_OK
   
@@ -3177,6 +3186,7 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
     if ERROR == True:
       SEND_DATA = 'ENCRYPTION ERROR (function REE)'
       cleanup_granted_tmp(TARGET_BOT_ID)
+      cleanup_temp_keys(UNIQ_COMMAND_ID)
     else:
       VERIFICATION_REPLY_EXPECT[UNIQ_COMMAND_ID]  = VERIFICATION_PROTOCOL[L2_PROTOCOL][1]
     
@@ -3259,6 +3269,7 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
     if ERROR == True:
       verify_remove_l2_temporary_data(UNIQ_COMMAND_ID)
       cleanup_control_tmp(SOURCE_BOT_ID)
+      cleanup_temp_keys(UNIQ_COMMAND_ID)
     
     return [ERROR, ENCRYPT_LEVEL, ENCRYPT_KEY1, ENCRYPT_KEY2, SEND_DATA]
     
@@ -3332,6 +3343,8 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
     
     if ERROR == False:
       VERIFICATION_REPLY_EXPECT[UNIQ_COMMAND_ID] = VERIFICATION_PROTOCOL[L2_PROTOCOL][1]
+    else:
+      cleanup_temp_keys(UNIQ_COMMAND_ID)
     
     return [ERROR, ENCRYPT_LEVEL, ENCRYPT_KEY1, ENCRYPT_KEY2, SEND_DATA]
   
@@ -3385,6 +3398,7 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
     
     if ERROR == True:
       cleanup_control_tmp(SOURCE_BOT_ID)
+      cleanup_temp_keys(UNIQ_COMMAND_ID)
     
     return [ERROR, ENCRYPT_LEVEL, ENCRYPT_KEY1, ENCRYPT_KEY2, SEND_DATA]
   
@@ -3440,6 +3454,7 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
     
     if ERROR == True:
       cleanup_granted_tmp(SOURCE_BOT_ID)
+      cleanup_temp_keys(UNIQ_COMMAND_ID)
     
     return [ERROR, ENCRYPT_LEVEL, ENCRYPT_KEY1, ENCRYPT_KEY2, SEND_DATA]
   
@@ -3500,7 +3515,8 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
     
     if ERROR == True:
       verify_remove_l2_temporary_data(UNIQ_COMMAND_ID)
-      cleanup_control_tmp(SOURCE_BOT_ID)    
+      cleanup_control_tmp(SOURCE_BOT_ID)
+      cleanup_temp_keys(UNIQ_COMMAND_ID)
     
     return [ERROR, ENCRYPT_LEVEL, ENCRYPT_KEY1, ENCRYPT_KEY2, SEND_DATA]
   
@@ -3582,6 +3598,7 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
     
     if ERROR == True:
       cleanup_granted_tmp(SOURCE_BOT_ID)
+      cleanup_temp_keys(UNIQ_COMMAND_ID)
     
     return [ERROR, ENCRYPT_LEVEL, ENCRYPT_KEY1, ENCRYPT_KEY2, SEND_DATA]
   
