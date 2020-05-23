@@ -32,7 +32,7 @@
 # 2.00.0 (unusable, full reworking in progress)
 # - Full code rewriting (for better lucidity, and also for code enhancements)
 # -- function 'display_message' replaces 'f_message' and 'f_message_simple'
-# -- function 'user_command_update' fully changed (splitted into functions)
+# -- function 'command_update' fully changed (splitted into functions)
 # -- functions 'encrypt/decrypt' enhanced into levels (also backward compatibility ensure with older script communication)
 # -- added possibility choice BOT by INDEX number (for commands DEL/RENAME/REVOKE/SSH/UPDATE)
 # -- 
@@ -1056,25 +1056,25 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
   #
   # FUNCTION COMMAND RECALL
   # is called after a verification was requested and we have result
-  # then we call command_pre_validation again to finish execution
+  # then we call function_command_pre_validation again to finish execution
   
-  def command_recall(WEECHAT_DATA, BUFFER, SOURCE, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS, UNIQ_COMMAND_ID):
+  def function_command_recall(WEECHAT_DATA, BUFFER, SOURCE, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS, UNIQ_COMMAND_ID):
     # DEBUG
-    # ~ display_message(BUFFER, 'DEBUG - command_recall: %s' % [WEECHAT_DATA, BUFFER, SOURCE, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS, UNIQ_COMMAND_ID])
+    # ~ display_message(BUFFER, 'DEBUG - function_command_recall: %s' % [WEECHAT_DATA, BUFFER, SOURCE, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS, UNIQ_COMMAND_ID])
     
     if SOURCE == 'LOCAL':
       SOURCE = 'PRE-LOCAL'
       
     DATA = '%s %s %s %s %s' % (COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS)
     
-    command_pre_validation(WEECHAT_DATA, BUFFER, SOURCE, '', '', '', '', '', DATA)
+    function_command_pre_validation(WEECHAT_DATA, BUFFER, SOURCE, '', '', '', '', '', DATA)
     return weechat.WEECHAT_RC_OK
   
   #
   # FUNCTION COMMAND PRE-VALIDATION
   # is called from user input or call from buffer
   
-  def command_pre_validation(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, DATA):
+  def function_command_pre_validation(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, DATA):
     # HERE WE PREPARE VARIABLES
     global ID_CALL_LOCAL, ID_CALL_REMOTE, WRECON_BOT_ID, DISPLAY_COMMAND
     
@@ -1082,7 +1082,7 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
       COMMAND_ID  = get_command_uniq_id()
     
     # DEBUG
-    # ~ display_message(BUFFER, 'DEBUG - (1) command_pre_validation: ID_CALL_LOCAL : %s' % ID_CALL_LOCAL)
+    # ~ display_message(BUFFER, 'DEBUG - (1) function_command_pre_validation: ID_CALL_LOCAL : %s' % ID_CALL_LOCAL)
     
     if not DATA:
       if not COMMAND_ID:
@@ -1094,7 +1094,7 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
       ARGUMENTS.pop(0)
       
       # DEBUG
-      # ~ display_data('command_pre_validation', WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, '', '', '', ARGUMENTS)
+      # ~ display_data('function_command_pre_validation', WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, '', '', '', ARGUMENTS)
       
       if SOURCE == 'REMOTE':
         TARGET_BOT_ID = ARGUMENTS[0]
@@ -1153,7 +1153,7 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
           DISPLAY_COMMAND[UNIQ_COMMAND_ID] = True
         
         # DEBUG
-        # ~ display_message(BUFFER, 'DEBUG - (2) command_pre_validation: ID_CALL_LOCAL : %s' % ID_CALL_LOCAL)
+        # ~ display_message(BUFFER, 'DEBUG - (2) function_command_pre_validation: ID_CALL_LOCAL : %s' % ID_CALL_LOCAL)
         
         DATE      = ''
         TAGS      = ''
@@ -1163,9 +1163,9 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
         
         # DEBUG ONLY
         # ~ if SOURCE == 'PRE-LOCAL':
-          # ~ display_data('command_pre_validation', WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, WRECON_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST)
+          # ~ display_data('function_command_pre_validation', WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, WRECON_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST)
         # ~ else:
-          # ~ display_data('command_pre_validation', WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, WRECON_BOT_ID, WRECON_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST)
+          # ~ display_data('function_command_pre_validation', WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, WRECON_BOT_ID, WRECON_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST)
         
         # First we check command exist
         
@@ -1200,7 +1200,7 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
         ID_CALL_REMOTE[UNIQ_COMMAND_ID]  = [COMMAND, COMMAND_ID, COMMAND_ARGUMENTS_LIST]
         DISPLAY_COMMAND[UNIQ_COMMAND_ID] = True
         
-        # ~ display_data('command_pre_validation', WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, WRECON_BOT_ID, WRECON_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST)
+        # ~ display_data('function_command_pre_validation', WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, WRECON_BOT_ID, WRECON_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST)
         EXECUTION_ALLOWED, EXECUTE_COMMAND  = validate_command(WEECHAT_DATA, BUFFER, 'REMOTE', COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS, UNIQ_COMMAND_ID)
         
         # ~ display_message(BUFFER, 'REMOTE EXE : %s' % EXECUTION_ALLOWED)
@@ -1221,7 +1221,7 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
   
   def hook_command_from_user(WEECHAT_DATA, BUFFER, DATA):
     
-    command_pre_validation(WEECHAT_DATA, BUFFER, 'LOCAL', '', '', '', '', '', DATA)
+    function_command_pre_validation(WEECHAT_DATA, BUFFER, 'LOCAL', '', '', '', '', '', DATA)
     
     return weechat.WEECHAT_RC_OK
   
@@ -1237,7 +1237,7 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
   
   def hook_command_from_buffer(WEECHAT_DATA, BUFFER, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, DATA):
     
-    command_pre_validation(WEECHAT_DATA, BUFFER, 'REMOTE', DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, DATA)
+    function_command_pre_validation(WEECHAT_DATA, BUFFER, 'REMOTE', DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, DATA)
     
     return weechat.WEECHAT_RC_OK
   
@@ -1729,7 +1729,7 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
       WWEECHAT_DATA, WBUFFER, WSOURCE, WCOMMAND, WTARGET_BOT_ID, WSOURCE_BOT_ID, WCOMMAND_ID, WCOMMAND_ARGUMENTS, WUNIQ_COMMAND_ID = CALL_DATA
       
       # SAVE ACTUAL DATA INTO WAIT_FOR_VERIFICATION
-      WAIT_FOR_VERIFICATION[TARGET_UNIQ_ID] = [command_recall, WEECHAT_DATA, BUFFER, SOURCE, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS, UNIQ_COMMAND_ID]
+      WAIT_FOR_VERIFICATION[TARGET_UNIQ_ID] = [function_command_recall, WEECHAT_DATA, BUFFER, SOURCE, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS, UNIQ_COMMAND_ID]
       
       # THEN CALL ADDITIONAL VERIFICATION COMMAND
       CALL_COMMAND(WWEECHAT_DATA, WBUFFER, WSOURCE, WCOMMAND, WTARGET_BOT_ID, WSOURCE_BOT_ID, WCOMMAND_ID, WCOMMAND_ARGUMENTS, WUNIQ_COMMAND_ID)
@@ -1798,7 +1798,7 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
       SCRIPT_CALL = SCRIPT_COMMAND_CALL
     
     # PREPARE VARIABLES OF PRE-LOCAL CALL
-    # Command was called by command_pre_validation
+    # Command was called by function_command_pre_validation
     if SOURCE == 'PRE-LOCAL':
       ID_CALL     = ID_CALL_LOCAL
       VERIFY_BOT  = TARGET_BOT_ID
@@ -2012,7 +2012,7 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
         del WAIT_FOR_ADVERTISE_ADA[UNIQ_COMMAND_ID]
         del WAIT_FOR_VERIFICATION[UNIQ_COMMAND_ID]
       else:
-        WAIT_FOR_VERIFICATION[UNIQ_COMMAND_ID] = [command_pre_validation, '', BUFFER, 'INTERNAL', '', '', '', '', '', COMMAND_ADA]
+        WAIT_FOR_VERIFICATION[UNIQ_COMMAND_ID] = [function_command_pre_validation, '', BUFFER, 'INTERNAL', '', '', '', '', '', COMMAND_ADA]
         WAIT_FOR_ADVERTISE_ADA[UNIQ_COMMAND_ID]      = COMMAND_ADA
     else:
       if UNIQ_COMMAND_ID in WAIT_FOR_ADVERTISE_ADA:
@@ -2076,7 +2076,7 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
         del WAIT_FOR_VERIFICATION[UNIQ_COMMAND_ID]
     else:
     # Prepare data for additional verification
-      WAIT_FOR_VERIFICATION[UNIQ_COMMAND_ID] = [command_pre_validation, '', BUFFER, 'INTERNAL', '', '', '', '', '', COMMAND_VAL]
+      WAIT_FOR_VERIFICATION[UNIQ_COMMAND_ID] = [function_command_pre_validation, '', BUFFER, 'INTERNAL', '', '', '', '', '', COMMAND_VAL]
       WAIT_FOR_VALIDATION[UNIQ_COMMAND_ID]   = COMMAND_VAL
     # DEBUG
     # ~ display_message(BUFFER, 'DEBUG - verify_remote_bot_verified_after_advertise: WAIT_FOR_VERIFICATION   : %s' % WAIT_FOR_VERIFICATION)
@@ -2132,12 +2132,12 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
   # UPDATE - PREPARE COMMAND FOR VALIDATION AND EXECUTION
   #
   
-  def prepare_command_update(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
+  def command_update_prepare(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
     global WRECON_BOT_ID, BUFFER_CMD_UPD_EXE, WRECON_REMOTE_BOTS_CONTROL, WAIT_FOR_VERIFICATION
     
     # DEBUG
-    # ~ display_message(BUFFER, 'DEBUG - prepare_command_update: %s' % [WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST])
-    # ~ display_message(BUFFER, 'DEBUG - prepare_command_update: WAIT_FOR_VERIFICATION : %s' % WAIT_FOR_VERIFICATION)
+    # ~ display_message(BUFFER, 'DEBUG - command_update_prepare: %s' % [WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST])
+    # ~ display_message(BUFFER, 'DEBUG - command_update_prepare: WAIT_FOR_VERIFICATION : %s' % WAIT_FOR_VERIFICATION)
     
     COMMAND = 'UPDATE'
     
@@ -2149,7 +2149,7 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
       
     UNIQ_COMMAND_ID = WRECON_BOT_ID + COMMAND_ID
     
-    # ~ display_data('prepare_command_update', WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST)
+    # ~ display_data('command_update_prepare', WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST)
     
     return [COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST, UNIQ_COMMAND_ID]
   
@@ -2157,13 +2157,13 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
   # UPDATE
   #
   
-  def user_command_update(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
+  def command_update(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
     global WRECON_BOT_ID, BUFFER_CMD_UPD_EXE, WRECON_REMOTE_BOTS_ADVERTISED
     
     UNIQ_COMMAND_ID = SOURCE_BOT_ID + COMMAND_ID
     
     # DEBUG
-    # ~ display_data('user_command_update', WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST)
+    # ~ display_data('command_update', WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST)
     
     
     if not TARGET_BOT_ID == WRECON_BOT_ID:
@@ -2278,7 +2278,7 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
   
   def function_update_2_prepare_dir(OUTPUT_MESSAGE):
     ENVIRONMENT_VARIABLES = os.environ
-    DOWNLOAD_DIRECTORY    = '%s/%s' % (ENVIRONMENT_VARIABLES['HOME'], '.wrecon-user_command_update')
+    DOWNLOAD_DIRECTORY    = '%s/%s' % (ENVIRONMENT_VARIABLES['HOME'], '.wrecon-command_update')
     
     DIRECTORY_PREPARED    = False
     NEXT_FUNCTION         = ''
@@ -2440,10 +2440,10 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
   # UPDATE - REQUEST, here we decide to sent command to buffer for remote bot, or we will update itself
   #
   
-  def buffer_command_update_1_requested(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
+  def command_update_buffer_1_requested(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
     
     display_message(BUFFER, '[%s] %s < UPDATE RECEIVED' % (COMMAND_ID, SOURCE_BOT_ID))
-    user_command_update(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST)
+    command_update(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST)
     
     return weechat.WEECHAT_RC_OK
   
@@ -2484,13 +2484,13 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
     
     global SCRIPT_COMPLETION, SCRIPT_COMMAND_CALL, PREPARE_USER_CALL, SCRIPT_BUFFER_CALL, COMMAND_VERSION, GLOBAL_VERSION_LIMIT
     SCRIPT_COMPLETION              = SCRIPT_COMPLETION + ' || UP || UPDATE'
-    SCRIPT_COMMAND_CALL['UPDATE']  = user_command_update
+    SCRIPT_COMMAND_CALL['UPDATE']  = command_update
     
-    PREPARE_USER_CALL['UP']               = prepare_command_update
+    PREPARE_USER_CALL['UP']               = command_update_prepare
     PREPARE_USER_CALL['UPDATE']           = PREPARE_USER_CALL['UP']
     PREPARE_USER_CALL[BUFFER_CMD_UPD_EXE] = PREPARE_USER_CALL['UP']
     
-    SCRIPT_BUFFER_CALL[BUFFER_CMD_UPD_EXE] = buffer_command_update_1_requested
+    SCRIPT_BUFFER_CALL[BUFFER_CMD_UPD_EXE] = command_update_buffer_1_requested
     
     COMMAND_VERSION['UP']               = '1.10'
     COMMAND_VERSION['UPDATE']           = COMMAND_VERSION['UP']
@@ -2514,11 +2514,11 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
   # VERIFY - PREPARE INTERNAL COMMAND VARIABLES
   #
   
-  def prepare_command_verify(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
+  def command_verify_prepare(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
     global BUFFER_CMD_VAL_EXE, BUFFER_CMD_VAL_EXE, WRECON_BOT_ID
     
     # DEBUG
-    # ~ display_message(BUFFER, 'DEBUG - prepare_command_verify: %s' % [WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST])
+    # ~ display_message(BUFFER, 'DEBUG - command_verify_prepare: %s' % [WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST])
     
     SOURCE_BOT_ID = WRECON_BOT_ID
     
@@ -2538,12 +2538,12 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
   # Called from validation, we are requesting information from remote BOT
   # Will not be called when we are missing ADVERTISE data of remote BOT
   
-  def buffer_command_verify(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
+  def command_verify(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
     global BUFFER_CMD_VAL_EXE, BUFFER_CMD_VAL_ERR, WAIT_FOR_REMOTE_DATA, VERIFY_RESULT_VAL, TIMEOUT_COMMAND_L2
     global WRECON_BOT_KEY, VERIFICATION_PROTOCOL, WRECON_REMOTE_BOTS_GRANTED_SECRET
     
     # DEBUG
-    # ~ display_data('DEBUG - buffer_command_verify:', WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST)
+    # ~ display_data('DEBUG - command_verify:', WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST)
     
     UNIQ_COMMAND_ID = TARGET_BOT_ID + COMMAND_ID
     
@@ -2558,7 +2558,7 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
     VERIFY_COMMAND = BUFFER_CMD_VAL_EXE
     
     # DEBUG
-    # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify: ENCRYPT_LEVEL : %s' % ENCRYPT_LEVEL)
+    # ~ display_message(BUFFER, 'DEBUG - command_verify: ENCRYPT_LEVEL : %s' % ENCRYPT_LEVEL)
     
     # We need determine which verification will be used
     if ENCRYPT_LEVEL > 0:
@@ -2634,13 +2634,13 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
   # VERIFY - REQUESTED
   # Called from buffer, this is received from remote BOT as request
   
-  def buffer_command_verify_1_requested(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
+  def command_verify_buffer_1_requested(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
     global BUFFER_CMD_VAL_REP, WRECON_REMOTE_BOTS_CONTROL, VERIFICATION_PROTOCOL, TIMEOUT_COMMAND_L2
     global VERIFICATION_REPLY_EXPECT, VERIFICATION_INITIAL, BUFFER_CMD_VAL_ERR, VERIFICATION_LAST_L2, WAIT_FOR_VERIFICATION_L2
     
-    # ~ display_data('buffer_command_verify_1_requested', WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST)
-    # ~ display_data('DEBUG - buffer_command_verify_1_  requested:', WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST)
-    # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_1_requested: BOT : %s' % WRECON_REMOTE_BOTS_CONTROL[SOURCE_BOT_ID])
+    # ~ display_data('command_verify_buffer_1_requested', WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST)
+    # ~ display_data('DEBUG - command_verify_1_  requested:', WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST)
+    # ~ display_message(BUFFER, 'DEBUG - command_verify_buffer_1_requested: BOT : %s' % WRECON_REMOTE_BOTS_CONTROL[SOURCE_BOT_ID])
     
     UNIQ_COMMAND_ID = SOURCE_BOT_ID + COMMAND_ID
     
@@ -2661,7 +2661,7 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
     VERIFY_COMMAND = BUFFER_CMD_VAL_REP
     
     # DEBUG
-    # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_1_requested: ENCRYPT_LEVEL : %s' % ENCRYPT_LEVEL)
+    # ~ display_message(BUFFER, 'DEBUG - command_verify_buffer_1_requested: ENCRYPT_LEVEL : %s' % ENCRYPT_LEVEL)
     
     if ENCRYPT_LEVEL > 0:
       
@@ -2670,7 +2670,7 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
         VERIFICATION_REPLY_EXPECT[UNIQ_COMMAND_ID] = SECRET_DATA
       
       # DEBUG
-      # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_1_requested VERIFICATION_REPLY_EXPECT: %s' % VERIFICATION_REPLY_EXPECT)
+      # ~ display_message(BUFFER, 'DEBUG - command_verify_buffer_1_requested VERIFICATION_REPLY_EXPECT: %s' % VERIFICATION_REPLY_EXPECT)
       
       if SECRET_DATA in VERIFICATION_PROTOCOL:
         if not SECRET_DATA in VERIFICATION_REPLY_EXPECT[UNIQ_COMMAND_ID]:
@@ -2709,12 +2709,12 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
       # 1. DATA ARE DECRYPTED
       
       # DEUG
-      # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_1_requested: SEECRET : %s' % (SECRET_DATA))
+      # ~ display_message(BUFFER, 'DEBUG - command_verify_buffer_1_requested: SEECRET : %s' % (SECRET_DATA))
       
       ERROR, DECRYPT_SEECRET_DATA = string_decrypt(ENCRYPT_LEVEL, SECRET_DATA, ENCRYPT_KEY1, ENCRYPT_KEY2)
       
       # DEBUG
-      # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_1_requested: SEECRET : %s' % (DECRYPT_SEECRET_DATA))
+      # ~ display_message(BUFFER, 'DEBUG - command_verify_buffer_1_requested: SEECRET : %s' % (DECRYPT_SEECRET_DATA))
       
       # 2. GET HASH OF DECRYPTED DATA
       if ERROR == True:
@@ -2732,12 +2732,12 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
         # 3. ENCRYPT HASH
         
         # DEBUG
-        # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_1_requested: SEC  : %s' % get_device_secrets())
-        # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_1_requested: KEY1 : %s' % ENCRYPT_KEY1)
-        # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_1_requested: KEY2 : %s' % ENCRYPT_KEY2)
-        # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_1_requested: DATA : %s' % DECRYPT_SEECRET_DATA)
-        # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_1_requested: HASH : %s' % HASH_DATA)
-        # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_1_requested: LVL  : %s' % ENCRYPT_LEVEL)
+        # ~ display_message(BUFFER, 'DEBUG - command_verify_buffer_1_requested: SEC  : %s' % get_device_secrets())
+        # ~ display_message(BUFFER, 'DEBUG - command_verify_buffer_1_requested: KEY1 : %s' % ENCRYPT_KEY1)
+        # ~ display_message(BUFFER, 'DEBUG - command_verify_buffer_1_requested: KEY2 : %s' % ENCRYPT_KEY2)
+        # ~ display_message(BUFFER, 'DEBUG - command_verify_buffer_1_requested: DATA : %s' % DECRYPT_SEECRET_DATA)
+        # ~ display_message(BUFFER, 'DEBUG - command_verify_buffer_1_requested: HASH : %s' % HASH_DATA)
+        # ~ display_message(BUFFER, 'DEBUG - command_verify_buffer_1_requested: LVL  : %s' % ENCRYPT_LEVEL)
         
         ERROR, ENCRYPT_SEECRET_DATA = string_encrypt(ENCRYPT_LEVEL, HASH_DATA, ENCRYPT_KEY1, ENCRYPT_KEY2)
         # 4. SEND BACK ENCRYPTED HASH TO REQUESTOR
@@ -2765,7 +2765,7 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
   # VERIFY - RESULT RECEIVED
   # Called from buffer, we are received data from remote BOT of our request
   
-  def buffer_command_verify_2_result_received(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
+  def command_verify_buffer_2_result_received(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
     global BUFFER_CMD_VAL_ERR, BUFFER_CMD_VAL_REA, BUFFER_CMD_VAL_EXE, WRECON_REMOTE_BOTS_CONTROL, WRECON_REMOTE_BOTS_CONTROL_SECRET, WAIT_FOR_REMOTE_DATA, VERIFY_RESULT_VAL, WRECON_REMOTE_BOTS_ADVERTISED
     global ID_CALL_LOCAL, ID_CALL_REMOTE, WRECON_BOT_KEY, WRECON_BOT_ID, VERIFICATION_PROTOCOL, VERIFICATION_REPLY_EXPECT, VERIFICATION_LAST_L2, TIMEOUT_COMMAND_L2, WAIT_FOR_VERIFICATION_L2
     
@@ -2781,8 +2781,8 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
       weechat.unhookd(WAIT_FOR_VERIFICATION_L2[UNIQ_COMMAND_ID])
       del WAIT_FOR_VERIFICATION_L2[UNIQ_COMMAND_ID]
     
-    # ~ display_data('buffer_command_verify_2_result_received', WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST)
-    # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_2_result_received VERIFICATION_REPLY_EXPECT: %s' % VERIFICATION_REPLY_EXPECT)
+    # ~ display_data('command_verify_buffer_2_result_received', WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST)
+    # ~ display_message(BUFFER, 'DEBUG - command_verify_buffer_2_result_received VERIFICATION_REPLY_EXPECT: %s' % VERIFICATION_REPLY_EXPECT)
     
     # CHECK WE REQUESTED VERIFICATION
     ENCRYPT_LEVEL      = get_target_level_01_encryption(SOURCE_BOT_ID)
@@ -2821,13 +2821,13 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
             L2_PROTOCOL        = VERIFICATION_PROTOCOL[SECRET_DATA][1]
             
             # DEBUG
-            # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_2_result_received: INI FUNC : %s' % INITIAL_FUNCTION)
+            # ~ display_message(BUFFER, 'DEBUG - command_verify_buffer_2_result_received: INI FUNC : %s' % INITIAL_FUNCTION)
             
             SECRET_DATA        = COMMAND_ARGUMENTS_LIST[1]
             
             # DEBUG
-            # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_2_result_received: SECRET_DATA            : %s' % SECRET_DATA)
-            # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_2_result_received: COMMAND_ARGUMENTS_LIST : %s' % COMMAND_ARGUMENTS_LIST)
+            # ~ display_message(BUFFER, 'DEBUG - command_verify_buffer_2_result_received: SECRET_DATA            : %s' % SECRET_DATA)
+            # ~ display_message(BUFFER, 'DEBUG - command_verify_buffer_2_result_received: COMMAND_ARGUMENTS_LIST : %s' % COMMAND_ARGUMENTS_LIST)
             
             L2_PROTOCOL_NEXT   = VERIFICATION_PROTOCOL[L2_PROTOCOL][1]
             protocol_function  = VERIFICATION_PROTOCOL[L2_PROTOCOL][2]
@@ -2835,11 +2835,11 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
             if ERROR == True:
               OUT_MESSAGE      = SEND_DATA
             # DEBUG
-            # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_2_result_received: L2 PROTOCOL FOLLOWED - %s' % L2_PROTOCOL)
-            # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_2_result_received: ENCRYPT_KEY1 : %s' % ENCRYPT_KEY1)
-            # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_2_result_received: ENCRYPT_KEY2 : %s' % ENCRYPT_KEY2)
-            # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_2_result_received: LEVEL        : %s' % ENCRYPT_LEVEL)
-            # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_2_result_received: EDATA        : %s' % SECRET_DATA)
+            # ~ display_message(BUFFER, 'DEBUG - command_verify_buffer_2_result_received: L2 PROTOCOL FOLLOWED - %s' % L2_PROTOCOL)
+            # ~ display_message(BUFFER, 'DEBUG - command_verify_buffer_2_result_received: ENCRYPT_KEY1 : %s' % ENCRYPT_KEY1)
+            # ~ display_message(BUFFER, 'DEBUG - command_verify_buffer_2_result_received: ENCRYPT_KEY2 : %s' % ENCRYPT_KEY2)
+            # ~ display_message(BUFFER, 'DEBUG - command_verify_buffer_2_result_received: LEVEL        : %s' % ENCRYPT_LEVEL)
+            # ~ display_message(BUFFER, 'DEBUG - command_verify_buffer_2_result_received: EDATA        : %s' % SECRET_DATA)
           else:
             ERROR              = True
             OUT_MESSAGE        = 'PROTOCOL VIOLATION'
@@ -2851,7 +2851,7 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
       # If not ERROR occured, then decrypt data and check HASH
       
         # DEBUG
-        # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_2_result_received: L KEYS : %s %s %s' % (ENCRYPT_LEVEL, ENCRYPT_KEY1, ENCRYPT_KEY2))
+        # ~ display_message(BUFFER, 'DEBUG - command_verify_buffer_2_result_received: L KEYS : %s %s %s' % (ENCRYPT_LEVEL, ENCRYPT_KEY1, ENCRYPT_KEY2))
         
         ERROR, DECRYPT_DATA  = string_decrypt(ENCRYPT_LEVEL, SECRET_DATA, ENCRYPT_KEY1, ENCRYPT_KEY2)
         
@@ -2860,7 +2860,7 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
         #
         
         # DEBUG
-        # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_2_result_received: DECRYPT_DATA         : %s' % DECRYPT_DATA)
+        # ~ display_message(BUFFER, 'DEBUG - command_verify_buffer_2_result_received: DECRYPT_DATA         : %s' % DECRYPT_DATA)
         
       # Check HASH is correct of older version of remote client
         if ENCRYPT_LEVEL == 0:
@@ -2876,8 +2876,8 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
           DECRYPT_DATA = DECRYPT_DATA.split(' ')
           
           # DEBUG
-          # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_2_result_received: WAIT_FOR_REMOTE_DATA : %s' % WAIT_FOR_REMOTE_DATA)
-          # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_2_result_received: DECRYPT_DATA         : %s' % DECRYPT_DATA)
+          # ~ display_message(BUFFER, 'DEBUG - command_verify_buffer_2_result_received: WAIT_FOR_REMOTE_DATA : %s' % WAIT_FOR_REMOTE_DATA)
+          # ~ display_message(BUFFER, 'DEBUG - command_verify_buffer_2_result_received: DECRYPT_DATA         : %s' % DECRYPT_DATA)
           
           if WAIT_FOR_REMOTE_DATA[UNIQ_COMMAND_ID] == DECRYPT_DATA[0]:
             OUT_MESSAGE        = 'VERIFICATION SUCCESSFUL'
@@ -2914,7 +2914,7 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
           SECRET_DATA   = get_random_string(RANDOM_NUMBER)
           SECRET_HASH   = get_hash(SECRET_DATA)
           
-          # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_2_result_received : PROTOCOL : %s' % L2_PROTOCOL)
+          # ~ display_message(BUFFER, 'DEBUG - command_verify_buffer_2_result_received : PROTOCOL : %s' % L2_PROTOCOL)
           
           # ~ if L2_PROTOCOL == VERIFICATION_LAST_L2:
             # ~ L2_PROTOCOL = ''
@@ -2923,12 +2923,12 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
             SECRET_DATA = '%s %s' % (SECRET_DATA, SEND_DATA)
           
           # DEBUG
-          # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_2_result_received : SEC  : %s' % get_device_secrets())
-          # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_2_result_received : KEY1 : %s' % ENCRYPT_KEY1)
-          # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_2_result_received : KEY2 : %s' % ENCRYPT_KEY2)
-          # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_2_result_received : DATA : %s' % SECRET_DATA)
-          # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_2_result_received : HASH : %s' % SECRET_HASH)
-          # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_2_result_received : LVL  : %s' % ENCRYPT_LEVEL)
+          # ~ display_message(BUFFER, 'DEBUG - command_verify_buffer_2_result_received : SEC  : %s' % get_device_secrets())
+          # ~ display_message(BUFFER, 'DEBUG - command_verify_buffer_2_result_received : KEY1 : %s' % ENCRYPT_KEY1)
+          # ~ display_message(BUFFER, 'DEBUG - command_verify_buffer_2_result_received : KEY2 : %s' % ENCRYPT_KEY2)
+          # ~ display_message(BUFFER, 'DEBUG - command_verify_buffer_2_result_received : DATA : %s' % SECRET_DATA)
+          # ~ display_message(BUFFER, 'DEBUG - command_verify_buffer_2_result_received : HASH : %s' % SECRET_HASH)
+          # ~ display_message(BUFFER, 'DEBUG - command_verify_buffer_2_result_received : LVL  : %s' % ENCRYPT_LEVEL)
           
           ERROR, ENCRYPT_SEECRET_DATA = string_encrypt(ENCRYPT_LEVEL, SECRET_DATA, ENCRYPT_KEY1, ENCRYPT_KEY2)
           
@@ -2964,9 +2964,9 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
         # Here we can save data of CONTROL bot after successful verification
         
         # DEBUG
-        # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_2_result_received: ID_CALL_LOCAL   : %s' % ID_CALL_LOCAL)
-        # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_2_result_received: ID_CALL_REMOTE  : %s' % ID_CALL_REMOTE)
-        # ~ display_message(BUFFER, 'DEBUG - buffer_command_verify_2_result_received: UNIQ_COMMAND_ID : %s' % UNIQ_COMMAND_ID)
+        # ~ display_message(BUFFER, 'DEBUG - command_verify_buffer_2_result_received: ID_CALL_LOCAL   : %s' % ID_CALL_LOCAL)
+        # ~ display_message(BUFFER, 'DEBUG - command_verify_buffer_2_result_received: ID_CALL_REMOTE  : %s' % ID_CALL_REMOTE)
+        # ~ display_message(BUFFER, 'DEBUG - command_verify_buffer_2_result_received: UNIQ_COMMAND_ID : %s' % UNIQ_COMMAND_ID)
         
         # SAVE DATA OF CONTROL BOT
         # ~ if UNIQ_COMMAND_ID in VERIFY_CONTROL_SECRET_SAVE:
@@ -3692,17 +3692,17 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
     BUFFER_CMD_VAL_FUNCTION = {}
     VERIFY_RESULT_VAL       = {}
     
-    SCRIPT_BUFFER_CALL[BUFFER_CMD_VAL_EXE] = buffer_command_verify_1_requested
-    SCRIPT_BUFFER_CALL[BUFFER_CMD_VAL_REP] = buffer_command_verify_2_result_received
-    SCRIPT_BUFFER_CALL[BUFFER_CMD_VAL_REA] = buffer_command_verify_2_result_received
-    SCRIPT_BUFFER_CALL[BUFFER_CMD_VAL_ERR] = buffer_command_verify_2_result_received
+    SCRIPT_BUFFER_CALL[BUFFER_CMD_VAL_EXE] = command_verify_buffer_1_requested
+    SCRIPT_BUFFER_CALL[BUFFER_CMD_VAL_REP] = command_verify_buffer_2_result_received
+    SCRIPT_BUFFER_CALL[BUFFER_CMD_VAL_REA] = command_verify_buffer_2_result_received
+    SCRIPT_BUFFER_CALL[BUFFER_CMD_VAL_ERR] = command_verify_buffer_2_result_received
     
-    PREPARE_USER_CALL['VERIFY']             = prepare_command_verify
-    SCRIPT_INTERNAL_CALL['VERIFY']          = prepare_command_verify
-    # ~ SCRIPT_COMMAND_CALL[BUFFER_CMD_VAL_EXE] = prepare_command_verify
+    PREPARE_USER_CALL['VERIFY']             = command_verify_prepare
+    SCRIPT_INTERNAL_CALL['VERIFY']          = command_verify_prepare
+    # ~ SCRIPT_COMMAND_CALL[BUFFER_CMD_VAL_EXE] = command_verify_prepare
     
-    SCRIPT_COMMAND_CALL['VERIFY']           = buffer_command_verify
-    # ~ SCRIPT_COMMAND_CALL[BUFFER_CMD_VAL_EXE] = buffer_command_verify
+    SCRIPT_COMMAND_CALL['VERIFY']           = command_verify
+    # ~ SCRIPT_COMMAND_CALL[BUFFER_CMD_VAL_EXE] = command_verify
     
     # BEFORE EXECUTION OF LOCAL COMMAND or RECEIVED BY REMOTE COMMAND
     # following setup ensure ADVERTISE verification automatically
@@ -3774,7 +3774,7 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
   # HELP - PREPARE COMMAND FOR VALIDATION AND EXECUTION
   #
   
-  def prepare_command_help(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
+  def command_help_prepare(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
     global WRECON_BOT_ID
     
     UNIQ_COMMAND_ID = WRECON_BOT_ID + COMMAND_ID
@@ -3786,7 +3786,7 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
   # HELP
   #
   
-  def user_command_help(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
+  def command_help(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
     global SHORT_HELP, ID_CALL_LOCAL, SCRIPT_NAME, SCRIPT_VERSION, SCRIPT_TIMESTAMP
     
     UNIQ_COMMAND_ID = TARGET_BOT_ID + COMMAND_ID
@@ -3847,7 +3847,7 @@ COMMAND            COMMAND [and arguments]
     SCRIPT_ARGS                 = SCRIPT_ARGS + ' | [H[ELP] [COMMAND]'
     SCRIPT_ARGS_DESCRIPTION     = SCRIPT_ARGS_DESCRIPTION + HELP_COMMAND['HELP']
     SCRIPT_COMPLETION           = SCRIPT_COMPLETION + ' || H || HELP'
-    SCRIPT_COMMAND_CALL['HELP'] = user_command_help
+    SCRIPT_COMMAND_CALL['HELP'] = command_help
     
     global SHORT_HELP
     
@@ -3858,7 +3858,7 @@ HELP               H[ELP] [COMMAND]'''
     
     ARGUMENTS_OPTIONAL['HELP'] = 1
     
-    PREPARE_USER_CALL['H']      = prepare_command_help
+    PREPARE_USER_CALL['H']      = command_help_prepare
     PREPARE_USER_CALL['HELP']   = PREPARE_USER_CALL['H']
     
     return
@@ -3872,7 +3872,7 @@ HELP               H[ELP] [COMMAND]'''
   
   # ADVERTISE - CALLED FROM USER (PREPARE FOR VALIDATION)
   
-  def prepare_command_advertise(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
+  def command_advertise_prepare(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
     global BUFFER_CMD_ADV_REQ, BUFFER_CMD_ADV_ADA, ID_CALL_LOCAL, WRECON_BOT_ID, SCRIPT_COMMAND_CALL, WRECON_REMOTE_BOTS_ADVERTISED
     
     SOURCE_BOT_ID = WRECON_BOT_ID
@@ -3891,7 +3891,7 @@ HELP               H[ELP] [COMMAND]'''
       TARGET_BOT_ID   = COMMAND_ID
       UNIQ_COMMAND_ID = WRECON_BOT_ID + COMMAND_ID
     
-    # ~ display_data('prepare_command_advertise', WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST)
+    # ~ display_data('command_advertise_prepare', WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST)
     
     return [COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST, UNIQ_COMMAND_ID]
   
@@ -3899,7 +3899,7 @@ HELP               H[ELP] [COMMAND]'''
   # ADVERTISE
   # 
   
-  def user_command_advertise(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
+  def command_advertise(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
     global BUFFER_CMD_ADV_REQ, BUFFER_CMD_ADA_REQ, ID_CALL_LOCAL, WRECON_BOT_ID, WRECON_BUFFER_CHANNEL, COUNT_ADVERTISED_BOTS, TIMEOUT_COMMAND_SHORT, WAIT_FOR_ADVERTISE
     
     COUNT_ADVERTISED_BOTS = 0
@@ -3920,14 +3920,14 @@ HELP               H[ELP] [COMMAND]'''
     
     WAIT_FOR_ADVERTISE[UNIQ_COMMAND_ID] = weechat.hook_timer(TIMEOUT_COMMAND_SHORT*1000, 0, 1, 'function_advertise_wait_result', UNIQ_COMMAND_ID)
     
-    # ~ display_data('user_command_advertise', WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST)
+    # ~ display_data('command_advertise', WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST)
     return weechat.WEECHAT_RC_OK
   
   #
   # ADVERTISE - RECEIVED FROM BUFFER (REQUESTED INFORMATION ABOUT BOT, WE NOW REPLY)
   #
   
-  def buffer_command_advertise_1_requested(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
+  def command_advertise_buffer_1_requested(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
     global BUFFER_CMD_ADV_REP, BUFFER_CMD_ADA_REP, BUFFER_CMD_ADA_REQ, SCRIPT_VERSION, SCRIPT_TIMESTAMP, WRECON_BOT_NAME, WRECON_BOT_ID
     
     UNIQ_COMMAND_ID = SOURCE_BOT_ID + COMMAND_ID
@@ -3946,18 +3946,18 @@ HELP               H[ELP] [COMMAND]'''
     # Clean up variables, we finished
     cleanup_unique_command_id('REMOTE', UNIQ_COMMAND_ID)
     
-    # ~ display_data('buffer_command_advertise_1_requested', WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST)
+    # ~ display_data('command_advertise_buffer_1_requested', WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST)
     return weechat.WEECHAT_RC_OK
   
   #
   # ADVERTISE - RECEIVED FROM BUFFER (RECEIVED INFORMATION ABOUT BOT, WE NOW SAVE)
   #
   
-  def buffer_command_advertise_2_result_received(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
+  def command_advertise_buffer_2_result_received(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
     global ID_CALL_LOCAL, BUFFER_CMD_ADV_REP, BUFFER_CMD_ADA_REP, WAIT_FOR_ADVERTISE, COUNT_ADVERTISED_BOTS, WAIT_FOR_VERIFICATION
     
     # ~ display_message(BUFFER, 'ADV RESULT RECEIVED %s' % [WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST])
-    # ~ display_data('buffer_command_advertise_2_result_received', WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST)
+    # ~ display_data('command_advertise_buffer_2_result_received', WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST)
     
     if COMMAND == BUFFER_CMD_ADA_REP:
       UNIQ_COMMAND_ID = SOURCE_BOT_ID + COMMAND_ID
@@ -3974,7 +3974,7 @@ HELP               H[ELP] [COMMAND]'''
       # In case it was additional advertise, we can stop hook and remove variables immediately
       # ~ UNIQ_ID = SOURCE_BOT_ID + COMMAND_ID
       # DEBUG
-      # ~ display_message(BUFFER, 'DEBUG - buffer_command_advertise_2_result_received: WAIT_FOR_VERIFICATION : %s' % WAIT_FOR_VERIFICATION)
+      # ~ display_message(BUFFER, 'DEBUG - command_advertise_buffer_2_result_received: WAIT_FOR_VERIFICATION : %s' % WAIT_FOR_VERIFICATION)
       if COMMAND == BUFFER_CMD_ADA_REP and UNIQ_COMMAND_ID in WAIT_FOR_ADVERTISE:
         weechat.unhook(WAIT_FOR_ADVERTISE[UNIQ_COMMAND_ID])
         del WAIT_FOR_ADVERTISE[UNIQ_COMMAND_ID]
@@ -4096,15 +4096,15 @@ ADVERTISE          ADV[ERTISE]'''
     
     global SCRIPT_COMPLETION, SCRIPT_COMMAND_CALL, PREPARE_USER_CALL, SCRIPT_BUFFER_CALL, SCRIPT_INTERNAL_CALL
     SCRIPT_COMPLETION                = SCRIPT_COMPLETION + ' || ADV || ADVERTISE'
-    SCRIPT_COMMAND_CALL['ADVERTISE'] = user_command_advertise
+    SCRIPT_COMMAND_CALL['ADVERTISE'] = command_advertise
     SCRIPT_COMMAND_CALL['ADA']       = SCRIPT_COMMAND_CALL['ADVERTISE']
     
-    PREPARE_USER_CALL['ADV']         = prepare_command_advertise
+    PREPARE_USER_CALL['ADV']         = command_advertise_prepare
     PREPARE_USER_CALL['ADVERTISE']   = PREPARE_USER_CALL['ADV']
     SCRIPT_INTERNAL_CALL['ADA']      = PREPARE_USER_CALL['ADV']
     
-    SCRIPT_BUFFER_CALL[BUFFER_CMD_ADV_REQ] = buffer_command_advertise_1_requested
-    SCRIPT_BUFFER_CALL[BUFFER_CMD_ADV_REP] = buffer_command_advertise_2_result_received
+    SCRIPT_BUFFER_CALL[BUFFER_CMD_ADV_REQ] = command_advertise_buffer_1_requested
+    SCRIPT_BUFFER_CALL[BUFFER_CMD_ADV_REP] = command_advertise_buffer_2_result_received
     
     SCRIPT_BUFFER_CALL[BUFFER_CMD_ADA_REQ] = SCRIPT_BUFFER_CALL[BUFFER_CMD_ADV_REQ]
     SCRIPT_BUFFER_CALL[BUFFER_CMD_ADA_REP] = SCRIPT_BUFFER_CALL[BUFFER_CMD_ADV_REP]
@@ -4123,7 +4123,7 @@ ADVERTISE          ADV[ERTISE]'''
   #
   # COMMAND ME - PREPARE COMMAND FOR VALIDATION (CALLED FROM )
   
-  def prepare_command_me(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
+  def command_me_prepare(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
     global WRECON_BOT_ID
     
     UNIQ_COMMAND_ID = WRECON_BOT_ID + COMMAND_ID
@@ -4139,7 +4139,7 @@ ADVERTISE          ADV[ERTISE]'''
   # ME - DISPLAY INFORMATION (CALLED AFTER COMMAND VALIDATED)
   #
   
-  def user_command_me(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
+  def command_me(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
     global WRECON_BOT_NAME, WRECON_BOT_ID, WRECON_BOT_KEY, SCRIPT_VERSION, SCRIPT_TIMESTAMP
     
     WRECON_VER, WRECON_STM = get_version_and_timestamp(SCRIPT_VERSION, SCRIPT_TIMESTAMP)
@@ -4190,14 +4190,14 @@ ADVERTISE          ADV[ERTISE]'''
     SCRIPT_ARGS               = SCRIPT_ARGS + '[M[E]]'
     SCRIPT_ARGS_DESCRIPTION   = SCRIPT_ARGS_DESCRIPTION + HELP_COMMAND['ME']
     SCRIPT_COMPLETION         = SCRIPT_COMPLETION + 'M || ME'
-    SCRIPT_COMMAND_CALL['ME'] = user_command_me
+    SCRIPT_COMMAND_CALL['ME'] = command_me
     
     global SHORT_HELP
     SHORT_HELP                       = SHORT_HELP + '''
 ME                 M[E]'''
     
     global PREPARE_USER_CALL
-    PREPARE_USER_CALL['M']    = prepare_command_me
+    PREPARE_USER_CALL['M']    = command_me_prepare
     PREPARE_USER_CALL['ME']   = PREPARE_USER_CALL['M']
     
     return
@@ -4213,7 +4213,7 @@ ME                 M[E]'''
   # REGISTER - PREPARE COMMAND
   #
   
-  def prepare_command_register(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
+  def command_register_prepare(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
     global WRECON_BOT_ID
     
     UNIQ_COMMAND_ID = WRECON_BOT_ID + COMMAND_ID
@@ -4228,7 +4228,7 @@ ME                 M[E]'''
   # REGISTER
   #
   
-  def user_command_register(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
+  def command_register(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
     global WRECON_SERVER, WRECON_CHANNEL, WRECON_CHANNEL_KEY, WRECON_CHANNEL_ENCRYPTION_KEY, WRECON_BUFFER_CHANNEL
     
     ERROR_REGISTER = False
@@ -4321,14 +4321,14 @@ ME                 M[E]'''
     SCRIPT_ARGS                     = SCRIPT_ARGS + ' | [REG[ISTER] <ChannelKEY> <ChannelEncryptKEY>]'
     SCRIPT_ARGS_DESCRIPTION         = SCRIPT_ARGS_DESCRIPTION + HELP_COMMAND['REGISTER']
     SCRIPT_COMPLETION               = SCRIPT_COMPLETION + ' || REG || REGISTER'
-    SCRIPT_COMMAND_CALL['REGISTER'] = user_command_register
+    SCRIPT_COMMAND_CALL['REGISTER'] = command_register
     
     global SHORT_HELP
     SHORT_HELP                       = SHORT_HELP + '''
 REGISTER           REG[ISTER] <ChannelKEY> <ChannelEncryptKEY>'''
     
-    PREPARE_USER_CALL['REG']      = prepare_command_register
-    PREPARE_USER_CALL['REGISTER'] = prepare_command_register
+    PREPARE_USER_CALL['REG']      = command_register_prepare
+    PREPARE_USER_CALL['REGISTER'] = command_register_prepare
     
     global ARGUMENTS_REQUIRED
     ARGUMENTS_REQUIRED['REGISTER'] = 2
@@ -4342,7 +4342,7 @@ REGISTER           REG[ISTER] <ChannelKEY> <ChannelEncryptKEY>'''
   #
   # COMMAND UNREGISTER
   
-  def prepare_command_unregister(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
+  def command_unregister_prepare(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
     global WRECON_BOT_ID
     
     UNIQ_COMMAND_ID = WRECON_BOT_ID + COMMAND_ID
@@ -4357,7 +4357,7 @@ REGISTER           REG[ISTER] <ChannelKEY> <ChannelEncryptKEY>'''
   # UNREGISTER
   #
   
-  def user_command_unregister(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
+  def command_unregister(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
     global SCRIPT_NAME, WRECON_SERVER, WRECON_CHANNEL, WRECON_CHANNEL_ENCRYPTION_KEY, WRECON_CHANNEL_ENCRYPTION_KEY
     
     UNIQ_COMMAND_ID = TARGET_BOT_ID + COMMAND_ID
@@ -4438,9 +4438,9 @@ UNREGISTER         UN[REGISTER]'''
     SCRIPT_ARGS_DESCRIPTION           = SCRIPT_ARGS_DESCRIPTION + HELP_COMMAND['UNREGISTER']
     
     SCRIPT_COMPLETION                 = SCRIPT_COMPLETION + ' || UNREG || UNREGISTER'
-    SCRIPT_COMMAND_CALL['UNREGISTER'] = user_command_unregister
+    SCRIPT_COMMAND_CALL['UNREGISTER'] = command_unregister
     
-    PREPARE_USER_CALL['UN']           = prepare_command_unregister
+    PREPARE_USER_CALL['UN']           = command_unregister_prepare
     PREPARE_USER_CALL['UNREGISTER']   = PREPARE_USER_CALL['UN']
     
     return
@@ -4456,7 +4456,7 @@ UNREGISTER         UN[REGISTER]'''
   # ADD - PREPARE
   #
   
-  def prepare_command_add(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
+  def command_add_prepare(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
     global WRECON_REMOTE_BOTS_CONTROL, WRECON_BOT_ID
     
     COMMAND = 'ADD'
@@ -4464,7 +4464,7 @@ UNREGISTER         UN[REGISTER]'''
     UNIQ_COMMAND_ID = WRECON_BOT_ID + COMMAND_ID
     
     # DEBUG
-    # ~ display_message(BUFFER, 'DEBUG - prepare_command_add: COMMAND_ARGUMENTS_LIST : %s' % COMMAND_ARGUMENTS_LIST)
+    # ~ display_message(BUFFER, 'DEBUG - command_add_prepare: COMMAND_ARGUMENTS_LIST : %s' % COMMAND_ARGUMENTS_LIST)
     
     return [COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST, UNIQ_COMMAND_ID]
   
@@ -4472,7 +4472,7 @@ UNREGISTER         UN[REGISTER]'''
   # ADD - COMMAND
   #
   
-  def user_command_add(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
+  def command_add(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
     global ID_CALL_LOCAL, WRECON_REMOTE_BOTS_CONTROL, WRECON_REMOTE_BOTS_CONTROL_SECRET
     
     OUT_MESSAGE = []
@@ -4480,7 +4480,7 @@ UNREGISTER         UN[REGISTER]'''
     UNIQ_COMMAND_ID = TARGET_BOT_ID + COMMAND_ID
     
     # DEBUG
-    # ~ display_message(BUFFER, 'DEBUG - user_command_add: COMMAND_ARGUMENTS_LIST : %s' % COMMAND_ARGUMENTS_LIST)
+    # ~ display_message(BUFFER, 'DEBUG - command_add: COMMAND_ARGUMENTS_LIST : %s' % COMMAND_ARGUMENTS_LIST)
     
     NEW_BOT_ID  = COMMAND_ARGUMENTS_LIST[0]
     NEW_BOT_KEY = COMMAND_ARGUMENTS_LIST[1]
@@ -4534,9 +4534,9 @@ UNREGISTER         UN[REGISTER]'''
     SCRIPT_ARGS                = SCRIPT_ARGS + ' | [ADD <BotID> <BotKEY> [a note]]'
     SCRIPT_ARGS_DESCRIPTION    = SCRIPT_ARGS_DESCRIPTION + HELP_COMMAND['ADD']
     SCRIPT_COMPLETION          = SCRIPT_COMPLETION + ' || ADD'
-    SCRIPT_COMMAND_CALL['ADD'] = user_command_add
+    SCRIPT_COMMAND_CALL['ADD'] = command_add
     
-    PREPARE_USER_CALL['ADD']   = prepare_command_add
+    PREPARE_USER_CALL['ADD']   = command_add_prepare
     
     global SHORT_HELP
     
@@ -4559,7 +4559,7 @@ ADD                ADD <BotID> <BotKEY> [a note]'''
   # DEL - PREPARE
   #
   
-  def prepare_command_del(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
+  def command_del_prepare(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
     global WRECON_REMOTE_BOTS_CONTROL, WRECON_BOT_ID, WRECON_REMOTE_BOTS_CONTROL_SECRET
     
     COMMAND = 'DELETE'
@@ -4572,7 +4572,7 @@ ADD                ADD <BotID> <BotKEY> [a note]'''
   # DEL -COMMAND
   #
   
-  def user_command_del(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
+  def command_del(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
     global ID_CALL_LOCAL, WRECON_REMOTE_BOTS_CONTROL, WRECON_REMOTE_BOTS_CONTROL_SECRET
     
     OUT_MESSAGE = []
@@ -4580,13 +4580,13 @@ ADD                ADD <BotID> <BotKEY> [a note]'''
     UNIQ_COMMAND_ID = TARGET_BOT_ID + COMMAND_ID
     
     # DEBUG
-    # ~ display_message(BUFFER, 'DEBUG - user_command_del: COMMAND_ARGUMENTS_LIST : %s' % COMMAND_ARGUMENTS_LIST)
+    # ~ display_message(BUFFER, 'DEBUG - command_del: COMMAND_ARGUMENTS_LIST : %s' % COMMAND_ARGUMENTS_LIST)
     
     DEL_BOT_ID = get_bot_id(COMMAND_ARGUMENTS_LIST[0], WRECON_REMOTE_BOTS_CONTROL)
     
     # DEBUG
-    # ~ display_message(BUFFER, 'DEBUG - user_command_del: DEL_BOT_ID                 : %s' % DEL_BOT_ID)
-    # ~ display_message(BUFFER, 'DEBUG - user_command_del: WRECON_REMOTE_BOTS_CONTROL : %s ' % WRECON_REMOTE_BOTS_CONTROL)
+    # ~ display_message(BUFFER, 'DEBUG - command_del: DEL_BOT_ID                 : %s' % DEL_BOT_ID)
+    # ~ display_message(BUFFER, 'DEBUG - command_del: WRECON_REMOTE_BOTS_CONTROL : %s ' % WRECON_REMOTE_BOTS_CONTROL)
     
     if not DEL_BOT_ID in WRECON_REMOTE_BOTS_CONTROL:
       OUT_MESSAGE_TAG = 'DEL ERROR'
@@ -4630,9 +4630,9 @@ ADD                ADD <BotID> <BotKEY> [a note]'''
     SCRIPT_ARGS                   = SCRIPT_ARGS + ' | [DEL[ETE] <botid>|<INDEX>]'
     SCRIPT_ARGS_DESCRIPTION       = SCRIPT_ARGS_DESCRIPTION + HELP_COMMAND['DELETE']
     SCRIPT_COMPLETION             = SCRIPT_COMPLETION + ' || DEL || DELETE'
-    SCRIPT_COMMAND_CALL['DELETE'] = user_command_del
+    SCRIPT_COMMAND_CALL['DELETE'] = command_del
     
-    PREPARE_USER_CALL['DEL']      = prepare_command_del
+    PREPARE_USER_CALL['DEL']      = command_del_prepare
     PREPARE_USER_CALL['DELETE']   = PREPARE_USER_CALL['DEL']
     
     global SHORT_HELP
@@ -4655,7 +4655,7 @@ DELETE             DEL[ETE] <BotID>|<INDEX>'''
   # GRANT - PREPARE COMMAND
   #
   
-  def prepare_command_grant(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
+  def command_grant_prepare(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
     global WRECON_REMOTE_BOTS_CONTROL, WRECON_BOT_ID
     
     COMMAND = 'GRANT'
@@ -4668,7 +4668,7 @@ DELETE             DEL[ETE] <BotID>|<INDEX>'''
   # GRANT - COMMAND
   #
   
-  def user_command_grant(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
+  def command_grant(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
     global WRECON_REMOTE_BOTS_GRANTED, WRECON_REMOTE_BOTS_GRANTED_SECRET
     
     OUT_MESSAGE = []
@@ -4719,9 +4719,9 @@ DELETE             DEL[ETE] <BotID>|<INDEX>'''
     SCRIPT_ARGS                  = SCRIPT_ARGS + ' | [G[RANT] <BotID> [a note]]'
     SCRIPT_ARGS_DESCRIPTION      = SCRIPT_ARGS_DESCRIPTION + HELP_COMMAND['GRANT']
     SCRIPT_COMPLETION            = SCRIPT_COMPLETION + ' || G || GRANT'
-    SCRIPT_COMMAND_CALL['GRANT'] = user_command_grant 
+    SCRIPT_COMMAND_CALL['GRANT'] = command_grant 
     
-    PREPARE_USER_CALL['G']       = prepare_command_grant
+    PREPARE_USER_CALL['G']       = command_grant_prepare
     PREPARE_USER_CALL['GRANT']   = PREPARE_USER_CALL['G']
     
     global SHORT_HELP
@@ -4744,7 +4744,7 @@ GRANT              G[RANT] <BotID> [a note]'''
   #
   # REVOKE - PREPARE COMMAND
   #
-  def prepare_command_revoke(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
+  def command_revoke_prepare(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
     global WRECON_REMOTE_BOTS_CONTROL, WRECON_BOT_ID
     
     COMMAND = 'REVOKE'
@@ -4757,7 +4757,7 @@ GRANT              G[RANT] <BotID> [a note]'''
   # REVOKE - COMMAND
   #
   
-  def user_command_revoke(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
+  def command_revoke(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
     global WRECON_REMOTE_BOTS_GRANTED, WRECON_REMOTE_BOTS_GRANTED_SECRET
     
     OUT_MESSAGE = []
@@ -4765,13 +4765,13 @@ GRANT              G[RANT] <BotID> [a note]'''
     UNIQ_COMMAND_ID = TARGET_BOT_ID + COMMAND_ID
     
     # DEBUG
-    # ~ display_message(BUFFER, 'DEBUG - user_command_del: COMMAND_ARGUMENTS_LIST : %s' % COMMAND_ARGUMENTS_LIST)
+    # ~ display_message(BUFFER, 'DEBUG - command_del: COMMAND_ARGUMENTS_LIST : %s' % COMMAND_ARGUMENTS_LIST)
     
     REVOKE_BOT_ID = get_bot_id(COMMAND_ARGUMENTS_LIST[0], WRECON_REMOTE_BOTS_GRANTED)
     
     # DEBUG
-    # ~ display_message(BUFFER, 'DEBUG - user_command_del: REVOKE_BOT_ID              : %s' % REVOKE_BOT_ID)
-    # ~ display_message(BUFFER, 'DEBUG - user_command_del: WRECON_REMOTE_BOTS_GRANTED : %s' % WRECON_REMOTE_BOTS_GRANTED)
+    # ~ display_message(BUFFER, 'DEBUG - command_del: REVOKE_BOT_ID              : %s' % REVOKE_BOT_ID)
+    # ~ display_message(BUFFER, 'DEBUG - command_del: WRECON_REMOTE_BOTS_GRANTED : %s' % WRECON_REMOTE_BOTS_GRANTED)
     
     if not REVOKE_BOT_ID in WRECON_REMOTE_BOTS_GRANTED:
       OUT_MESSAGE_TAG = 'REVOKE ERROR'
@@ -4817,9 +4817,9 @@ GRANT              G[RANT] <BotID> [a note]'''
     SCRIPT_ARGS_DESCRIPTION       = SCRIPT_ARGS_DESCRIPTION + HELP_COMMAND['REVOKE']
     
     SCRIPT_COMPLETION             = SCRIPT_COMPLETION + ' || REV || REVOKE'
-    SCRIPT_COMMAND_CALL['REVOKE'] = user_command_revoke
+    SCRIPT_COMMAND_CALL['REVOKE'] = command_revoke
     
-    PREPARE_USER_CALL['REV']      = prepare_command_revoke
+    PREPARE_USER_CALL['REV']      = command_revoke_prepare
     PREPARE_USER_CALL['REVOKE']   = PREPARE_USER_CALL['REV']
     
     global ARGUMENTS_REQUIRED
@@ -4844,7 +4844,7 @@ REVOKE             REV[OKE] <BotID>|<INDEX>'''
   # RENAME - PREPARE COMMAND
   #
   
-  def prepare_command_rename(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
+  def command_rename_prepare(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
     global WRECON_BOT_ID, WRECON_REMOTE_BOTS_CONTROL
     
     COMMAND = 'RENAME'
@@ -4866,14 +4866,14 @@ REVOKE             REV[OKE] <BotID>|<INDEX>'''
   # RENAME - COMMAND
   #
   
-  def user_command_rename(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
+  def command_rename(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
     global BUFFER_CMD_REN_EXE, WRECON_BOT_ID, WAIT_FOR_RENAME, ID_CALL_LOCAL
     
     NEW_NAME        = ' '.join(COMMAND_ARGUMENTS_LIST)
 
     # DEBUG
-    # ~ display_message(BUFFER, 'DEBUG - user_command_rename: %s' % [WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST])
-    # ~ display_message(BUFFER, 'DEBUG - user_command_rename: NEW_NAME : %s' % NEW_NAME)
+    # ~ display_message(BUFFER, 'DEBUG - command_rename: %s' % [WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST])
+    # ~ display_message(BUFFER, 'DEBUG - command_rename: NEW_NAME : %s' % NEW_NAME)
     
     if TARGET_BOT_ID == WRECON_BOT_ID:
       function_rename_save_data(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST)
@@ -4889,7 +4889,7 @@ REVOKE             REV[OKE] <BotID>|<INDEX>'''
   # RENAME - REQUEST RECEIVED
   #
   
-  def buffer_command_rename_1_requested(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
+  def command_rename_buffer_1_requested(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
     
     UNIQ_COMMAND_ID = SOURCE_BOT_ID + COMMAND_ID
     
@@ -4903,16 +4903,16 @@ REVOKE             REV[OKE] <BotID>|<INDEX>'''
   # RENAME - RESULT RECEIVED
   #
   
-  def buffer_command_rename_2_result_received(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
+  def command_rename_buffer_2_result_received(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
     global WRECON_BOT_ID, ID_CALL_LOCAL, WAIT_FOR_RENAME, WAIT_FOR_VERIFICATION
     display_message(BUFFER, '[%s] %s < RENAME HAS BEEN ACCEPTED' % (COMMAND_ID, SOURCE_BOT_ID))
     
     UNIQ_COMMAND_ID = SOURCE_BOT_ID + COMMAND_ID
     
     # DEBUG
-    # ~ display_data('DEBUG - buffer_command_rename_2_result_received', WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST)
-    # ~ display_message(BUFFER, 'DEBUG - buffer_command_rename_2_result_received: UNIQ_COMMAND_ID : %s' % UNIQ_COMMAND_ID)
-    # ~ display_message(BUFFER, 'DEBUG - buffer_command_rename_2_result_received: WAIT_FOR_RENAME : %s' % WAIT_FOR_RENAME)
+    # ~ display_data('DEBUG - command_rename_buffer_2_result_received', WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST)
+    # ~ display_message(BUFFER, 'DEBUG - command_rename_buffer_2_result_received: UNIQ_COMMAND_ID : %s' % UNIQ_COMMAND_ID)
+    # ~ display_message(BUFFER, 'DEBUG - command_rename_buffer_2_result_received: WAIT_FOR_RENAME : %s' % WAIT_FOR_RENAME)
     
     # We unhook previous waiting for RENAME
     if UNIQ_COMMAND_ID in WAIT_FOR_RENAME:
@@ -4928,7 +4928,7 @@ REVOKE             REV[OKE] <BotID>|<INDEX>'''
     
     SOURCE = 'INTERNAL' 
     COMMAND_ADA = 'ADA %s %s %s' % (SOURCE_BOT_ID, COMMAND_ID, UNIQ_COMMAND_ID)
-    command_pre_validation('', BUFFER, SOURCE, '', '', '', '', '', COMMAND_ADA)
+    function_command_pre_validation('', BUFFER, SOURCE, '', '', '', '', '', COMMAND_ADA)
     
     # And cleanup received remote command
     cleanup_unique_command_id('REMOTE', UNIQ_COMMAND_ID)
@@ -5023,13 +5023,13 @@ REVOKE             REV[OKE] <BotID>|<INDEX>'''
     SCRIPT_ARGS                   = SCRIPT_ARGS + ' | [REN[AME] <M[YBOT]|BotID>|<INDEX> <New Name>]'
     SCRIPT_ARGS_DESCRIPTION       = SCRIPT_ARGS_DESCRIPTION + HELP_COMMAND['RENAME']
     SCRIPT_COMPLETION             = SCRIPT_COMPLETION + ' || REN || RENAME'
-    SCRIPT_COMMAND_CALL['RENAME'] = user_command_rename
+    SCRIPT_COMMAND_CALL['RENAME'] = command_rename
     
-    SCRIPT_BUFFER_CALL[BUFFER_CMD_REN_EXE]          = buffer_command_rename_1_requested
-    SCRIPT_BUFFER_CALL[BUFFER_CMD_REN_REP]          = buffer_command_rename_2_result_received
+    SCRIPT_BUFFER_CALL[BUFFER_CMD_REN_EXE]          = command_rename_buffer_1_requested
+    SCRIPT_BUFFER_CALL[BUFFER_CMD_REN_REP]          = command_rename_buffer_2_result_received
     COMMAND_REQUIREMENTS_REMOTE[BUFFER_CMD_REN_EXE] = verify_remote_bot_granted
     
-    PREPARE_USER_CALL['REN']      = prepare_command_rename
+    PREPARE_USER_CALL['REN']      = command_rename_prepare
     PREPARE_USER_CALL['RENAME']   = PREPARE_USER_CALL['REN']
     
     global ARGUMENTS_REQUIRED_MINIMAL
@@ -5057,7 +5057,7 @@ RENAME             REN[AME] M[YBOT]|<BotID>|<INDEX> <New Name>'''
   # LIST - PREPARE COMMAND
   #
   
-  def prepare_command_list(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
+  def command_list_prepare(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
     global WRECON_BOT_ID
     
     COMMAND         = 'LIST'
@@ -5078,7 +5078,7 @@ RENAME             REN[AME] M[YBOT]|<BotID>|<INDEX> <New Name>'''
   # LIST
   #
   
-  def user_command_list(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
+  def command_list(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
     global SCRIPT_NAME, WRECON_REMOTE_BOTS_CONTROL, WRECON_REMOTE_BOTS_GRANTED, WRECON_REMOTE_BOTS_ADVERTISED
     
     OUT_MESSAGE_TAG = 'LIST INFO'
@@ -5162,9 +5162,9 @@ RENAME             REN[AME] M[YBOT]|<BotID>|<INDEX> <New Name>'''
     SCRIPT_ARGS                 = SCRIPT_ARGS + ' | [L[IST] <A[DDED]>|<G[RANTED]>]'
     SCRIPT_ARGS_DESCRIPTION     = SCRIPT_ARGS_DESCRIPTION + HELP_COMMAND['LIST']
     SCRIPT_COMPLETION           = SCRIPT_COMPLETION + ' || L || LIST'
-    SCRIPT_COMMAND_CALL['LIST'] = user_command_list
+    SCRIPT_COMMAND_CALL['LIST'] = command_list
     
-    PREPARE_USER_CALL['L']      = prepare_command_list
+    PREPARE_USER_CALL['L']      = command_list_prepare
     PREPARE_USER_CALL['LIST']   = PREPARE_USER_CALL['L']
     
     global SHORT_HELP
@@ -5179,6 +5179,113 @@ LIST               L[IST] A[DDED]|G[RANTED]'''
   
   #
   ###### END COMMAND LIST
+  
+  ######
+  #
+  # COMMAND SSH
+  #
+  
+  #
+  # SSH - PREPARE COMMAND
+  #
+  
+  def command_ssh_prepare(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
+    global WRECON_BOT_ID, BUFFER_CMD_UPD_EXE, WRECON_REMOTE_BOTS_CONTROL, WAIT_FOR_VERIFICATION
+    
+    # DEBUG
+    # ~ display_message(BUFFER, 'DEBUG - command_ssh_prepare: %s' % [WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST])
+    # ~ display_message(BUFFER, 'DEBUG - command_ssh_prepare: WAIT_FOR_VERIFICATION : %s' % WAIT_FOR_VERIFICATION)
+    
+    COMMAND = 'SSH'
+    
+    if not COMMAND_ARGUMENTS_LIST:
+      TARGET_BOT_ID = WRECON_BOT_ID
+    else:
+      TARGET_BOT_ID          = get_bot_id(COMMAND_ARGUMENTS_LIST[0], WRECON_REMOTE_BOTS_CONTROL)
+      COMMAND_ARGUMENTS_LIST = [TARGET_BOT_ID]
+      
+    UNIQ_COMMAND_ID = WRECON_BOT_ID + COMMAND_ID
+    
+    return [COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST, UNIQ_COMMAND_ID]
+  
+  #
+  # SSH - USER COMMAND
+  #
+  
+  def command_ssh(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
+    return weechat.WEECHAT_RC_OK
+  
+  #
+  # SSH - COMMAND REQUESTED
+  #
+  
+  def command_ssh_buffer_1_requested(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
+    return weechat.WEECHAT_RC_OK
+  
+  #
+  # SSH -COMMAND RESULT RECEIVED
+  #
+  
+  def command_ssh_buffer_2_result_received(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
+    return weechat.WEECHAT_RC_OK
+  
+  #
+  # SSH - SETUP VARIABLES
+  #
+  
+  def setup_command_variables_ssh():
+    global BUFFER_CMD_SSH_EXE, BUFFER_CMD_SSH_REP, BUFFER_CMD_SSH_REK, SSH_GLOBAL_OUTPUT
+    BUFFER_CMD_SSH_EXE = '%sE-SSH' % (COMMAND_IN_BUFFER)
+    BUFFER_CMD_SSH_REP = '%sSSH-R' % (COMMAND_IN_BUFFER)
+    BUFFER_CMD_SSH_REK = '%sSSH-K' % (COMMAND_IN_BUFFER)
+    SSH_GLOBAL_OUTPUT = []
+    
+    
+    global SHORT_HELP, COLOR_TEXT
+    SHORT_HELP                       = SHORT_HELP + '''
+SSH                S[SH] [BotID]|<INDEX>'''
+    
+    HELP_COMMAND['S'] = '''
+%(bold)s%(italic)s--- S[SH] <BotID>|<INDEX>%(nitalic)s%(nbold)s''' % COLOR_TEXT + '''
+ Start remote SSH for your access on remote bot.
+   /wrecon S 5
+   /wrecon SSH %s
+''' % (get_random_string(16))
+    
+    HELP_COMMAND['SSH']        = HELP_COMMAND['S']
+    
+    global SCRIPT_ARGS, SCRIPT_ARGS_DESCRIPTION
+    
+    SCRIPT_ARGS                = SCRIPT_ARGS + ' | [S[SH] <BotID>|<INDEX>]'
+    SCRIPT_ARGS_DESCRIPTION    = SCRIPT_ARGS_DESCRIPTION + HELP_COMMAND['SSH']
+    
+    global ARGUMENTS_REQUIRED
+    ARGUMENTS_REQUIRED['SSH'] = 1
+    
+    global SCRIPT_COMPLETION, SCRIPT_COMMAND_CALL, PREPARE_USER_CALL, SCRIPT_BUFFER_CALL, COMMAND_VERSION, GLOBAL_VERSION_LIMIT
+    SCRIPT_COMPLETION              = SCRIPT_COMPLETION + ' || S || SSH'
+    SCRIPT_COMMAND_CALL['SSH']     = command_ssh
+    
+    PREPARE_USER_CALL['S']                = command_ssh_prepare
+    PREPARE_USER_CALL['SSH']              = PREPARE_USER_CALL['S']
+    PREPARE_USER_CALL[BUFFER_CMD_SSH_EXE] = PREPARE_USER_CALL['S']
+    
+    SCRIPT_BUFFER_CALL[BUFFER_CMD_SSH_EXE] = command_ssh_buffer_1_requested
+    SCRIPT_BUFFER_CALL[BUFFER_CMD_SSH_REP] = command_ssh_buffer_2_result_received
+    SCRIPT_BUFFER_CALL[BUFFER_CMD_SSH_REK] = command_ssh_buffer_2_result_received
+    
+    COMMAND_VERSION['S']               = '1.10'
+    COMMAND_VERSION['SSH']             = COMMAND_VERSION['S']
+    COMMAND_VERSION[BUFFER_CMD_SSH_EXE] = GLOBAL_VERSION_LIMIT
+    
+    global COMMAND_REQUIREMENTS_LOCAL, COMMAND_REQUIREMENTS_REMOTE
+    COMMAND_REQUIREMENTS_LOCAL['SSH']               = verify_remote_bot_control
+    COMMAND_REQUIREMENTS_REMOTE[BUFFER_CMD_SSH_EXE] = verify_remote_bot_granted
+    
+    return
+  
+  #
+  ###### END COMMAND SSH
   
   #
   ###### END ALL COMMANDS
@@ -5225,6 +5332,7 @@ LIST               L[IST] A[DDED]|G[RANTED]'''
     setup_command_variables_register()
     setup_command_variables_rename()
     setup_command_variables_revoke()
+    setup_command_variables_ssh()
     setup_command_variables_unregister()
     setup_command_variables_update()
     setup_command_variables_verify()
