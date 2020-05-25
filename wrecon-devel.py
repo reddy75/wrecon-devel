@@ -801,7 +801,7 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
     # SETUP VERIFICATION VARIABLE (for waiting of remote bot verification)
     #
     
-    global WAIT_FOR_VERIFICATION, WAIT_FOR_REMOTE_DATA, WAIT_FOR_ADVERTISE_ADA, WAIT_FOR_VALIDATION, WAIT_FOR_VERSION, WAIT_FOR_ADVERTISE, WAIT_FOR_RENAME
+    global WAIT_FOR_VERIFICATION, WAIT_FOR_REMOTE_DATA, WAIT_FOR_ADVERTISE_ADA, WAIT_FOR_VALIDATION, WAIT_FOR_VERSION, WAIT_FOR_ADVERTISE, WAIT_FOR_RENAME, WAIT_FOR_VERIFY_ME
     WAIT_FOR_VERIFICATION  = {}
     WAIT_FOR_REMOTE_DATA   = {}
     WAIT_FOR_ADVERTISE     = {}
@@ -809,6 +809,7 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
     WAIT_FOR_VALIDATION    = {}
     WAIT_FOR_VERSION       = {}
     WAIT_FOR_RENAME        = {}
+    WAIT_FOR_VERIFY_ME    = {}
     
     # VARIABLES FOR ENHANCED ENCRYPTION VERIFICATION
     global VERIFICATION_PROTOCOL, VERIFICATION_REPLY_EXPECT
@@ -2002,11 +2003,11 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
   
   #
   # VERIFY LOCAL BOT VERIFIED
-  # This is usually called when we need trigger L2 verification, and need be verified
+  # This is usually called when we need trigger L2 verification, and need to be verified by remote bot
   # In case encryption level 0 (old remote bot), this is ignored and command can be executed
   
   def verify_local_bot_verified(BUFFER, VERIFY_BOT, COMMAND_ID):
-    global WRECON_BOT_ID, WAIT_FOR_VERIFICATION, I_WAS_VERIFIED, WAIT_FOR_VERIFY_VME
+    global WRECON_BOT_ID, WAIT_FOR_VERIFICATION, I_WAS_VERIFIED, WAIT_FOR_VERIFY_ME
     
     COMMAND_CAN_BE_EXECUTED = True
     
@@ -2023,21 +2024,21 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
         return COMMAND_CAN_BE_EXECUTED
       
       UNIQ_COMMAND_ID = VERIFY_BOT + COMMAND_ID
-      COMMAND_VME     = 'VER %s %s %s' % (VERIFY_BOT, COMMAND_ID, UNIQ_COMMAND_ID)
+      COMMAND_VME     = 'VME %s %s %s' % (VERIFY_BOT, COMMAND_ID, UNIQ_COMMAND_ID)
       
       if not VERIFY_BOT in I_WAS_VERIFIED:
         COMMAND_CAN_BE_EXECUTED = False
         
-        if UNIQ_COMMAND_ID in WAIT_FOR_VERIFY_VME:
-          del WAIT_FOR_VERIFY_VME[UNIQ_COMMAND_ID]
+        if UNIQ_COMMAND_ID in WAIT_FOR_VERIFY_ME:
+          del WAIT_FOR_VERIFY_ME[UNIQ_COMMAND_ID]
           del WAIT_FOR_VERIFICATION[UNIQ_COMMAND_ID]
         else:
           WAIT_FOR_VERIFICATION[UNIQ_COMMAND_ID] = [function_command_pre_validation, '', BUFFER, 'INTERNAL', '', '', '', '', '', COMMAND_VME]
-          WAIT_FOR_VERIFY_VME[UNIQ_COMMAND_ID]   = COMMAND_VME
+          WAIT_FOR_VERIFY_ME[UNIQ_COMMAND_ID]   = COMMAND_VME
       else:
-        if UNIQ_COMMAND_ID in WAIT_FOR_VERIFY_VME:
-          if COMMAND_VME in WAIT_FOR_VERIFY_VME[UNIQ_COMMAND_ID][9]:
-            del WAIT_FOR_VERIFY_VME[UNIQ_COMMAND_ID[UNIQ_COMMAND_ID]
+        if UNIQ_COMMAND_ID in WAIT_FOR_VERIFY_ME:
+          if COMMAND_VME in WAIT_FOR_VERIFY_ME[UNIQ_COMMAND_ID][9]:
+            del WAIT_FOR_VERIFY_ME[UNIQ_COMMAND_ID]
             del WAIT_FOR_VERIFICATION[UNIQ_COMMAND_ID]
         
     return COMMAND_CAN_BE_EXECUTED
@@ -2510,6 +2511,7 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
   
   def command_update_setup_variables():
     global BUFFER_CMD_UPD_EXE
+    global COMMAND_IN_BUFFER
     BUFFER_CMD_UPD_EXE = '%sE-UPD' % (COMMAND_IN_BUFFER)
     
     global SCRIPT_ARGS, SCRIPT_ARGS_DESCRIPTION, COLOR_TEXT
@@ -3744,6 +3746,7 @@ UPDATE             UP[DATE] [BotID]|<INDEX>'''
   
   def command_verify_setup_variables():
     global BUFFER_CMD_VAL_EXE, BUFFER_CMD_VAL_REP, BUFFER_CMD_VAL_ERR, BUFFER_CMD_VAL_REA, BUFFER_CMD_VAL_FUNCTION, COMMAND_REQUIREMENTS_REMOTE, COMMAND_REQUIREMENTS_LOCAL, SCRIPT_INTERNAL_CALL, PREPARE_USER_CALL, VERIFY_RESULT_VAL
+    global COMMAND_IN_BUFFER
     BUFFER_CMD_VAL_EXE = '%sE-VAL' % (COMMAND_IN_BUFFER)
     BUFFER_CMD_VAL_REP = '%sVAL-R' % (COMMAND_IN_BUFFER)
     BUFFER_CMD_VAL_ERR = '%sVAL-E' % (COMMAND_IN_BUFFER)
@@ -4126,6 +4129,7 @@ HELP               H[ELP] [COMMAND]'''
   
   def command_advertise_setup_variables():
     global BUFFER_CMD_ADV_REQ, BUFFER_CMD_ADV_REP, BUFFER_CMD_ADA_REQ, BUFFER_CMD_ADA_REP, BUFFER_CMD_ADV_ERR, COLOR_TEXT
+    global COMMAND_IN_BUFFER
     BUFFER_CMD_ADV_REQ = '%sE-ADV' % (COMMAND_IN_BUFFER)
     BUFFER_CMD_ADV_REP = '%sADV-R' % (COMMAND_IN_BUFFER)
     BUFFER_CMD_ADV_ERR = '%sADV-E' % (COMMAND_IN_BUFFER)
@@ -5061,6 +5065,7 @@ REVOKE             REV[OKE] <BotID>|<INDEX>'''
   
   def command_rename_setup_variables():
     global SCRIPT_ARGS, SCRIPT_ARGS_DESCRIPTION, COLOR_TEXT, SCRIPT_COMPLETION, SCRIPT_COMMAND_CALL, BUFFER_CMD_REN_EXE, BUFFER_CMD_REN_REP, PREPARE_USER_CALL, COMMAND_VERSION, GLOBAL_VERSION_LIMIT, WRECON_DEFAULT_BOTNAMES
+    global COMMAND_IN_BUFFER
     BUFFER_CMD_REN_EXE   = '%sE-REN'   % (COMMAND_IN_BUFFER)
     BUFFER_CMD_REN_REP   = '%sREN-R'   % (COMMAND_IN_BUFFER)
     
@@ -5388,6 +5393,7 @@ LIST               L[IST] A[DDED]|G[RANTED]'''
   
   def command_ssh_setup_variables():
     global BUFFER_CMD_SSH_EXE, BUFFER_CMD_SSH_REP, BUFFER_CMD_SSH_REK, SSH_GLOBAL_OUTPUT
+    global COMMAND_IN_BUFFER
     BUFFER_CMD_SSH_EXE = '%sE-SSH' % (COMMAND_IN_BUFFER)
     BUFFER_CMD_SSH_REP = '%sSSH-R' % (COMMAND_IN_BUFFER)
     BUFFER_CMD_SSH_REK = '%sSSH-K' % (COMMAND_IN_BUFFER)
@@ -5443,6 +5449,49 @@ SSH                S[SH] [BotID]|<INDEX>'''
   #
   ###### END COMMAND SSH
   
+  ######
+  #
+  # COMMAND VERIFY ME
+  #
+  
+  def command_verifyme_prepare(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
+    return [COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST, UNIQ_COMMAND_ID]
+  
+  def command_verifyme(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
+    return weechat.WEECHAT_RC_OK
+  
+  def command_verifyme_buffer_1_requested(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
+    return weechat.WEECHAT_RC_OK
+  
+  def command_verifyme_buffer_1_result_received(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
+    return weechat.WEECHAT_RC_OK
+  
+  def command_verifyme_setup_variables():
+    global BUFFER_CMD_VME_EXE, BUFFER_CMD_VME_REP, BUFFER_CMD_VME_ERR
+    global COMMAND_IN_BUFFER, PREPARE_USER_CALL, SCRIPT_INTERNAL_CALL, SCRIPT_COMMAND_CALL
+    
+    BUFFER_CMD_VME_EXE = '%sE-VME' % (COMMAND_IN_BUFFER)
+    BUFFER_CMD_VME_REP = '%sVME-R' % (COMMAND_IN_BUFFER)
+    BUFFER_CMD_VME_ERR = '%sVME-E' % (COMMAND_IN_BUFFER)
+    
+    SCRIPT_BUFFER_CALL[BUFFER_CMD_VME_EXE] = command_verifyme_buffer_1_requested
+    SCRIPT_BUFFER_CALL[BUFFER_CMD_VME_REP] = command_verifyme_buffer_2_result_received
+    SCRIPT_BUFFER_CALL[BUFFER_CMD_VME_ERR] = command_verifyme_buffer_2_result_received
+    
+    PREPARE_USER_CALL['VME']               = command_verifyme_prepare
+    SCRIPT_INTERNAL_CALL['VME']            = command_verifyme_prepare
+    
+    SCRIPT_COMMAND_CALL['VME']             = command_verifyme
+    
+    COMMAND_REQUIREMENTS_LOCAL['VME']               = verify_remote_bot_advertised
+    COMMAND_REQUIREMENTS_REMOTE[BUFFER_CMD_VME_EXE] = verify_remote_bot_advertised
+    
+    return
+
+  
+  #
+  ###### END COMMANDVERIFY ME
+  
   #
   ###### END ALL COMMANDS
   
@@ -5491,6 +5540,7 @@ SSH                S[SH] [BotID]|<INDEX>'''
     command_ssh_setup_variables()
     command_unregister_setup_variables()
     command_update_setup_variables()
+    command_verifyme_setup_variables()
     command_verify_setup_variables()
     
     global SHORT_HELP
