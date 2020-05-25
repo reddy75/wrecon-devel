@@ -2007,39 +2007,37 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
   # In case encryption level 0 (old remote bot), this is ignored and command can be executed
   
   def verify_local_bot_verified(BUFFER, VERIFY_BOT, COMMAND_ID):
-    global WRECON_BOT_ID, WAIT_FOR_VERIFICATION, I_WAS_VERIFIED, WAIT_FOR_VERIFY_ME
+    global WRECON_BOT_ID, WAIT_FOR_VERIFICATION, I_WAS_VERIFIED, WAIT_FOR_VERIFY_ME, ID_CALL_LOCAL
     
     COMMAND_CAN_BE_EXECUTED = True
     
     if VERIFY_BOT == WRECON_BOT_ID:
       return COMMAND_CAN_BE_EXECUTED
     
-    COMMAND_CAN_BE_EXECUTED = verify_remote_bot_control(BUFFER, VERIFY_BOT, COMMAND_ID)
+    ENCRYPT_LEVEL = get_target_level_01_encryption(VERIFY_BOT)
     
-    if COMMAND_CAN_BE_EXECUTED == True:
+    if ENCRYPT_LEVEL == 0:
+      return COMMAND_CAN_BE_EXECUTED
+    
+    UNIQ_COMMAND_ID = VERIFY_BOT + COMMAND_ID
+    COMMAND_VME     = 'VME %s %s %s' % (VERIFY_BOT, COMMAND_ID, UNIQ_COMMAND_ID)
+    
+    if not VERIFY_BOT in I_WAS_VERIFIED:
+      COMMAND_CAN_BE_EXECUTED = False
       
-      ENCRYPT_LEVEL = get_target_level_01_encryption(VERIFY_BOT)
+      ID_CALL_LOCAL[UNIQ_COMMAND_ID] = 'ADDITIONAL VERIFY SELF REQUEST'
       
-      if ENCRYPT_LEVEL == 0:
-        return COMMAND_CAN_BE_EXECUTED
-      
-      UNIQ_COMMAND_ID = VERIFY_BOT + COMMAND_ID
-      COMMAND_VME     = 'VME %s %s %s' % (VERIFY_BOT, COMMAND_ID, UNIQ_COMMAND_ID)
-      
-      if not VERIFY_BOT in I_WAS_VERIFIED:
-        COMMAND_CAN_BE_EXECUTED = False
-        
-        if UNIQ_COMMAND_ID in WAIT_FOR_VERIFY_ME:
+      if UNIQ_COMMAND_ID in WAIT_FOR_VERIFY_ME:
+        del WAIT_FOR_VERIFY_ME[UNIQ_COMMAND_ID]
+        del WAIT_FOR_VERIFICATION[UNIQ_COMMAND_ID]
+      else:
+        WAIT_FOR_VERIFICATION[UNIQ_COMMAND_ID] = [function_command_pre_validation, '', BUFFER, 'INTERNAL', '', '', '', '', '', COMMAND_VME]
+        WAIT_FOR_VERIFY_ME[UNIQ_COMMAND_ID]   = COMMAND_VME
+    else:
+      if UNIQ_COMMAND_ID in WAIT_FOR_VERIFY_ME:
+        if COMMAND_VME in WAIT_FOR_VERIFY_ME[UNIQ_COMMAND_ID][9]:
           del WAIT_FOR_VERIFY_ME[UNIQ_COMMAND_ID]
           del WAIT_FOR_VERIFICATION[UNIQ_COMMAND_ID]
-        else:
-          WAIT_FOR_VERIFICATION[UNIQ_COMMAND_ID] = [function_command_pre_validation, '', BUFFER, 'INTERNAL', '', '', '', '', '', COMMAND_VME]
-          WAIT_FOR_VERIFY_ME[UNIQ_COMMAND_ID]   = COMMAND_VME
-      else:
-        if UNIQ_COMMAND_ID in WAIT_FOR_VERIFY_ME:
-          if COMMAND_VME in WAIT_FOR_VERIFY_ME[UNIQ_COMMAND_ID][9]:
-            del WAIT_FOR_VERIFY_ME[UNIQ_COMMAND_ID]
-            del WAIT_FOR_VERIFICATION[UNIQ_COMMAND_ID]
         
     return COMMAND_CAN_BE_EXECUTED
   
@@ -5464,6 +5462,9 @@ SSH                S[SH] [BotID]|<INDEX>'''
     return weechat.WEECHAT_RC_OK
   
   def command_verifyme_buffer_1_result_received(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
+    return weechat.WEECHAT_RC_OK
+  
+  def command_verifyme_wait_result():
     return weechat.WEECHAT_RC_OK
   
   def command_verifyme_setup_variables():
