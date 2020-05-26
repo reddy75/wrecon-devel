@@ -1693,6 +1693,13 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
         else:
           display_message(BUFFER, '[%s] ERROR: UNKNOWN %s COMMAND -> %s' % (COMMAND_ID, SOURCE, COMMAND))
       
+      # CHECK WE ARE RECEIVING DATA FROM SAME SOURCE, only REMOTE command is checked
+      # This is security feature to refuse reply or command from different sources (possible hacker attacks)
+      if COMMAND_CAN_BE_EXECUTED == True and SOURCE == 'REMOTE':
+        ERROR_MESSAGE, COMMAND_CAN_BE_EXECUTED = function_validate_4_compare_remote_source(BUFFER, VERIFY_BOT, COMMAND_ID)
+        if COMMAND_CAN_BE_EXECUTED == False:
+          display_message(BUFFER, '[%s] ERROR: %s' % (COMMAND_ID, ERROR_MESSAGE))
+      
       # CHECK NUMBER OF COMMAND ARGUMENTS, only LOCAL command is checked
       if COMMAND_CAN_BE_EXECUTED == True and SOURCE == 'LOCAL':
         COMMAND_CAN_BE_EXECUTED, ERROR_MESSAGE = function_validate_3_number_of_arguments(COMMAND, COMMAND_ARGUMENTS)
@@ -1703,17 +1710,12 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
       # we need to be sure, that remote bot have required version for execution
       if COMMAND_CAN_BE_EXECUTED == True:
         COMMAND_CAN_BE_EXECUTED = verify_remote_bot_version(BUFFER, COMMAND, VERIFY_BOT, COMMAND_ID)
-      
+        
       # CHECK REQUIREMENTS FOR EXECUTION, LOCAL and REMOTE command are checked, and PRE-LOCAL SOURCE is excluded
       if COMMAND_CAN_BE_EXECUTED == True and SOURCE != 'PRE-LOCAL':
-        # ~ display_message(BUFFER, 'DEBUG - validate_command: call function_validate_4_requirements(%s)' % [SOURCE, BUFFER, COMMAND, VERIFY_BOT, COMMAND_ID])
-        COMMAND_CAN_BE_EXECUTED  = function_validate_4_requirements(SOURCE, BUFFER, COMMAND, VERIFY_BOT, COMMAND_ID)
+        # ~ display_message(BUFFER, 'DEBUG - validate_command: call function_validate_5_requirements(%s)' % [SOURCE, BUFFER, COMMAND, VERIFY_BOT, COMMAND_ID])
+        COMMAND_CAN_BE_EXECUTED  = function_validate_5_requirements(SOURCE, BUFFER, COMMAND, VERIFY_BOT, COMMAND_ID)
         # ~ display_message(BUFFER, 'DEBUG - validate_command: COMMAND_CAN_BE_EXECUTED : %s' % COMMAND_CAN_BE_EXECUTED)
-      
-      # CHECK WHEN ADVERTISE IS REQUIRED, IF WE ARE STILL RECEIVING DATA FROM SAME NICK
-      # This is security feature to refuse answers from different source (nick)
-      if COMMAND_CAN_BE_EXECUTED == True and SOURCE == 'REMOTE':
-        COMMAND_CAN_BE_EXECUTED = function_validate_5_compare_remote_source(BUFFER, VERIFY_BOT, COMMAND_ID)
       
       if COMMAND_CAN_BE_EXECUTED == False:
         # DEBUG
@@ -1899,36 +1901,16 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
     # False = return command contain incorrect number of arguments
     
     return [VERIFY_RESULT, OUT_MESSAGE]
-  #
-  # CHECK COMMAND REQUIREMENTS
-  #
-  
-  def function_validate_4_requirements(SOURCE, BUFFER, COMMAND, VERIFY_BOT, COMMAND_ID):
-    global WRECON_BOT_ID, COMMAND_REQUIREMENTS_LOCAL, COMMAND_REQUIREMENTS_REMOTE
-    
-    COMMAND_CAN_BE_EXECUTED = True
-    
-    if VERIFY_BOT == WRECON_BOT_ID or (VERIFY_BOT == COMMAND_ID and SOURCE == 'LOCAL'):
-      return COMMAND_CAN_BE_EXECUTED
-    
-    if SOURCE in ['LOCAL', 'PRE-LOCAL', 'INTERNAL']:
-      COMMAND_REQUIREMENTS = COMMAND_REQUIREMENTS_LOCAL
-    else:
-      COMMAND_REQUIREMENTS = COMMAND_REQUIREMENTS_REMOTE
-    
-    if COMMAND in COMMAND_REQUIREMENTS:
-      COMMAND_CAN_BE_EXECUTED = COMMAND_REQUIREMENTS[COMMAND](BUFFER, VERIFY_BOT, COMMAND_ID)
-      
-    return COMMAND_CAN_BE_EXECUTED
   
   #
   # CHECK COMMAND IS SENT FROM SAME SOURCE AS EXPECTED ()
   #
   
-  def function_validate_5_compare_remote_source(BUFFER, VERIFY_BOT, COMMAND_ID):
+  def function_validate_4_compare_remote_source(BUFFER, VERIFY_BOT, COMMAND_ID):
     global COMMAND_RECEIVED_FROM, WRECON_REMOTE_BOTS_ADVERTISED, WRECON_BOT_ID
     
     COMMAND_CAN_BE_EXECUTED = True
+    ERROR_MESSAGE           = ''
     
     UNIQ_COMMAND_ID = VERIFY_BOT + COMMAND_ID
     
@@ -1952,13 +1934,35 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
       
       if not ACTUAL_DATA == ADVERTISED_DATA:
         COMMAND_CAN_BE_EXECUTED = False
-        display_message(BUFFER, '[%s] %s < DATA RECEIVED FROM DIFFERENT SOURCE !!!' %s (COMMAND_ID, VERIFY_BOT))
+        ERROR_MESSAGE           = 'COMMAND RECEIVED FROM DIFFERENT SOURCE > %s (%s)' % (ACTUAL_NICK_NAME, ACTUAL_HOST_NAME)
     
     if UNIQ_COMMAND_ID in COMMAND_RECEIVED_FROM:
       del COMMAND_RECEIVED_FROM[UNIQ_COMMAND_ID]
     
-    return COMMAND_CAN_BE_EXECUTED
+    return [ERROR_MESSAGE, COMMAND_CAN_BE_EXECUTED]
   
+  #
+  # CHECK COMMAND REQUIREMENTS
+  #
+  
+  def function_validate_5_requirements(SOURCE, BUFFER, COMMAND, VERIFY_BOT, COMMAND_ID):
+    global WRECON_BOT_ID, COMMAND_REQUIREMENTS_LOCAL, COMMAND_REQUIREMENTS_REMOTE
+    
+    COMMAND_CAN_BE_EXECUTED = True
+    
+    if VERIFY_BOT == WRECON_BOT_ID or (VERIFY_BOT == COMMAND_ID and SOURCE == 'LOCAL'):
+      return COMMAND_CAN_BE_EXECUTED
+    
+    if SOURCE in ['LOCAL', 'PRE-LOCAL', 'INTERNAL']:
+      COMMAND_REQUIREMENTS = COMMAND_REQUIREMENTS_LOCAL
+    else:
+      COMMAND_REQUIREMENTS = COMMAND_REQUIREMENTS_REMOTE
+    
+    if COMMAND in COMMAND_REQUIREMENTS:
+      COMMAND_CAN_BE_EXECUTED = COMMAND_REQUIREMENTS[COMMAND](BUFFER, VERIFY_BOT, COMMAND_ID)
+      
+    return COMMAND_CAN_BE_EXECUTED
+    
   #
   # VALIDATE COMMAND VERSION (some commands are not in previous version)
   # this command require remote bot is advertised
