@@ -35,7 +35,8 @@
 # -- function 'command_update' fully changed (splitted into functions)
 # -- functions 'encrypt/decrypt' enhanced into levels (also backward compatibility ensure with older script communication)
 # -- added possibility choice BOT by INDEX number (for commands DEL/RENAME/REVOKE/SSH/UPDATE)
-# -- 
+# -- added security feature - strict check advertised bot (once advertised should be same source)
+# -- added security feature - ssh using random encrypt keys
 #
 # 1.18.13 - Bug fix UPDATE (arguments incorrectly checked after additional advertise)
 # 1.18.12 - Bug fix REGISTER/UNREGISTER (add/del registered channels and keys)
@@ -1698,7 +1699,7 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
       if COMMAND_CAN_BE_EXECUTED == True and SOURCE == 'REMOTE':
         ERROR_MESSAGE, COMMAND_CAN_BE_EXECUTED = function_validate_4_compare_remote_source(BUFFER, VERIFY_BOT, COMMAND_ID)
         if COMMAND_CAN_BE_EXECUTED == False:
-          display_message(BUFFER, '[%s] ERROR: %s' % (COMMAND_ID, ERROR_MESSAGE))
+          display_message(BUFFER, ERROR_MESSAGE)
       
       # CHECK NUMBER OF COMMAND ARGUMENTS, only LOCAL command is checked
       if COMMAND_CAN_BE_EXECUTED == True and SOURCE == 'LOCAL':
@@ -1934,7 +1935,10 @@ KPX4rlTJFYD/K/Hb0OM4NwaXz5Q=
       
       if not ACTUAL_DATA == ADVERTISED_DATA:
         COMMAND_CAN_BE_EXECUTED = False
-        ERROR_MESSAGE           = 'COMMAND RECEIVED FROM DIFFERENT SOURCE > %s (%s)' % (ACTUAL_NICK_NAME, ACTUAL_HOST_NAME)
+        ADVERTISED_DATA   = WRECON_REMOTE_BOTS_ADVERTISED[VERIFY_BOT].split('|')
+        ADVERTISED_DATA   = ' '.join(ADVERTISED_DATA)
+        ERROR_MESSAGE     = ['[%s] ERROR: REMOTE COMMAND/REPLY RECEIVED FROM DIFFERENT SOURCE > %s (%s)' % (ACTUAL_NICK_NAME, ACTUAL_HOST_NAME)]
+        ERROR_MESSAGE.append('[%s] COMMAND/REPLE EXPECTED FROM : %s' % ADVERTISED_DATA)
     
     if UNIQ_COMMAND_ID in COMMAND_RECEIVED_FROM:
       del COMMAND_RECEIVED_FROM[UNIQ_COMMAND_ID]
@@ -5501,9 +5505,25 @@ SSH                S[SH] [BotID]|<INDEX>'''
   #
   
   def command_verifyme_prepare(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
+    global WRECON_BOT_ID
+    
+    SOURCE_BOT_ID = WRECON_BOT_ID
+    
+    COMMAND = 'VME'
+    
+    if len(COMMAND_ARGUMENTS_LIST) == 0:
+      TARGET_BOT_ID   = ''
+      UNIQ_COMMAND_ID = WRECON_BOT_ID + COMMAND_ID
+    else:
+      TARGET_BOT_ID   = COMMAND_ARGUMENTS_LIST[0]
+      UNIQ_COMMAND_ID = TARGET_BOT_ID + COMMAND_ID
+    
     return [COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST, UNIQ_COMMAND_ID]
   
   def command_verifyme(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
+    
+    UNIQ_COMMAND_ID = TARGET_BOT_ID + COMMAND_ID
+    
     return weechat.WEECHAT_RC_OK
   
   def command_verifyme_buffer_1_requested(WEECHAT_DATA, BUFFER, SOURCE, DATE, TAGS, DISPLAYED, HIGHLIGHT, PREFIX, COMMAND, TARGET_BOT_ID, SOURCE_BOT_ID, COMMAND_ID, COMMAND_ARGUMENTS_LIST):
