@@ -38,6 +38,7 @@
 # -- added security feature - strict check advertised bot (once advertised should be same source)
 # -- added security feature - ssh using random encrypt keys
 #
+# 1.18.14 - Allowing to accept python version since 2.7
 # 1.18.13 - Bug fix UPDATE (arguments incorrectly checked after additional advertise)
 # 1.18.12 - Bug fix REGISTER/UNREGISTER (add/del registered channels and keys)
 # 1.18.11 - Bug fix UPDATE CHECK VERSION
@@ -138,7 +139,7 @@ for IMPORT_MOD in ['ast', 'base64', 'contextlib', 'datetime', 'gnupg', 'hashlib'
     print('[%s v%s] > module >> %s << import error' % (SCRIPT_NAME, SCRIPT_VERSION, IMPORT_MOD))
 
 
-if sys.version_info >= (3,):
+if sys.version_info >= (2,7):
   #print('[%s v%s] > python version 3' % (SCRIPT_NAME, SCRIPT_VERSION))
   pass
 else:
@@ -5363,12 +5364,11 @@ LIST               L[IST] A[DDED]|G[RANTED]'''
       if ERROR == False:
         weechat.command(BUFFER, '%s %s %s %s' % (BUFFER_CMD_SSH_EXE, TARGET_BOT_ID, SOURCE_BOT_ID, SEND_DATA))
         SSH_WAIT_FOR_RESULT[UNIQ_COMMAND_ID] = weechat.hook_timer(TIMEOUT_COMMAND_SSH*1000, 0, 1, 'command_ssh_wait_result', UNIQ_COMMAND_ID)
-      else:
-        SEND_DATA = 'ERROR, SSH ENCRYPTION FAILED'
       
     else:
-      ERROR     = True
       SEND_DATA = 'ERROR, SSH REQUEST ALREADY EXIST'
+      display_message(BUFFER, '[%s] %s < %s' % (COMMAND_ID, TARGET_BOT_ID, SEND_DATA))
+      return weechat.WEECHAT_RC_OK
     
     if ERROR == True
       display_message(BUFFER, '[%s] %s < %s' % (COMMAND_ID, TARGET_BOT_ID, SEND_DATA))
